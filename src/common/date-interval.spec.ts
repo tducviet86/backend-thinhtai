@@ -1,0 +1,2 @@
+import { overlaps, parseStay } from './date-interval';
+describe('hotel intervals',()=>{it('allows same-day turnover because checkout is exclusive',()=>{const a=parseStay('2026-09-01','2026-09-03');const b=parseStay('2026-09-03','2026-09-05');expect(overlaps(a,b)).toBe(false)});it('detects nested overlap',()=>{expect(overlaps(parseStay('2026-09-01','2026-09-10'),parseStay('2026-09-03','2026-09-04'))).toBe(true)});});
