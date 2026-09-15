@@ -137,6 +137,7 @@ model User {
   tokenVersion  Int            @default(0)
   roles         UserRole[]
   refreshTokens RefreshToken[]
+  customer      Customer?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -190,6 +191,8 @@ model RefreshToken {
 
 model Customer {
   id          String    @id @default(uuid()) @db.Uuid
+  userId      String?   @unique @db.Uuid
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   firstName   String
   lastName    String
   email       String?

@@ -1,11 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AvailabilityService } from '../availability/availability.service';
 import { eachNight, nightsBetween, parseStay } from '../common/date-interval';
 import { PrismaService } from '../prisma/prisma.service';
 export interface QuoteInput { unitId?: string; publicCode?: string; checkIn: string; checkOut: string; guests: number; promoCode?: string }
 @Injectable()
 export class PricingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly availability: AvailabilityService) {}
   async resolveUnitId(input: Pick<QuoteInput, 'unitId' | 'publicCode'>): Promise<string> {
     if (!input.unitId && !input.publicCode) throw new BadRequestException('unitId or publicCode is required');
     const unit = await this.prisma.unit.findFirst({ where: input.unitId ? { id: input.unitId } : { publicCode: input.publicCode }, select: { id: true } });
@@ -19,6 +20,7 @@ export class PricingService {
     const unit = await this.prisma.unit.findUnique({ where: { id: unitId }, select: { id: true, basePrice: true, currency: true, cleaningFee: true, serviceFeeRate: true, depositRate: true, maxGuests: true } });
     if (!unit) throw new NotFoundException('Unit not found');
     if (input.guests > unit.maxGuests) throw new BadRequestException('Guest count exceeds unit capacity');
+    if (!(await this.availability.isAvailable(unitId, start, end))) throw new ConflictException('Unit is unavailable for the requested interval');
     const dates = eachNight(start, end); const overrides = await this.prisma.dailyRate.findMany({ where: { unitId, date: { gte: start, lt: end } } });
     const byDate = new Map(overrides.map((r) => [r.date.toISOString().slice(0, 10), r.amount]));
     const weekend = await this.prisma.ratePlan.findFirst({ where: { unitId, active: true } });

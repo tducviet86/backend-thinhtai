@@ -21,6 +21,7 @@ const publicSelect = {
   currency: true, status: true, property: { select: { name: true, address: true } },
   amenities: { select: { amenity: { select: { code: true, nameVi: true, nameEn: true, icon: true, category: true } } } },
   media: { orderBy: { sortOrder: "asc" as const }, select: { type: true, sortOrder: true, media: { select: { url: true, width: true, height: true, altVi: true, altEn: true } } } },
+  reviews: { where: { status: "APPROVED" as const }, select: { rating: true } },
 };
 
 @Controller("units")
@@ -47,7 +48,7 @@ export class UnitsController {
 
   @Public() @Get(":slug") @Version("1")
   async one(@Param("slug") slug: string) {
-    const unit = await this.prisma.unit.findFirst({ where: { status: { in: ["PUBLISHED", "TEMP_UNAVAILABLE"] }, OR: [{ slugVi: slug }, { slugEn: slug }] }, select: publicSelect });
+    const unit = await this.prisma.unit.findFirst({ where: { status: { in: ["PUBLISHED", "TEMP_UNAVAILABLE"] }, OR: [{ slugVi: slug }, { slugEn: slug }, { publicCode: slug }] }, select: publicSelect });
     if (!unit) throw new NotFoundException("Unit not found");
     return unit;
   }
