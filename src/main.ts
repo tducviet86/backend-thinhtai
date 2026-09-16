@@ -60,7 +60,7 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(config.get<string>('PORT')) || 3000;
 
-  await app.listen(port, '0.0.0.0');
+  await app.listen(config.get<number>('PORT', 3000));
 
   console.log(`🚀 TT Rental API running on 0.0.0.0:${port}`);
 }
