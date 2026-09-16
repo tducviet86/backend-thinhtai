@@ -10,7 +10,7 @@ type VnpParams = Record<string, string>;
 export class VnpayService {
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
-  async createPaymentUrl(userId: string, bookingCode: string, ipAddress: string, locale: 'vn' | 'en') {
+  async createPaymentUrl(userId: string, bookingCode: string, ipAddress: string, locale: 'vn' | 'en', bankCode?: 'VNPAYQR' | 'VNBANK' | 'INTCARD') {
     const booking = await this.prisma.booking.findUnique({ where: { bookingCode }, include: { customer: { select: { userId: true } } } });
     if (!booking) throw new NotFoundException('Booking not found');
     if (booking.customer.userId !== userId) throw new ForbiddenException('Booking does not belong to this account');
@@ -36,8 +36,9 @@ export class VnpayService {
       vnp_Locale: locale, vnp_ReturnUrl: this.config.getOrThrow('VNPAY_RETURN_URL'),
       vnp_IpAddr: this.normalizeIp(ipAddress), vnp_CreateDate: this.formatVnpDate(now), vnp_ExpireDate: this.formatVnpDate(expires),
     };
+    if (bankCode) params.vnp_BankCode = bankCode;
     const query = this.canonicalQuery(params), secureHash = this.sign(query);
-    return { paymentUrl: `${this.config.getOrThrow('VNPAY_URL')}?${query}&vnp_SecureHash=${secureHash}`, expiresAt: expires, bookingCode: booking.bookingCode, amount: amount.toFixed(2), currency: booking.currency };
+    return { paymentUrl: `${this.config.getOrThrow('VNPAY_URL')}?${query}&vnp_SecureHash=${secureHash}`, expiresAt: expires, bookingCode: booking.bookingCode, transactionReference: txnRef, bankCode: bankCode ?? null, amount: amount.toFixed(2), currency: booking.currency };
   }
 
   async verifyReturn(query: Record<string, unknown>) {
