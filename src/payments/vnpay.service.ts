@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, PaymentStatus } from '@prisma/client';
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
 type VnpParams = Record<string, string>;
@@ -18,18 +18,20 @@ export class VnpayService {
     if (booking.currency !== 'VND') throw new BadRequestException('VNPAY only supports VND');
     const amount = Prisma.Decimal.min(booking.depositRequired, booking.remainingAmount);
     if (amount.lte(0)) throw new BadRequestException('Booking has no outstanding deposit');
-    const existing = await this.prisma.payment.findUnique({
-      where: { provider_providerReference: { provider: 'VNPAY', providerReference: booking.bookingCode } },
-    });
-    if (!existing) {
-      await this.prisma.payment.create({ data: { bookingId: booking.id, type: 'DEPOSIT', method: 'VNPAY', provider: 'VNPAY', providerReference: booking.bookingCode, amount, currency: booking.currency, status: 'PENDING' } });
-    } else if (existing.status === PaymentStatus.FAILED || existing.status === PaymentStatus.CANCELLED) {
-      await this.prisma.payment.update({ where: { id: existing.id }, data: { amount, status: PaymentStatus.PENDING, paidAt: null } });
-    }
     const now = new Date(), expires = new Date(now.valueOf() + 15 * 60_000);
+    const txnRef = `${booking.bookingCode.replace(/[^a-zA-Z0-9]/g, '')}${this.formatVnpDate(now)}${randomBytes(3).toString('hex')}`;
+    await this.prisma.$transaction([
+      this.prisma.payment.updateMany({
+        where: { bookingId: booking.id, provider: 'VNPAY', status: { in: [PaymentStatus.PENDING, PaymentStatus.PROCESSING] } },
+        data: { status: PaymentStatus.CANCELLED },
+      }),
+      this.prisma.payment.create({
+        data: { bookingId: booking.id, type: 'DEPOSIT', method: 'VNPAY', provider: 'VNPAY', providerReference: txnRef, amount, currency: booking.currency, status: PaymentStatus.PENDING },
+      }),
+    ]);
     const params: VnpParams = {
       vnp_Version: '2.1.0', vnp_Command: 'pay', vnp_TmnCode: this.config.getOrThrow('VNPAY_TMN_CODE'),
-      vnp_Amount: amount.mul(100).toFixed(0), vnp_CurrCode: 'VND', vnp_TxnRef: booking.bookingCode,
+      vnp_Amount: amount.mul(100).toFixed(0), vnp_CurrCode: 'VND', vnp_TxnRef: txnRef,
       vnp_OrderInfo: `Thanh toan dat coc booking ${booking.bookingCode}`, vnp_OrderType: 'other',
       vnp_Locale: locale, vnp_ReturnUrl: this.config.getOrThrow('VNPAY_RETURN_URL'),
       vnp_IpAddr: this.normalizeIp(ipAddress), vnp_CreateDate: this.formatVnpDate(now), vnp_ExpireDate: this.formatVnpDate(expires),
@@ -38,11 +40,14 @@ export class VnpayService {
     return { paymentUrl: `${this.config.getOrThrow('VNPAY_URL')}?${query}&vnp_SecureHash=${secureHash}`, expiresAt: expires, bookingCode: booking.bookingCode, amount: amount.toFixed(2), currency: booking.currency };
   }
 
-  verifyReturn(query: Record<string, unknown>) {
+  async verifyReturn(query: Record<string, unknown>) {
     const params = this.extract(query), secureHash = params.vnp_SecureHash ?? '';
     delete params.vnp_SecureHash; delete params.vnp_SecureHashType;
     const validSignature = this.safeEqual(this.sign(this.canonicalQuery(params)), secureHash);
-    return { validSignature, success: validSignature && params.vnp_ResponseCode === '00' && params.vnp_TransactionStatus === '00', bookingCode: params.vnp_TxnRef ?? '', responseCode: params.vnp_ResponseCode ?? '', transactionNo: params.vnp_TransactionNo ?? '' };
+    const payment = validSignature && params.vnp_TxnRef
+      ? await this.prisma.payment.findUnique({ where: { provider_providerReference: { provider: 'VNPAY', providerReference: params.vnp_TxnRef } }, select: { booking: { select: { bookingCode: true } } } })
+      : null;
+    return { validSignature, success: validSignature && params.vnp_ResponseCode === '00' && params.vnp_TransactionStatus === '00', bookingCode: payment?.booking.bookingCode ?? '', responseCode: params.vnp_ResponseCode ?? '', transactionNo: params.vnp_TransactionNo ?? '' };
   }
 
   async handleIpn(query: Record<string, unknown>): Promise<{ RspCode: string; Message: string }> {
@@ -50,10 +55,9 @@ export class VnpayService {
     delete params.vnp_SecureHash; delete params.vnp_SecureHashType;
     if (!this.safeEqual(this.sign(this.canonicalQuery(params)), secureHash)) return { RspCode: '97', Message: 'Invalid signature' };
     if (params.vnp_TmnCode !== this.config.getOrThrow('VNPAY_TMN_CODE')) return { RspCode: '97', Message: 'Invalid terminal code' };
-    const booking = await this.prisma.booking.findUnique({ where: { bookingCode: params.vnp_TxnRef }, include: { payments: { where: { provider: 'VNPAY' }, orderBy: { createdAt: 'desc' }, take: 1 } } });
-    if (!booking) return { RspCode: '01', Message: 'Order not found' };
-    const payment = booking.payments[0];
+    const payment = params.vnp_TxnRef ? await this.prisma.payment.findUnique({ where: { provider_providerReference: { provider: 'VNPAY', providerReference: params.vnp_TxnRef } }, include: { booking: true } }) : null;
     if (!payment) return { RspCode: '01', Message: 'Payment not found' };
+    const booking = payment.booking;
     if (payment.status === 'PAID') return { RspCode: '02', Message: 'Order already confirmed' };
     const receivedAmount = new Prisma.Decimal(params.vnp_Amount || 0).div(100);
     if (!receivedAmount.equals(payment.amount)) return { RspCode: '04', Message: 'Invalid amount' };
