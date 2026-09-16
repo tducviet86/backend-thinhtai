@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { UpdateCustomerProfileDto } from './dto/customer-auth.dto';
+import { RegisterDto, UpdateCustomerProfileDto } from './dto/customer-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,10 +14,11 @@ export class AuthService {
     if (!user || user.status !== 'ACTIVE' || !(await argon2.verify(user.passwordHash, password))) throw new UnauthorizedException('Invalid credentials');
     return this.issue(user.id, user.email, user.tokenVersion, [...new Set(user.roles.flatMap((r) => r.role.permissions.map((p) => p.permission.code)))]);
   }
-  async register(email: string, password: string) {
-    const normalizedEmail = email.toLowerCase();
+  async register(dto: RegisterDto) {
+    const normalizedEmail = dto.email.toLowerCase();
     if (await this.prisma.user.findUnique({ where: { email: normalizedEmail }, select: { id: true } })) throw new ConflictException('Email is already registered');
-    const user = await this.prisma.user.create({ data: { email: normalizedEmail, passwordHash: await argon2.hash(password), firstName: '', lastName: '' } });
+    const firstName = dto.firstName.trim(), lastName = dto.lastName.trim();
+    const user = await this.prisma.user.create({ data: { email: normalizedEmail, passwordHash: await argon2.hash(dto.password), firstName, lastName, customer: { create: { firstName, lastName, email: normalizedEmail, phone: dto.phone.trim(), nationality: dto.nationality?.trim() } } } });
     return this.issue(user.id, user.email, user.tokenVersion, []);
   }
   async me(userId: string) {
