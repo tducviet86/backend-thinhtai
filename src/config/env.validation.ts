@@ -22,5 +22,7 @@ export function validateEnvironment(raw: Record<string, unknown>): Environment {
   if (errors.length) throw new Error(`Invalid environment: ${errors.map((e) => e.property).join(', ')}`);
   if (value.JWT_ACCESS_SECRET.length < 32 || value.JWT_REFRESH_SECRET.length < 32) throw new Error('JWT secrets must be at least 32 characters');
   if (value.VNPAY_TMN_CODE.length !== 8 || value.VNPAY_HASH_SECRET.length < 16) throw new Error('Invalid VNPAY credentials');
+  const placeholders = [value.JWT_ACCESS_SECRET, value.JWT_REFRESH_SECRET, value.VNPAY_HASH_SECRET].some((secret) => /^(YOUR_|replace-with)/i.test(secret));
+  if (value.NODE_ENV === 'production' && placeholders) throw new Error('Production secrets still contain placeholder values');
   return value;
 }
