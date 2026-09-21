@@ -38,9 +38,9 @@ export class AdminService {
   quote(dto: StayDto) { return this.pricing.quote({ ...dto, guests: dto.guestCount }); }
   async createBooking(dto: AdminBookingDto, actor: string) {
     const { start, end } = parseStay(dto.checkIn, dto.checkOut);
-    const calculated = await this.quote(dto);
+    const calculated = await this.pricing.quote({ unitId: dto.unitId, checkIn: dto.checkIn, checkOut: dto.checkOut, guests: dto.guestCount }, false);
     const quote = await this.db.priceQuote.findUnique({ where: { id: dto.quoteId } });
-    if (!quote || quote.expiresAt <= new Date() || quote.unitId !== dto.unitId || +quote.checkIn !== +start || +quote.checkOut !== +end || quote.guests !== dto.guestCount || !quote.total.equals(calculated.total)) throw new ConflictException('Báo giá đã thay đổi. Vui lòng tính giá lại.');
+    if (!quote || quote.expiresAt <= new Date() || quote.unitId !== dto.unitId || +quote.checkIn !== +start || +quote.checkOut !== +end || quote.guests !== dto.guestCount || !quote.total.equals(calculated.total) || !quote.requiredDeposit.equals(calculated.requiredDeposit) || quote.currency !== calculated.currency) throw new ConflictException('Báo giá đã thay đổi. Vui lòng tính giá lại.');
     return this.db.$transaction(async tx => {
       await this.availability.lockUnit(tx, dto.unitId);
       const unit = await tx.unit.findUniqueOrThrow({ where: { id: dto.unitId } });

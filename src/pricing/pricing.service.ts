@@ -17,11 +17,13 @@ export class PricingService {
     const unitId = await this.resolveUnitId(input);
     const { start, end } = parseStay(input.checkIn, input.checkOut); const nights = nightsBetween(start, end);
     if (nights > 365) throw new BadRequestException('Stay cannot exceed 365 nights');
-    const unit = await this.prisma.unit.findUnique({ where: { id: unitId }, select: { id: true, basePrice: true, currency: true, cleaningFee: true, serviceFeeRate: true, depositRate: true, maxGuests: true } });
+    const unit = await this.prisma.unit.findUnique({ where: { id: unitId }, select: { status: true, property: { select: { status: true } }, id: true, basePrice: true, currency: true, cleaningFee: true, serviceFeeRate: true, depositRate: true, maxGuests: true } });
     if (!unit) throw new NotFoundException('Unit not found');
+    if (unit.status !== 'PUBLISHED' || unit.property.status !== 'ACTIVE') throw new BadRequestException('Căn hộ chưa mở bán.');
     if (input.guests > unit.maxGuests) throw new BadRequestException('Guest count exceeds unit capacity');
     if (!(await this.availability.isAvailable(unitId, start, end))) throw new ConflictException('Unit is unavailable for the requested interval');
     const dates = eachNight(start, end); const overrides = await this.prisma.dailyRate.findMany({ where: { unitId, date: { gte: start, lt: end } } });
+    if (overrides.some(rate => rate.minStay && nights < rate.minStay)) throw new BadRequestException('Kỳ nghỉ chưa đáp ứng số đêm tối thiểu của giá theo ngày.');
     const byDate = new Map(overrides.map((r) => [r.date.toISOString().slice(0, 10), r.amount]));
     const weekend = await this.prisma.ratePlan.findFirst({ where: { unitId, active: true } });
     const breakdown = dates.map((date) => { const key = date.toISOString().slice(0, 10); const special = byDate.get(key); const isWeekend = [0, 6].includes(date.getUTCDay()); const amount = special ?? (isWeekend && weekend ? unit.basePrice.mul(weekend.weekendMultiplier) : unit.basePrice); return { date: key, amount: amount.toFixed(2), source: special ? 'SPECIAL_DATE' : isWeekend && weekend ? 'WEEKEND' : 'BASE' }; });
