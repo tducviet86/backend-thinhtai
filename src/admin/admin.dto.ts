@@ -7,6 +7,7 @@ export class CustomerDto {
   @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value) @IsString() @Length(5, 30) phone!: string;
   @IsOptional() @IsEmail() email?: string | null;
   @IsOptional() @IsString() @MaxLength(2000) notes?: string;
+  @IsOptional() @IsString() @MaxLength(80) nationality?: string;
 }
 export class StayDto {
   @IsUUID() unitId!: string;
@@ -37,6 +38,12 @@ export class BlockDto {
   @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value) @IsString() @Length(3, 500) reason!: string;
 }
 export class UnitDto {
+  @IsOptional() @IsString() @Length(1, 150) nameEn?: string;
+  @IsOptional() @IsString() @MaxLength(20000) descriptionVi?: string;
+  @IsOptional() @IsString() @MaxLength(20000) descriptionEn?: string;
+  @IsOptional() @IsString() @MaxLength(80) viewType?: string;
+  @IsOptional() @IsArray() @ArrayUnique() @IsUUID('all', { each: true }) amenityIds?: string[];
+
   @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value) @IsString() @Length(1, 150) nameVi!: string;
   @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(9999999999) basePrice!: number;
   @IsInt() @Min(1) @Max(100) maxGuests!: number;
@@ -71,6 +78,9 @@ export class CreateUnitDto extends UnitDto {
   @IsNumber({ maxDecimalPlaces: 4 }) @Min(0) @Max(1) depositRate!: number;
 }
 export class PropertyDto {
+  @IsOptional() @IsString() @MaxLength(20000) descriptionVi?: string;
+  @IsOptional() @IsString() @MaxLength(20000) descriptionEn?: string;
+
   @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value) @IsString() @Length(2, 150) name!: string;
   @IsUUID() locationId!: string;
   @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value) @IsString() @Length(5, 300) address!: string;
@@ -79,4 +89,14 @@ export class PropertyDto {
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) checkInTime!: string;
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) checkOutTime!: string;
   @IsIn(['DRAFT', 'ACTIVE', 'INACTIVE', 'ARCHIVED']) status!: 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+}
+
+export class EditUnitDto extends UnitDto {
+  @IsOptional() @IsInt() @Min(0) @Max(50) bedroomCount?: number;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 1 }) @Min(1) @Max(50) bathroomCount?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(100) bedCount?: number;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(1) @Max(10000) area?: number;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(9999999999) cleaningFee?: number;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 4 }) @Min(0) @Max(1) serviceFeeRate?: number;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 4 }) @Min(0) @Max(1) depositRate?: number;
 }

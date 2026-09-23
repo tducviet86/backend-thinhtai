@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req }
 import { Request } from 'express';
 import { RequirePermissions as Can } from '../common/decorators/permissions.decorator';
 import { AdminService } from './admin.service';
-import { AdminBookingDto, CreateUnitDto, PropertyDto, BlockDto, CustomerDto, PaymentDto, RoleDto, StaffAccessDto, StaffDto, StayDto, TransitionDto, UnitDto } from './admin.dto';
+import { AdminBookingDto, EditUnitDto, CreateUnitDto, PropertyDto, BlockDto, CustomerDto, PaymentDto, RoleDto, StaffAccessDto, StaffDto, StayDto, TransitionDto } from './admin.dto';
 @Controller({ path: 'admin', version: '1' })
 export class AdminController {
   constructor(private readonly service: AdminService) {}
@@ -16,8 +16,9 @@ export class AdminController {
   @Get('customers') @Can('customer.read') customers() { return this.service.customers(); }
   @Post('customers') @Can('customer.create') customer(@Body() dto: CustomerDto, @Req() req: Request) { return this.service.customer(dto, req.user!.sub); }
   @Patch('customers/:id') @Can('customer.update') updateCustomer(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CustomerDto, @Req() req: Request) { return this.service.customer(dto, req.user!.sub, id); }
+  @Get('amenities') @Can('unit.read') amenities() { return this.service.amenities(); }
   @Get('units') @Can('unit.read') units() { return this.service.units(); }
-  @Patch('units/:id') @Can('unit.update', 'pricing.update', 'unit.publish') unit(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UnitDto, @Req() req: Request) { return this.service.unit(id, dto, req.user!.sub); }
+  @Patch('units/:id') @Can('unit.update', 'pricing.update', 'unit.publish') unit(@Param('id', ParseUUIDPipe) id: string, @Body() dto: EditUnitDto, @Req() req: Request) { return this.service.unit(id, dto, req.user!.sub); }
   @Post('units') @Can('unit.create', 'pricing.update', 'unit.publish') createUnit(@Body() dto: CreateUnitDto, @Req() req: Request) { return this.service.createUnit(dto, req.user!.sub); }
   @Get('locations') @Can('property.read') locations() { return this.service.locations(); }
   @Post('properties') @Can('property.create', 'property.publish') createProperty(@Body() dto: PropertyDto, @Req() req: Request) { return this.service.property(dto, req.user!.sub); }

@@ -8,7 +8,7 @@ import { BookingStateService } from '../bookings/booking-state.service';
 import { parseStay } from '../common/date-interval';
 import { PricingService } from '../pricing/pricing.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdminBookingDto, CreateUnitDto, PropertyDto, BlockDto, CustomerDto, PaymentDto, RoleDto, StaffAccessDto, StaffDto, StayDto, TransitionDto, UnitDto } from './admin.dto';
+import { AdminBookingDto, EditUnitDto, CreateUnitDto, PropertyDto, BlockDto, CustomerDto, PaymentDto, RoleDto, StaffAccessDto, StaffDto, StayDto, TransitionDto } from './admin.dto';
 const bookingInclude = { customer: true, unit: { select: { id: true, nameVi: true, publicCode: true } }, payments: { orderBy: { createdAt: 'desc' as const } } };
 @Injectable()
 export class AdminService {
@@ -81,13 +81,27 @@ export class AdminService {
   }
   customers() { return this.db.customer.findMany({ orderBy: { createdAt: 'desc' }, take: 1000, include: { _count: { select: { bookings: true } } } }); }
   customer(dto: CustomerDto, actor: string, id?: string) { return this.db.$transaction(async tx => { const c = id ? await tx.customer.update({ where: { id }, data: dto }) : await tx.customer.create({ data: dto }); await this.log(tx, actor, id ? 'customer.update' : 'customer.create', 'Customer', c.id); return c; }); }
-  units() { return this.db.unit.findMany({ orderBy: { publicCode: 'asc' }, include: { property: { select: { name: true } } } }); }
-  unit(id: string, dto: UnitDto, actor: string) { return this.db.$transaction(async tx => { const u = await tx.unit.update({ where: { id }, data: dto }); await this.log(tx, actor, 'unit.update', 'Unit', id, { ...dto }); return u; }); }
+  units() { return this.db.unit.findMany({ orderBy: { publicCode: 'asc' }, include: { property: { select: { name: true } }, amenities: { include: { amenity: true } }, media: { orderBy: { sortOrder: 'asc' }, include: { media: true } } } }); }
+  amenities() { return this.db.amenity.findMany({ orderBy: [{ category: 'asc' }, { nameVi: 'asc' }] }); }
+  unit(id: string, dto: EditUnitDto, actor: string) {
+    return this.db.$transaction(async tx => {
+      const { amenityIds, ...data } = dto;
+      if (amenityIds) {
+        const count = await tx.amenity.count({ where: { id: { in: amenityIds } } });
+        if (count !== amenityIds.length) throw new BadRequestException('Tiện ích không hợp lệ.');
+        await tx.unitAmenity.deleteMany({ where: { unitId: id } });
+        await tx.unitAmenity.createMany({ data: amenityIds.map(amenityId => ({ unitId: id, amenityId })) });
+      }
+      const u = await tx.unit.update({ where: { id }, data: { ...data, ...(dto.status === 'PUBLISHED' ? { publishedAt: new Date() } : {}) } });
+      await this.log(tx, actor, 'unit.update', 'Unit', id, { ...dto }); return u;
+    });
+  }
   async createUnit(dto: CreateUnitDto, actor: string) {
     if (await this.db.unit.findUnique({ where: { publicCode: dto.publicCode } })) throw new ConflictException('Mã căn hộ đã tồn tại.');
     const slug = `apartment-${randomBytes(6).toString('hex')}`;
     return this.db.$transaction(async tx => {
-      const u = await tx.unit.create({ data: { ...dto, internalCode: dto.publicCode, nameEn: dto.nameVi, slugVi: slug, slugEn: slug, descriptionVi: dto.nameVi, descriptionEn: dto.nameVi, publishedAt: dto.status === 'PUBLISHED' ? new Date() : null } });
+      const { amenityIds, ...data } = dto;
+      const u = await tx.unit.create({ data: { ...data, internalCode: dto.publicCode, nameEn: dto.nameEn || dto.nameVi, slugVi: slug, slugEn: slug, descriptionVi: dto.descriptionVi ?? '', descriptionEn: dto.descriptionEn ?? '', amenities: amenityIds ? { create: amenityIds.map(amenityId => ({ amenityId })) } : undefined, publishedAt: dto.status === 'PUBLISHED' ? new Date() : null } });
       await this.log(tx, actor, 'unit.create', 'Unit', u.id); return u;
     });
   }
@@ -95,7 +109,7 @@ export class AdminService {
   property(dto: PropertyDto, actor: string, id?: string) {
     return this.db.$transaction(async tx => {
       const slug = `property-${randomBytes(6).toString('hex')}`;
-      const p = id ? await tx.property.update({ where: { id }, data: dto }) : await tx.property.create({ data: { ...dto, slugVi: slug, slugEn: slug, descriptionVi: dto.name, descriptionEn: dto.name, publishedAt: dto.status === 'ACTIVE' ? new Date() : null } });
+      const p = id ? await tx.property.update({ where: { id }, data: dto }) : await tx.property.create({ data: { ...dto, slugVi: slug, slugEn: slug, descriptionVi: dto.descriptionVi ?? '', descriptionEn: dto.descriptionEn ?? '', publishedAt: dto.status === 'ACTIVE' ? new Date() : null } });
       await this.log(tx, actor, id ? 'property.update' : 'property.create', 'Property', p.id); return p;
     });
   }

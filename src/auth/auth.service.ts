@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
@@ -9,9 +9,10 @@ import { RegisterDto, UpdateCustomerProfileDto } from './dto/customer-auth.dto';
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService, private readonly jwt: JwtService, private readonly config: ConfigService) {}
-  async login(email: string, password: string) {
+  async login(email: string, password: string, customerOnly = false) {
     const user = await this.prisma.user.findUnique({ where: { email: email.toLowerCase() }, include: { roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } } } });
     if (!user || user.status !== 'ACTIVE' || !(await argon2.verify(user.passwordHash, password))) throw new UnauthorizedException('Invalid credentials');
+    if (customerOnly && user.roles.length) throw new ForbiddenException('Tài khoản quản trị cần đăng nhập tại trang admin. Vui lòng dùng tài khoản khách hàng riêng.');
     return this.issue(user.id, user.email, user.tokenVersion, [...new Set(user.roles.flatMap((r) => r.role.permissions.map((p) => p.permission.code)))]);
   }
   async register(dto: RegisterDto) {
