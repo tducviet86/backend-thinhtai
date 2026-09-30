@@ -1,1 +1,4 @@
-import{Module}from'@nestjs/common';import{PropertiesController}from'./properties.controller';@Module({controllers:[PropertiesController]})export class PropertiesModule{}
+import { Module } from "@nestjs/common";
+import { PropertiesController } from "./properties.controller";
+@Module({ controllers: [PropertiesController] })
+export class PropertiesModule {}

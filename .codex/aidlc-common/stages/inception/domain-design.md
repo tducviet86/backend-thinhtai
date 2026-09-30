@@ -64,6 +64,7 @@ This stage does NOT decide deployment topology (monolith, microservices, serverl
 ### Step 2: Create Design Plan with Questions
 
 Create `<record>/inception/domain-design/domain-design-questions.md` with context-appropriate questions using [Answer]: tag format:
+
 - Component boundary decisions (what is a distinct building block, and why)
 - Entity ownership (each entity has exactly one owning component — ambiguity is a design smell)
 - Component responsibilities (what business logic each block owns)
@@ -74,6 +75,7 @@ Create `<record>/inception/domain-design/domain-design-questions.md` with contex
 ### Step 3: Collect and Analyze Answers
 
 Collect answers following stage-protocol.md §3 question flow (offer interaction mode choice, collect answers, write back to file).
+
 - MANDATORY ambiguity analysis: scan for vague language, contradictions, missing details
 - Create follow-up questions if ANY ambiguity found
 - Resolve all ambiguities before proceeding
@@ -88,28 +90,28 @@ Create `<record>/inception/domain-design/components.md`. This single artifact ca
 
 ```yaml
 components:
-  - name: <ComponentName>              # PascalCase, unique
+  - name: <ComponentName> # PascalCase, unique
     summary: <one-line purpose>
     behaviour: >
       <business rules, validation logic, security constraints, key behaviours — be specific>
     responsibilities:
       - <what this component owns>
-    depends_on:                        # components it CALLS ([] if none)
+    depends_on: # components it CALLS ([] if none)
       - component: <OtherComponentName>
         interaction: <why / what for>
         style: <sync | async | event>
-    dependents:                        # components that CALL this one ([] if none)
+    dependents: # components that CALL this one ([] if none)
       - component: <OtherComponentName>
         interaction: <why / what for>
-    external_dependencies:             # infra / third-party this component USES (optional)
+    external_dependencies: # infra / third-party this component USES (optional)
       - name: <e.g. PostgreSQL | Redis | Stripe API>
         kind: <database | cache | queue | object-store | third-party-api | other>
         purpose: <what it's used for>
-    entities:                          # entities owned by THIS component ([] if none)
+    entities: # entities owned by THIS component ([] if none)
       - name: <EntityName>
         identifier: <attribute that uniquely identifies it>
         attributes: [<attributeName>, <attributeName>]
-        references:                    # entities in OTHER components this points to (optional)
+        references: # entities in OTHER components this points to (optional)
           - entity: <OtherEntityName>
             owned_by: <OwningComponentName>
             relationship: <plain-language, e.g. "each Order belongs to one Customer">
@@ -184,6 +186,7 @@ That `report` call owns every lifecycle transition and advancement; never perfor
 ### Step 8: Present Completion & Request Approval
 
 Use stage-protocol.md completion template with completion emoji: :building_construction:
+
 - Summary of components identified (count, key boundaries, entity ownership)
 - Key boundary decisions highlighted (with a pointer to the ADR log in `decisions.md`)
 - Review path: `<record>/inception/domain-design/`

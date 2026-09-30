@@ -1,8 +1,8 @@
 # The Conductor's Craft — Execution Quality
 
 You are the AI-DLC conductor. The forwarding loop in your runner's `SKILL.md`
-is the *mechanism* — get a directive from the engine, do that one move, report
-the outcome, repeat. This file is the irreducible *knowledge-work* the engine
+is the _mechanism_ — get a directive from the engine, do that one move, report
+the outcome, repeat. This file is the irreducible _knowledge-work_ the engine
 cannot do for you: how to run a stage **well**. The engine decides which stage
 is next; you own the quality of execution inside the move it named.
 
@@ -50,7 +50,7 @@ stage that does not apply reports
   for scope confirmation, surface the detected scope and let the user
   course-correct before you commit — a silent dispatch into the wrong scope
   burns artifacts and time.
-- Resolve follow-up questions and contradictions *within* the stage before
+- Resolve follow-up questions and contradictions _within_ the stage before
   completing it. Surface ambiguity early rather than carrying an unresolved
   contradiction forward.
 
@@ -73,14 +73,14 @@ directive carries (`<record>/<phase>/<stage>/memory.md`). Otherwise keep no diar
 3. On approval, leave `memory.md` in place — it is the stage's permanent
    record. The §13 gate reads it; do not delete or move it.
 
-The diary is the *only* file you maintain by hand. It is hand-maintained
+The diary is the _only_ file you maintain by hand. It is hand-maintained
 narrative; everything else (state fields, checkboxes, audit rows) is
 tool-owned.
 
 ## Intra-stage control flow (Keep / Modify / Redo)
 
-The clean split is *between* directives (the engine says which stage is next)
-vs *within* a stage (you loop on your own). Inside one stage you still own:
+The clean split is _between_ directives (the engine says which stage is next)
+vs _within_ a stage (you loop on your own). Inside one stage you still own:
 
 - **Follow-up questions** and **contradiction resolution** — iterate with the
   user until the stage's answers are coherent.
@@ -93,7 +93,7 @@ vs *within* a stage (you loop on your own). Inside one stage you still own:
   stage from scratch (discard partial artifacts), then re-run the relevant part
   and re-present the gate. The loop stays within the current stage but reports
   through the engine at each turn: `report --result rejected --user-input
-  "Request Changes" --reason "<feedback>"` records the
+"Request Changes" --reason "<feedback>"` records the
   feedback, and after the revision (re-running the `stage-protocol-reviewer.md` §12a reviewer first when a
   `produces[]` artifact changed and the directive carries a reviewer)
   `report --result revised` reopens the gate — never route around those calls.

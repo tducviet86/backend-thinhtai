@@ -12,10 +12,7 @@ import {
   resolveWorkflowSelection,
   toPosix,
 } from "./aidlc-lib.ts";
-import {
-  type GraphStage,
-  memoryDirFor,
-} from "./aidlc-graph.ts";
+import { type GraphStage, memoryDirFor } from "./aidlc-graph.ts";
 
 export type RuleEntry = { rel: string; abs: string };
 export type RuleContent = { path: string; text: string };
@@ -82,9 +79,10 @@ export function rulesContentEntries(
   });
 }
 
-export function readRuleBundle(
-  entries: RuleEntry[],
-): { content: RuleContent[]; error: string | null } {
+export function readRuleBundle(entries: RuleEntry[]): {
+  content: RuleContent[];
+  error: string | null;
+} {
   const content: RuleContent[] = [];
   const seen = new Set<string>();
   for (const entry of entries) {

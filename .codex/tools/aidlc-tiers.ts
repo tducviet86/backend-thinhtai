@@ -136,7 +136,10 @@ export const TIER_PROJECTIONS: Record<Tier, TierProjection> = {
     codex: { model: "openai.gpt-5.6-terra", effort: "medium" },
     cursor: { model: null },
     kiro: { model: null },
-    opencode: { model: "amazon-bedrock/global.anthropic.claude-sonnet-4-6", variant: "medium" },
+    opencode: {
+      model: "amazon-bedrock/global.anthropic.claude-sonnet-4-6",
+      variant: "medium",
+    },
     copilot: { model: null },
   },
   templated: {
@@ -248,7 +251,9 @@ export function projectTier<H extends Harness>(
   cap: Tier | null = null,
 ): TierProjection[H] {
   if (!isTier(t)) {
-    throw new Error(`unknown tier ${JSON.stringify(t)}; use one of ${TIERS.join(", ")}`);
+    throw new Error(
+      `unknown tier ${JSON.stringify(t)}; use one of ${TIERS.join(", ")}`,
+    );
   }
   return TIER_PROJECTIONS[capTier(t, cap)][harness];
 }
@@ -274,10 +279,19 @@ export function kiroModelDefaults(
     if (!model || !effort) continue;
     if (!(model in out)) out[model] = effort;
   }
-  const effortOrder: readonly KiroEffort[] = ["low", "medium", "high", "xhigh", "max"];
+  const effortOrder: readonly KiroEffort[] = [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ];
   for (const { model, effort } of additions) {
     const current = out[model];
-    if (!current || effortOrder.indexOf(effort) > effortOrder.indexOf(current)) {
+    if (
+      !current ||
+      effortOrder.indexOf(effort) > effortOrder.indexOf(current)
+    ) {
       out[model] = effort;
     }
   }

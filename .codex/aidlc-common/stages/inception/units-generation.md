@@ -62,6 +62,7 @@ NOTE: **Stage 2.7 produces the dependency DAG (topology). Stage 2.9 Delivery Pla
 ### Step 2: Create Decomposition Plan with Questions
 
 Create `<record>/inception/units-generation/units-generation-questions.md` with questions using [Answer]: tag format:
+
 - Unit boundary strategy (by service, by feature, by domain, by deployment target)
 - Unit granularity preference (coarse-grained vs. fine-grained)
 - Dependency ordering preferences (strict topological only, or allow parallelism between independent units)
@@ -73,6 +74,7 @@ NOTE: Do NOT ask about implementation order priorities (value-first, risk-first,
 ### Step 3: Collect and Analyze Answers
 
 Collect answers following stage-protocol.md §3 question flow (offer interaction mode choice, collect answers, write back to file).
+
 - MANDATORY ambiguity analysis: scan for vague language, contradictions, missing details
 - Create follow-up questions if ANY ambiguity found
 - Resolve all ambiguities before proceeding
@@ -80,6 +82,7 @@ Collect answers following stage-protocol.md §3 question flow (offer interaction
 ### Step 4: Get Plan Approval
 
 Present the decomposition plan to the user as a structured question:
+
 - Summarize the approach: unit boundary strategy, estimated unit count, dependency structure, and the proposed kind per unit (service/spec/ui/packaging/library) so the human confirms the design-artifact scope each unit will carry into Construction
 - Options: Approve Plan / Revise Plan
 
@@ -92,6 +95,7 @@ Present the decomposition plan to the user as a structured question:
 Based on the approved plan, generate 4 artifacts in `<record>/inception/units-generation/` (the three Unit artifacts below plus `traceability.json`, whose contents are specified at the end of this step):
 
 **unit-of-work.md:**
+
 - Unit definitions (name, description, boundaries)
 - A stable short ID `U{n}` for every Unit and its construction directory name `u{n}-{description}`. Include both in a table (`Unit ID` and `Directory`) so downstream tools can join story-map IDs to filesystem paths.
 - Unit responsibilities (what each unit owns and delivers)
@@ -101,6 +105,7 @@ Based on the approved plan, generate 4 artifacts in `<record>/inception/units-ge
 - Implementation notes and constraints per unit
 
 **unit-of-work-dependency.md:**
+
 - Dependency DAG between units (directed edges: "A depends on B"). Must be cycle-free.
 - Integration points between units (APIs, shared data, events)
 - Parallel development opportunities (sets of units with no dependency between them — multiple valid topological orderings exist)
@@ -121,6 +126,7 @@ units:
 NOTE: This artifact describes topology only. It does NOT pick a single "recommended build order" or identify a critical path — those are economic decisions made in 2.9 (Delivery Planning) using this DAG as input.
 
 **unit-of-work-story-map.md:**
+
 - Each user story mapped by `USx.y` ID to its implementing Unit `U{n}` ID and directory name
 - Stories that span multiple units (cross-cutting concerns)
 - Story implementation order within each unit
@@ -151,6 +157,7 @@ That `report` call owns every lifecycle transition and advancement; never perfor
 ### Step 7: Present Completion & Request Approval
 
 Use stage-protocol.md completion template with completion emoji: :wrench:
+
 - Summary of units defined (with each unit's kind), dependencies mapped, stories assigned
 - Review path: `<record>/inception/units-generation/`
 - Structured approval question with options: Approve (continue to Construction phase) / Request Changes

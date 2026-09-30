@@ -51,10 +51,8 @@ export type ProviderKind = "amazon-bedrock" | "builtin" | "other";
 // are on the harness's own access.
 export type BedrockOrientedHarness = Exclude<ModelHarness, "kiro" | "kiro-ide">;
 
-const HARNESS_OWNED_MODEL_ACCESS: ReadonlySet<ModelHarness> = new Set<ModelHarness>([
-  "kiro",
-  "kiro-ide",
-]);
+const HARNESS_OWNED_MODEL_ACCESS: ReadonlySet<ModelHarness> =
+  new Set<ModelHarness>(["kiro", "kiro-ide"]);
 
 export function harnessOwnsModelAccess(
   harness: ModelHarness,
@@ -81,7 +79,8 @@ export function providerMenuCopy(
   switch (harness) {
     case "claude":
       return {
-        bedrock: "records the AWS region and profile in settings.json, and the AWS MCP region in .mcp.json when present",
+        bedrock:
+          "records the AWS region and profile in settings.json, and the AWS MCP region in .mcp.json when present",
       };
     case "codex":
       return {
@@ -91,13 +90,15 @@ export function providerMenuCopy(
       // opencode.json is written only when the follow-up offer is accepted; the
       // record itself always carries the region and profile.
       return {
-        bedrock: "records the AWS region and profile, and offers to write them to opencode.json",
+        bedrock:
+          "records the AWS region and profile, and offers to write them to opencode.json",
       };
     case "copilot":
       // Copilot reaches Bedrock through BYOK environment variables that AI-DLC
       // cannot set, so that branch is tracked as manual work, not performed.
       return {
-        bedrock: "records that you set the Copilot BYOK provider variables yourself",
+        bedrock:
+          "records that you set the Copilot BYOK provider variables yourself",
       };
     case "cursor":
       return {
@@ -176,9 +177,10 @@ export function workspaceShellRefreshCommand(
   distribution: string,
 ): string {
   const invoke = invocationForHarness(harnessDir);
-  const from = invoke === "aidlc"
-    ? ""
-    : ` --from <the runtime/${distribution}/ root you copied from, or a checkout's dist/${distribution}/ tree>`;
+  const from =
+    invoke === "aidlc"
+      ? ""
+      : ` --from <the runtime/${distribution}/ root you copied from, or a checkout's dist/${distribution}/ tree>`;
   return `${invoke} config --harness ${distribution}${from}`;
 }
 
@@ -317,8 +319,7 @@ export const PROVIDER_PENDING_ACTIONS: Record<
       "Configure the provider in Cursor settings and select the intended model in the session model picker.",
   },
   "non-bedrock-provider-configuration": {
-    label:
-      "Configure the selected non-Bedrock provider in the harness.",
+    label: "Configure the selected non-Bedrock provider in the harness.",
     remediation:
       "Follow the selected harness provider documentation, configure credentials and model selection, then acknowledge the manual setup.",
   },
@@ -328,7 +329,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function unknownKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>): string[] {
+function unknownKeys(
+  value: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+): string[] {
   return Object.keys(value).filter((key) => !allowed.has(key));
 }
 
@@ -355,16 +359,24 @@ export function normalizeRuntimeRecord(value: unknown): RuntimeRecord | null {
     throw new Error(`runtime record has unknown key(s): ${unknown.join(", ")}`);
   }
   const out: RuntimeRecord = { schemaVersion: 1 };
-  for (const key of ["baselinePath", "bunPath", "aidlcPath", "cliPath"] as const) {
+  for (const key of [
+    "baselinePath",
+    "bunPath",
+    "aidlcPath",
+    "cliPath",
+  ] as const) {
     const parsed = optionalString(value, key, "runtime");
     if (parsed !== undefined) out[key] = parsed;
   }
   return out;
 }
 
-function normalizePendingActions(value: unknown): ProviderPendingAction[] | undefined {
+function normalizePendingActions(
+  value: unknown,
+): ProviderPendingAction[] | undefined {
   if (value === undefined) return undefined;
-  if (!Array.isArray(value)) throw new Error("providers.pendingActions must be an array");
+  if (!Array.isArray(value))
+    throw new Error("providers.pendingActions must be an array");
   const seen = new Set<string>();
   const out: ProviderPendingAction[] = [];
   for (const raw of value) {
@@ -375,9 +387,12 @@ function normalizePendingActions(value: unknown): ProviderPendingAction[] | unde
       !(PENDING_ACTION_IDS as readonly string[]).includes(raw.id) ||
       (raw.status !== "pending" && raw.status !== "done")
     ) {
-      throw new Error("providers.pendingActions entries require a known id and pending|done status");
+      throw new Error(
+        "providers.pendingActions entries require a known id and pending|done status",
+      );
     }
-    if (seen.has(raw.id)) throw new Error(`duplicate provider pending action ${raw.id}`);
+    if (seen.has(raw.id))
+      throw new Error(`duplicate provider pending action ${raw.id}`);
     seen.add(raw.id);
     out.push({
       id: raw.id,
@@ -387,14 +402,18 @@ function normalizePendingActions(value: unknown): ProviderPendingAction[] | unde
   return out.sort((left, right) => left.id.localeCompare(right.id));
 }
 
-export function normalizeProvidersRecord(value: unknown): ProvidersRecord | null {
+export function normalizeProvidersRecord(
+  value: unknown,
+): ProvidersRecord | null {
   if (value === undefined || value === null) return null;
   if (!isRecord(value) || value.schemaVersion !== 1) {
     throw new Error("providers record must be an object with schemaVersion 1");
   }
   const unknown = unknownKeys(value, PROVIDER_KEYS);
   if (unknown.length > 0) {
-    throw new Error(`providers record has unknown key(s): ${unknown.join(", ")}`);
+    throw new Error(
+      `providers record has unknown key(s): ${unknown.join(", ")}`,
+    );
   }
   const out: ProvidersRecord = { schemaVersion: 1 };
   if (value.provider !== undefined) {
@@ -403,7 +422,9 @@ export function normalizeProvidersRecord(value: unknown): ProvidersRecord | null
       value.provider !== "builtin" &&
       value.provider !== "other"
     ) {
-      throw new Error("providers.provider must be amazon-bedrock, builtin, or other");
+      throw new Error(
+        "providers.provider must be amazon-bedrock, builtin, or other",
+      );
     }
     out.provider = value.provider;
   }
@@ -423,7 +444,8 @@ export function normalizeProvidersRecord(value: unknown): ProvidersRecord | null
     if (typeof value[key] === "boolean") out[key] = value[key];
   }
   const pendingActions = normalizePendingActions(value.pendingActions);
-  if (pendingActions && pendingActions.length > 0) out.pendingActions = pendingActions;
+  if (pendingActions && pendingActions.length > 0)
+    out.pendingActions = pendingActions;
   return out;
 }
 
@@ -441,7 +463,9 @@ export function normalizeTrustRecord(value: unknown): TrustRecord | null {
   }
   return {
     schemaVersion: 1,
-    ...(typeof value.reviewed === "boolean" ? { reviewed: value.reviewed } : {}),
+    ...(typeof value.reviewed === "boolean"
+      ? { reviewed: value.reviewed }
+      : {}),
   };
 }
 
@@ -477,10 +501,17 @@ export function normalizeProjectChoicesRecord(
   return out;
 }
 
-export function readConfigDiagnosticRecords(harnessRoot: string): ConfigDiagnosticRecords {
+export function readConfigDiagnosticRecords(
+  harnessRoot: string,
+): ConfigDiagnosticRecords {
   const path = join(harnessRoot, "tools", "data", "harness.json");
-  const value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
-  const policyKeys = ["models", "flags"].filter((key) => Object.hasOwn(value, key));
+  const value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+    string,
+    unknown
+  >;
+  const policyKeys = ["models", "flags"].filter((key) =>
+    Object.hasOwn(value, key),
+  );
   if (policyKeys.length > 0) {
     throw new Error(
       `${path}: harness.json contains legacy policy key(s) ${policyKeys.join(", ")}. ` +
@@ -514,7 +545,10 @@ function pathEntries(value: string, platform: NodeJS.Platform): string[] {
   return value.split(platform === "win32" ? ";" : delimiter).filter(Boolean);
 }
 
-function executableCandidates(command: string, platform: NodeJS.Platform): string[] {
+function executableCandidates(
+  command: string,
+  platform: NodeJS.Platform,
+): string[] {
   if (platform !== "win32" || extname(command)) return [command];
   return [command, `${command}.exe`, `${command}.cmd`, `${command}.bat`];
 }
@@ -553,10 +587,11 @@ export function deriveNonInteractivePath(
       "-Command",
       "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')",
     ]);
-    if (result.status === 0 && result.stdout.trim()) return result.stdout.trim();
+    if (result.status === 0 && result.stdout.trim())
+      return result.stdout.trim();
     return env.SystemRoot
       ? `${join(env.SystemRoot, "System32")};${env.SystemRoot}`
-      : env.PATH ?? "";
+      : (env.PATH ?? "");
   }
   const result = run("getconf", ["PATH"]);
   const entries = pathEntries(
@@ -569,7 +604,10 @@ export function deriveNonInteractivePath(
     for (const path of ["/etc/paths"]) {
       if (!existsSync(path)) continue;
       entries.push(
-        ...readFileSync(path, "utf-8").split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
+        ...readFileSync(path, "utf-8")
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean),
       );
     }
     const pathsDir = "/etc/paths.d";
@@ -579,7 +617,10 @@ export function deriveNonInteractivePath(
         try {
           if (!statSync(path).isFile()) continue;
           entries.push(
-            ...readFileSync(path, "utf-8").split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
+            ...readFileSync(path, "utf-8")
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter(Boolean),
           );
         } catch {
           // Ignore unreadable system path fragments.
@@ -598,7 +639,10 @@ function walkTextFiles(root: string): string[] {
       for (const entry of readdirSync(path, { withFileTypes: true })) {
         const child = join(path, entry.name);
         if (entry.isDirectory()) visit(child);
-        else if (entry.isFile() && /\.(?:json|jsonc|hook|md|toml)$/.test(entry.name)) {
+        else if (
+          entry.isFile() &&
+          /\.(?:json|jsonc|hook|md|toml)$/.test(entry.name)
+        ) {
           files.push(child);
         }
       }
@@ -677,8 +721,10 @@ function binaryProbe(
 ): RuntimeBinaryProbe {
   if (!required) return { name, required, status: "not-required" };
   const platform = options.platform ?? hostPlatform();
-  const which = options.which ?? ((command: string, pathValue: string) =>
-    resolveExecutableOnPath(command, pathValue, platform));
+  const which =
+    options.which ??
+    ((command: string, pathValue: string) =>
+      resolveExecutableOnPath(command, pathValue, platform));
   const baseline = which(name, baselinePath);
   const interactive = which(name, interactivePath);
   if (baseline) {
@@ -731,12 +777,14 @@ const HARNESS_CLI: Record<
     command: "copilot",
     required: false,
     minimumVersion: "1.0.74",
-    install: "Install @github/copilot 1.0.74 or later for CLI use; VS Code-only installs may omit it.",
+    install:
+      "Install @github/copilot 1.0.74 or later for CLI use; VS Code-only installs may omit it.",
   },
   cursor: {
     command: "cursor",
     required: false,
-    install: "Install the Cursor CLI and ensure `cursor --version` works; IDE-only installs may omit it.",
+    install:
+      "Install the Cursor CLI and ensure `cursor --version` works; IDE-only installs may omit it.",
   },
   kiro: {
     command: "kiro-cli",
@@ -756,9 +804,7 @@ const HARNESS_CLI: Record<
 
 function versionTuple(value: string): [number, number, number] | null {
   const match = value.match(/(\d+)\.(\d+)\.(\d+)/);
-  return match
-    ? [Number(match[1]), Number(match[2]), Number(match[3])]
-    : null;
+  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
 }
 
 function versionAtLeast(value: string, minimum: string): boolean {
@@ -788,8 +834,10 @@ export function probeHarnessCli(
   const env = options.env ?? process.env;
   const platform = options.platform ?? hostPlatform();
   const interactivePath = options.interactivePath ?? env.PATH ?? "";
-  const which = options.which ?? ((command: string, pathValue: string) =>
-    resolveExecutableOnPath(command, pathValue, platform));
+  const which =
+    options.which ??
+    ((command: string, pathValue: string) =>
+      resolveExecutableOnPath(command, pathValue, platform));
   const path = which(spec.command, interactivePath);
   if (!path) {
     return {
@@ -849,57 +897,68 @@ export function probeRuntime(
   const interactivePath = options.interactivePath ?? env.PATH ?? "";
   const commandFiles = runtimeCommandFiles(projectDir, harnessDir);
   const requirements = runtimeRequirements(
-    commandFiles.filter((file) =>
-      !file.replaceAll("\\", "/").includes("/skills/")
+    commandFiles.filter(
+      (file) => !file.replaceAll("\\", "/").includes("/skills/"),
     ),
   );
   return {
     baselinePath,
     commandFiles,
     binaries: [
-      binaryProbe("bun", requirements.bun, baselinePath, interactivePath, options),
-      binaryProbe("aidlc", requirements.aidlc, baselinePath, interactivePath, options),
+      binaryProbe(
+        "bun",
+        requirements.bun,
+        baselinePath,
+        interactivePath,
+        options,
+      ),
+      binaryProbe(
+        "aidlc",
+        requirements.aidlc,
+        baselinePath,
+        interactivePath,
+        options,
+      ),
     ],
-    cli: options.includeHarnessCli === false
-      ? {
-          harness,
-          required: false,
-          status: "not-applicable",
-        }
-      : probeHarnessCli(harness, options),
+    cli:
+      options.includeHarnessCli === false
+        ? {
+            harness,
+            required: false,
+            status: "not-applicable",
+          }
+        : probeHarnessCli(harness, options),
   };
 }
 
-export function runtimeIssues(diagnostics: RuntimeDiagnostics): DiagnosticIssue[] {
+export function runtimeIssues(
+  diagnostics: RuntimeDiagnostics,
+): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
   for (const binary of diagnostics.binaries) {
     if (binary.status === "found" || binary.status === "not-required") continue;
     issues.push({
       id: `runtime-${binary.name}-${binary.status}`,
-      message: binary.status === "interactive-only"
-        ? `${binary.name} resolves only through the interactive PATH at ${binary.interactivePath}`
-        : `${binary.name} is absent from the non-interactive hook PATH`,
+      message:
+        binary.status === "interactive-only"
+          ? `${binary.name} resolves only through the interactive PATH at ${binary.interactivePath}`
+          : `${binary.name} is absent from the non-interactive hook PATH`,
       remediation: binary.remediation ?? `Install ${binary.name}.`,
     });
   }
-  if (
-    diagnostics.cli.status === "missing" &&
-    diagnostics.cli.required
-  ) {
+  if (diagnostics.cli.status === "missing" && diagnostics.cli.required) {
     issues.push({
       id: "runtime-harness-cli-missing",
       message: `${diagnostics.cli.command} is required for ${diagnostics.cli.harness} but is not on PATH`,
-      remediation: diagnostics.cli.remediation ?? "Install the selected harness CLI.",
+      remediation:
+        diagnostics.cli.remediation ?? "Install the selected harness CLI.",
     });
-  } else if (
-    diagnostics.cli.status === "too-old" &&
-    diagnostics.cli.required
-  ) {
+  } else if (diagnostics.cli.status === "too-old" && diagnostics.cli.required) {
     issues.push({
       id: "runtime-harness-cli-old",
-      message:
-        `${diagnostics.cli.command} ${diagnostics.cli.version || "unknown"} is below ${diagnostics.cli.minimumVersion}`,
-      remediation: diagnostics.cli.remediation ?? "Upgrade the selected harness CLI.",
+      message: `${diagnostics.cli.command} ${diagnostics.cli.version || "unknown"} is below ${diagnostics.cli.minimumVersion}`,
+      remediation:
+        diagnostics.cli.remediation ?? "Upgrade the selected harness CLI.",
     });
   }
   return issues;
@@ -1002,7 +1061,8 @@ export function requiredProviderActions(
   harness: ModelHarness,
 ): ProviderPendingActionId[] {
   if (harnessOwnsModelAccess(harness)) return [];
-  if (record.provider === "other") return ["non-bedrock-provider-configuration"];
+  if (record.provider === "other")
+    return ["non-bedrock-provider-configuration"];
   // The harness provides its own model access: nothing to write, nothing to do.
   if (record.provider === "builtin") return [];
   if (record.provider !== "amazon-bedrock") return [];
@@ -1027,9 +1087,10 @@ export function reconcileProviderActions(
       id === "non-bedrock-provider-configuration";
     return {
       id,
-      status: record.acknowledged && acknowledgeGated
-        ? "done"
-        : current.get(id) ?? "pending",
+      status:
+        record.acknowledged && acknowledgeGated
+          ? "done"
+          : (current.get(id) ?? "pending"),
     } as ProviderPendingAction;
   });
   return normalizeProvidersRecord({
@@ -1046,7 +1107,8 @@ export function pendingProviderIssues(
   return (record.pendingActions ?? [])
     .filter((action) => action.status === "pending")
     .map((action) => {
-      const detail = PROVIDER_PENDING_ACTIONS[action.id as ProviderPendingActionId];
+      const detail =
+        PROVIDER_PENDING_ACTIONS[action.id as ProviderPendingActionId];
       return {
         id: action.id,
         message: detail.label,
@@ -1065,7 +1127,10 @@ function writeClaudeProvider(
   record: ProvidersRecord,
 ): void {
   const settingsPath = join(projectionRoot, harnessDir, "settings.json");
-  const settings = JSON.parse(readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
+  const settings = JSON.parse(readFileSync(settingsPath, "utf-8")) as Record<
+    string,
+    unknown
+  >;
   const env = isRecord(settings.env) ? { ...settings.env } : {};
   env.AWS_REGION = record.region;
   if (record.profile) env.AWS_PROFILE = record.profile;
@@ -1075,7 +1140,10 @@ function writeClaudeProvider(
 
   const mcpPath = join(projectionRoot, ".mcp.json");
   if (!existsSync(mcpPath)) return;
-  const mcp = JSON.parse(readFileSync(mcpPath, "utf-8")) as Record<string, unknown>;
+  const mcp = JSON.parse(readFileSync(mcpPath, "utf-8")) as Record<
+    string,
+    unknown
+  >;
   const servers = isRecord(mcp.mcpServers) ? mcp.mcpServers : {};
   const aws = isRecord(servers["aws-mcp"]) ? servers["aws-mcp"] : null;
   if (!aws || !Array.isArray(aws.args)) return;
@@ -1097,13 +1165,17 @@ function writeCodexProvider(
 ): void {
   const path = join(projectionRoot, harnessDir, "config.toml");
   const content = readFileSync(path, "utf-8");
-  const section = /(\[model_providers\.amazon-bedrock\.aws\]\r?\n)([\s\S]*?)(?=\r?\n\[|$)/;
+  const section =
+    /(\[model_providers\.amazon-bedrock\.aws\]\r?\n)([\s\S]*?)(?=\r?\n\[|$)/;
   const match = section.exec(content);
-  if (!match) throw new Error(`${path}: missing amazon-bedrock aws provider section`);
+  if (!match)
+    throw new Error(`${path}: missing amazon-bedrock aws provider section`);
   const profile = record.profile ?? "default";
   const lines = match[2].split(/\r?\n/).map((line) => {
-    if (/^profile\s*=/.test(line)) return `profile = ${JSON.stringify(profile)}`;
-    if (/^region\s*=/.test(line)) return `region = ${JSON.stringify(record.region)}`;
+    if (/^profile\s*=/.test(line))
+      return `profile = ${JSON.stringify(profile)}`;
+    if (/^region\s*=/.test(line))
+      return `region = ${JSON.stringify(record.region)}`;
     return line;
   });
   writeFileSync(
@@ -1129,10 +1201,15 @@ export function preserveKiroMcpRegion(
   const currentPath = join(projectDir, relative);
   const stagedPath = join(stagedRoot, relative);
   if (!existsSync(currentPath) || !existsSync(stagedPath)) return;
-  const awsArgs = (path: string): { value: Record<string, unknown>; args: unknown[] } | null => {
+  const awsArgs = (
+    path: string,
+  ): { value: Record<string, unknown>; args: unknown[] } | null => {
     let value: Record<string, unknown>;
     try {
-      value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+      value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+        string,
+        unknown
+      >;
     } catch {
       return null;
     }
@@ -1143,18 +1220,21 @@ export function preserveKiroMcpRegion(
   const current = awsArgs(currentPath);
   const staged = awsArgs(stagedPath);
   if (!current || !staged) return;
-  const endpoint = current.args.find((arg): arg is string =>
-    typeof arg === "string" && /^https:\/\/aws-mcp\.[^.]+\.api\.aws\/mcp$/.test(arg)
+  const endpoint = current.args.find(
+    (arg): arg is string =>
+      typeof arg === "string" &&
+      /^https:\/\/aws-mcp\.[^.]+\.api\.aws\/mcp$/.test(arg),
   );
-  const metadata = current.args.find((arg): arg is string =>
-    typeof arg === "string" && /^AWS_REGION=/.test(arg)
+  const metadata = current.args.find(
+    (arg): arg is string => typeof arg === "string" && /^AWS_REGION=/.test(arg),
   );
   if (!endpoint && !metadata) return;
   const servers = staged.value.mcpServers as Record<string, unknown>;
   const aws = servers["aws-mcp"] as Record<string, unknown>;
   aws.args = staged.args.map((arg) => {
     if (typeof arg !== "string") return arg;
-    if (endpoint && /^https:\/\/aws-mcp\.[^.]+\.api\.aws\/mcp$/.test(arg)) return endpoint;
+    if (endpoint && /^https:\/\/aws-mcp\.[^.]+\.api\.aws\/mcp$/.test(arg))
+      return endpoint;
     if (metadata && /^AWS_REGION=/.test(arg)) return metadata;
     return arg;
   });
@@ -1170,14 +1250,16 @@ export function preserveKiroMcpRegion(
   writeJson(stagedPath, staged.value);
 }
 
-
 function writeOpenCodeProvider(
   projectionRoot: string,
   record: ProvidersRecord,
 ): void {
   if (!record.opencodeDefault) return;
   const path = join(projectionRoot, "opencode.json");
-  const value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+  const value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+    string,
+    unknown
+  >;
   const providers = isRecord(value.provider) ? { ...value.provider } : {};
   const existing = isRecord(providers["amazon-bedrock"])
     ? providers["amazon-bedrock"]
@@ -1201,7 +1283,10 @@ function writeClaudeFlags(
 ): void {
   if (!record.defaultScope) return;
   const path = join(projectionRoot, harnessDir, "settings.json");
-  const value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+  const value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+    string,
+    unknown
+  >;
   const env = isRecord(value.env) ? { ...value.env } : {};
   env.AWS_AIDLC_DEFAULT_SCOPE = record.defaultScope;
   value.env = env;
@@ -1247,11 +1332,14 @@ export function providerFiles(
   record: ProvidersRecord | null,
 ): DiagnosticFileSetting[] {
   const harnessData = join(harnessDir, "tools", "data", "harness.json");
-  const files: DiagnosticFileSetting[] = [{
-    setting: "provider answers and pending actions",
-    file: harnessData,
-  }];
-  if (harnessOwnsModelAccess(harness) || record?.provider !== "amazon-bedrock") return files;
+  const files: DiagnosticFileSetting[] = [
+    {
+      setting: "provider answers and pending actions",
+      file: harnessData,
+    },
+  ];
+  if (harnessOwnsModelAccess(harness) || record?.provider !== "amazon-bedrock")
+    return files;
   if (harness === "claude") {
     files.push({
       setting: "AWS region and profile",
@@ -1284,7 +1372,9 @@ export function availableScopeNames(harnessRoot: string): string[] {
   const root = join(harnessRoot, "scopes");
   if (!existsSync(root)) return [];
   const names = new Set<string>();
-  for (const file of readdirSync(root).filter((name) => name.endsWith(".md")).sort()) {
+  for (const file of readdirSync(root)
+    .filter((name) => name.endsWith(".md"))
+    .sort()) {
     const path = join(root, file);
     let content = "";
     try {
@@ -1293,7 +1383,9 @@ export function availableScopeNames(harnessRoot: string): string[] {
       continue;
     }
     const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)?.[1];
-    const name = frontmatter ? /^name:\s*([a-z][a-z0-9-]*)\s*$/m.exec(frontmatter)?.[1] : null;
+    const name = frontmatter
+      ? /^name:\s*([a-z][a-z0-9-]*)\s*$/m.exec(frontmatter)?.[1]
+      : null;
     if (name) names.add(name);
   }
   return [...names].sort();
@@ -1313,9 +1405,7 @@ export function recordedFlagValue(
   record: ProjectFlagsRecord,
   envName: string,
 ): string | undefined {
-  if (
-    (RECORDABLE_PROJECT_BYPASSES as readonly string[]).includes(envName)
-  ) {
+  if ((RECORDABLE_PROJECT_BYPASSES as readonly string[]).includes(envName)) {
     return record.bypasses?.includes(
       envName as (typeof RECORDABLE_PROJECT_BYPASSES)[number],
     )
@@ -1337,14 +1427,16 @@ export function effectiveProjectFlagValues(
     ...FLAG_ENV_FIELDS.map((item) => item.env),
     ...RECORDABLE_PROJECT_BYPASSES,
   ];
-  return Object.fromEntries(names.map((name) => [
-    name,
-    Object.hasOwn(env, name)
-      ? env[name]
-      : record
-      ? recordedFlagValue(record, name)
-      : undefined,
-  ]));
+  return Object.fromEntries(
+    names.map((name) => [
+      name,
+      Object.hasOwn(env, name)
+        ? env[name]
+        : record
+          ? recordedFlagValue(record, name)
+          : undefined,
+    ]),
+  );
 }
 
 export function flagFiles(
@@ -1358,14 +1450,18 @@ export function flagFiles(
   for (const [layer, info] of Object.entries(resolved.files)) {
     if (!info.present) continue;
     const target = layer === "machine" ? "global" : layer;
-    if (!readSettingsTarget(projectDir, target as "global" | "project" | "local")?.flags) {
+    if (
+      !readSettingsTarget(projectDir, target as "global" | "project" | "local")
+        ?.flags
+    ) {
       continue;
     }
     files.push({
       setting: `${layer} flag policy`,
-      file: layer === "machine"
-        ? info.path
-        : relative(projectDir, info.path).replaceAll("\\", "/") || info.path,
+      file:
+        layer === "machine"
+          ? info.path
+          : relative(projectDir, info.path).replaceAll("\\", "/") || info.path,
     });
   }
   if (record?.defaultScope && harness === "claude") {
@@ -1398,38 +1494,40 @@ export function flagIssues(
     ) {
       issues.push({
         id: `flag-env-override-${envName.toLowerCase().replaceAll("_", "-")}`,
-        message:
-          `${envName}=${JSON.stringify(env[envName])} overrides the recorded answer ${
-            envName === "AIDLC_USE_SWARM" || envName === "AIDLC_HOOK_DEBUG"
-              ? record[
-                  envName === "AIDLC_USE_SWARM" ? "swarm" : "hookDebug"
-                ] === true
-                ? "on"
-                : "off"
-              : JSON.stringify(recorded)
-          }`,
-        remediation:
-          `Unset ${envName} to use the recorded project answer, or update the record to match the intended environment override.`,
+        message: `${envName}=${JSON.stringify(env[envName])} overrides the recorded answer ${
+          envName === "AIDLC_USE_SWARM" || envName === "AIDLC_HOOK_DEBUG"
+            ? record[envName === "AIDLC_USE_SWARM" ? "swarm" : "hookDebug"] ===
+              true
+              ? "on"
+              : "off"
+            : JSON.stringify(recorded)
+        }`,
+        remediation: `Unset ${envName} to use the recorded project answer, or update the record to match the intended environment override.`,
       });
     }
   }
   if (record.defaultScope && harness === "claude") {
     const path = join(projectDir, harnessDir, "settings.json");
     try {
-      const value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+      const value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+        string,
+        unknown
+      >;
       const settingsEnv = isRecord(value.env) ? value.env : {};
       if (settingsEnv.AWS_AIDLC_DEFAULT_SCOPE !== record.defaultScope) {
         issues.push({
           id: "flag-claude-default-scope-drift",
           message: `${path} does not carry the recorded default scope ${record.defaultScope}`,
-          remediation: "Run aidlc config flags again to reapply the recorded default scope.",
+          remediation:
+            "Run aidlc config flags again to reapply the recorded default scope.",
         });
       }
     } catch (error) {
       issues.push({
         id: "flag-claude-settings-unreadable",
         message: error instanceof Error ? error.message : String(error),
-        remediation: "Restore .claude/settings.json, then rerun aidlc config flags.",
+        remediation:
+          "Restore .claude/settings.json, then rerun aidlc config flags.",
       });
     }
   }
@@ -1442,7 +1540,10 @@ function collectPluginNames(value: unknown, names: Set<string>): void {
     return;
   }
   if (!isRecord(value)) return;
-  if (typeof value.plugin === "string" && /^[a-z][a-z0-9-]*$/.test(value.plugin)) {
+  if (
+    typeof value.plugin === "string" &&
+    /^[a-z][a-z0-9-]*$/.test(value.plugin)
+  ) {
     names.add(value.plugin);
   }
   for (const child of Object.values(value)) collectPluginNames(child, names);
@@ -1456,8 +1557,10 @@ export function discoverInstalledPluginNames(
   const dataDir = join(projectDir, harnessDir, "tools", "data");
   if (existsSync(dataDir)) {
     for (const file of readdirSync(dataDir).sort()) {
-      const match = /^(?:plugin-contrib|plugin-owned|plugin-compose)-([a-z][a-z0-9-]*)\.json$/
-        .exec(file);
+      const match =
+        /^(?:plugin-contrib|plugin-owned|plugin-compose)-([a-z][a-z0-9-]*)\.json$/.exec(
+          file,
+        );
       if (match) names.add(match[1]);
     }
     const graphPath = join(dataDir, "stage-graph.json");
@@ -1471,9 +1574,13 @@ export function discoverInstalledPluginNames(
   }
   const scopesDir = join(projectDir, harnessDir, "scopes");
   if (existsSync(scopesDir)) {
-    for (const file of readdirSync(scopesDir).filter((name) => name.endsWith(".md"))) {
-      const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/
-        .exec(readFileSync(join(scopesDir, file), "utf-8"))?.[1] ?? "";
+    for (const file of readdirSync(scopesDir).filter((name) =>
+      name.endsWith(".md"),
+    )) {
+      const frontmatter =
+        /^---\r?\n([\s\S]*?)\r?\n---/.exec(
+          readFileSync(join(scopesDir, file), "utf-8"),
+        )?.[1] ?? "";
       const plugin = /^plugin:\s*([a-z][a-z0-9-]*)\s*$/m.exec(frontmatter)?.[1];
       if (plugin) names.add(plugin);
     }
@@ -1483,7 +1590,10 @@ export function discoverInstalledPluginNames(
 
 export function readPluginSelection(harnessRoot: string): string[] | null {
   const path = join(harnessRoot, "tools", "data", "harness.json");
-  const value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+  const value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+    string,
+    unknown
+  >;
   if (!Object.hasOwn(value, "plugins")) return null;
   if (
     !Array.isArray(value.plugins) ||
@@ -1502,7 +1612,9 @@ export function completionInstruction(
   const usesBun = runtimeCommandFiles(projectDir, harnessDir).some((file) => {
     if (file.replaceAll("\\", "/").includes("/skills/")) return false;
     try {
-      return readFileSync(file, "utf-8").includes(`bun ${harnessDir}/tools/aidlc.ts`);
+      return readFileSync(file, "utf-8").includes(
+        `bun ${harnessDir}/tools/aidlc.ts`,
+      );
     } catch {
       return false;
     }
@@ -1530,16 +1642,19 @@ export function projectChoiceFiles(
   harnessDir: string,
   harness: ModelHarness,
 ): DiagnosticFileSetting[] {
-  const files: DiagnosticFileSetting[] = [{
-    setting: "plugin selection, MCP consent, and completion answer",
-    file: join(projectDir, harnessDir, "tools", "data", "harness.json"),
-  }];
+  const files: DiagnosticFileSetting[] = [
+    {
+      setting: "plugin selection, MCP consent, and completion answer",
+      file: join(projectDir, harnessDir, "tools", "data", "harness.json"),
+    },
+  ];
   const surface = projectMcpSurface(projectDir, harnessDir, harness);
   if (surface.path && existsSync(surface.path)) {
     files.push({
-      setting: surface.kind === "claude"
-        ? "consent-managed MCP server entries"
-        : "always-shipped MCP server configuration",
+      setting:
+        surface.kind === "claude"
+          ? "consent-managed MCP server entries"
+          : "always-shipped MCP server configuration",
       file: surface.path,
     });
   }
@@ -1603,7 +1718,8 @@ export function projectChoiceIssues(
       issues.push({
         id: "project-plugin-unknown",
         message: `Recorded plugin ${plugin} is not installed`,
-        remediation: "Install the plugin or rerun aidlc config project with the installed plugin set.",
+        remediation:
+          "Install the plugin or rerun aidlc config project with the installed plugin set.",
       });
     }
   }
@@ -1615,7 +1731,10 @@ export function projectChoiceIssues(
   let servers = new Set<string>();
   if (existsSync(path)) {
     try {
-      const value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+      const value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+        string,
+        unknown
+      >;
       servers = new Set(
         isRecord(value.mcpServers) ? Object.keys(value.mcpServers) : [],
       );
@@ -1634,8 +1753,10 @@ export function projectChoiceIssues(
   ) {
     issues.push({
       id: "project-mcp-defaults-drift",
-      message: "Recorded MCP consent is defaults, but one or more shipped MCP entries are absent",
-      remediation: "Run aidlc config project --mcp defaults to reapply consented entries.",
+      message:
+        "Recorded MCP consent is defaults, but one or more shipped MCP entries are absent",
+      remediation:
+        "Run aidlc config project --mcp defaults to reapply consented entries.",
     });
   }
   if (
@@ -1646,7 +1767,8 @@ export function projectChoiceIssues(
     issues.push({
       id: "project-mcp-none-drift",
       message: "Recorded MCP consent is none, but shipped MCP entries remain",
-      remediation: "Run aidlc config project --mcp none to remove framework-owned MCP entries.",
+      remediation:
+        "Run aidlc config project --mcp none to remove framework-owned MCP entries.",
     });
   }
   return issues;
@@ -1670,10 +1792,19 @@ function providerValueIssues(
   try {
     if (harness === "claude") {
       const settingsPath = join(projectDir, harnessDir, "settings.json");
-      const settings = JSON.parse(readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
+      const settings = JSON.parse(
+        readFileSync(settingsPath, "utf-8"),
+      ) as Record<string, unknown>;
       const env = isRecord(settings.env) ? settings.env : {};
-      if (env.AWS_REGION !== record.region || (record.profile && env.AWS_PROFILE !== record.profile)) {
-        mismatch("provider-claude-settings", settingsPath, "Claude settings do not reflect the recorded AWS region/profile");
+      if (
+        env.AWS_REGION !== record.region ||
+        (record.profile && env.AWS_PROFILE !== record.profile)
+      ) {
+        mismatch(
+          "provider-claude-settings",
+          settingsPath,
+          "Claude settings do not reflect the recorded AWS region/profile",
+        );
       }
       const mcpPath = join(projectDir, ".mcp.json");
       if (existsSync(mcpPath)) {
@@ -1682,7 +1813,11 @@ function providerValueIssues(
           !text.includes(`https://aws-mcp.${record.region}.api.aws/mcp`) ||
           !text.includes(`AWS_REGION=${record.region}`)
         ) {
-          mismatch("provider-claude-mcp", mcpPath, "Claude AWS MCP settings do not reflect the recorded region");
+          mismatch(
+            "provider-claude-mcp",
+            mcpPath,
+            "Claude AWS MCP settings do not reflect the recorded region",
+          );
         }
       }
     } else if (harness === "codex") {
@@ -1690,25 +1825,44 @@ function providerValueIssues(
       const text = readFileSync(path, "utf-8");
       if (
         !text.includes(`region = ${JSON.stringify(record.region)}`) ||
-        !text.includes(`profile = ${JSON.stringify(record.profile ?? "default")}`)
+        !text.includes(
+          `profile = ${JSON.stringify(record.profile ?? "default")}`,
+        )
       ) {
-        mismatch("provider-codex", path, "Codex Bedrock settings do not reflect the recorded region/profile");
+        mismatch(
+          "provider-codex",
+          path,
+          "Codex Bedrock settings do not reflect the recorded region/profile",
+        );
       }
     } else if (harness === "opencode" && record.opencodeDefault) {
       const path = join(projectDir, "opencode.json");
-      const value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+      const value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+        string,
+        unknown
+      >;
       const providers = isRecord(value.provider) ? value.provider : {};
-      const bedrock = isRecord(providers["amazon-bedrock"]) ? providers["amazon-bedrock"] : {};
+      const bedrock = isRecord(providers["amazon-bedrock"])
+        ? providers["amazon-bedrock"]
+        : {};
       const options = isRecord(bedrock.options) ? bedrock.options : {};
-      if (options.region !== record.region || (record.profile && options.profile !== record.profile)) {
-        mismatch("provider-opencode", path, "OpenCode Bedrock provider options do not reflect the recorded region/profile");
+      if (
+        options.region !== record.region ||
+        (record.profile && options.profile !== record.profile)
+      ) {
+        mismatch(
+          "provider-opencode",
+          path,
+          "OpenCode Bedrock provider options do not reflect the recorded region/profile",
+        );
       }
     }
   } catch (error) {
     issues.push({
       id: "provider-surface-unreadable",
       message: error instanceof Error ? error.message : String(error),
-      remediation: "Restore the selected harness configuration files, then rerun aidlc config providers.",
+      remediation:
+        "Restore the selected harness configuration files, then rerun aidlc config providers.",
     });
   }
   return issues;
@@ -1729,7 +1883,8 @@ export function providerIssues(
   if (record.provider === "amazon-bedrock" && !credentials.hasCredentials) {
     issues.push({
       id: "provider-credentials-missing",
-      message: "No AWS credential source was found in the offline environment, profile files, or SSO cache",
+      message:
+        "No AWS credential source was found in the offline environment, profile files, or SSO cache",
       remediation:
         "Configure AWS access keys, AWS_PROFILE, an AWS role credential source, or AWS SSO locally. This check never calls AWS.",
     });
@@ -1737,14 +1892,22 @@ export function providerIssues(
   return issues;
 }
 
-function codexTrustEntries(seedText: string, projectDir: string): Array<{
+function codexTrustEntries(
+  seedText: string,
+  projectDir: string,
+): Array<{
   table: string;
   hash: string;
 }> {
-  const rendered = seedText.replaceAll("<PROJECT_DIR>", projectDir.replaceAll("\\", "/"));
-  return [...rendered.matchAll(
-    /^\[hooks\.state\."([^"]+)"\]\r?\ntrusted_hash\s*=\s*"([^"]+)"$/gm,
-  )].map((match) => ({
+  const rendered = seedText.replaceAll(
+    "<PROJECT_DIR>",
+    projectDir.replaceAll("\\", "/"),
+  );
+  return [
+    ...rendered.matchAll(
+      /^\[hooks\.state\."([^"]+)"\]\r?\ntrusted_hash\s*=\s*"([^"]+)"$/gm,
+    ),
+  ].map((match) => ({
     table: match[1],
     hash: match[2],
   }));
@@ -1761,40 +1924,54 @@ export function codexTrustIssues(
     "config.toml",
   );
   if (!existsSync(seedPath)) {
-    return [{
-      id: "codex-trust-seed-missing",
-      message: `${seedPath} is missing`,
-      remediation: "Restore the complete .codex/trust-seed.toml from the selected projection.",
-    }];
+    return [
+      {
+        id: "codex-trust-seed-missing",
+        message: `${seedPath} is missing`,
+        remediation:
+          "Restore the complete .codex/trust-seed.toml from the selected projection.",
+      },
+    ];
   }
-  const entries = codexTrustEntries(readFileSync(seedPath, "utf-8"), projectDir);
+  const entries = codexTrustEntries(
+    readFileSync(seedPath, "utf-8"),
+    projectDir,
+  );
   if (entries.length === 0) {
-    return [{
-      id: "codex-trust-seed-empty",
-      message: "The Codex trust seed contains no hook identities",
-      remediation: "Restore the complete .codex/trust-seed.toml from the selected projection.",
-    }];
+    return [
+      {
+        id: "codex-trust-seed-empty",
+        message: "The Codex trust seed contains no hook identities",
+        remediation:
+          "Restore the complete .codex/trust-seed.toml from the selected projection.",
+      },
+    ];
   }
   if (!existsSync(configPath)) {
-    return [{
-      id: "codex-hook-trust-missing",
-      message: `Codex hook trust is absent because ${configPath} does not exist`,
-      remediation:
-        "Run one Codex TUI session and choose Trust all and continue, or replace <PROJECT_DIR> in the complete trust seed and merge the complete set into $CODEX_HOME/config.toml. Until then zero Codex hooks fire. --dangerously-bypass-hook-trust does not fire them. Do not append a duplicate set.",
-    }];
+    return [
+      {
+        id: "codex-hook-trust-missing",
+        message: `Codex hook trust is absent because ${configPath} does not exist`,
+        remediation:
+          "Run one Codex TUI session and choose Trust all and continue, or replace <PROJECT_DIR> in the complete trust seed and merge the complete set into $CODEX_HOME/config.toml. Until then zero Codex hooks fire. --dangerously-bypass-hook-trust does not fire them. Do not append a duplicate set.",
+      },
+    ];
   }
   const config = readFileSync(configPath, "utf-8");
-  const missing = entries.filter(({ table, hash }) =>
-    !config.includes(`[hooks.state.${JSON.stringify(table)}]`) ||
-    !config.includes(`trusted_hash = ${JSON.stringify(hash)}`)
+  const missing = entries.filter(
+    ({ table, hash }) =>
+      !config.includes(`[hooks.state.${JSON.stringify(table)}]`) ||
+      !config.includes(`trusted_hash = ${JSON.stringify(hash)}`),
   );
   if (missing.length === 0) return [];
-  return [{
-    id: "codex-hook-trust-incomplete",
-    message: `${missing.length} of ${entries.length} Codex hook trust entries are missing`,
-    remediation:
-      "Run one Codex TUI session and choose Trust all and continue, or replace <PROJECT_DIR> in the complete trust seed and merge the complete set into $CODEX_HOME/config.toml. Until then zero Codex hooks fire. --dangerously-bypass-hook-trust does not fire them. Replace the old set; appending a duplicate set produces invalid TOML.",
-  }];
+  return [
+    {
+      id: "codex-hook-trust-incomplete",
+      message: `${missing.length} of ${entries.length} Codex hook trust entries are missing`,
+      remediation:
+        "Run one Codex TUI session and choose Trust all and continue, or replace <PROJECT_DIR> in the complete trust seed and merge the complete set into $CODEX_HOME/config.toml. Until then zero Codex hooks fire. --dangerously-bypass-hook-trust does not fire them. Replace the old set; appending a duplicate set produces invalid TOML.",
+    },
+  ];
 }
 
 // A missing sibling is repaired by the same `--harness` refresh as a missing
@@ -1807,11 +1984,13 @@ export function workspaceSiblingIssues(
   harness: ModelHarness,
   harnessDir?: string,
 ): DiagnosticIssue[] {
-  const required: Array<{ id: string; path: string; reason: string }> = [{
-    id: "workspace-root-missing",
-    path: join(projectDir, "aidlc"),
-    reason: "the harness-neutral workspace root",
-  }];
+  const required: Array<{ id: string; path: string; reason: string }> = [
+    {
+      id: "workspace-root-missing",
+      path: join(projectDir, "aidlc"),
+      reason: "the harness-neutral workspace root",
+    },
+  ];
   if (harness === "codex") {
     required.push({
       id: "codex-agents-sibling-missing",
@@ -1826,15 +2005,17 @@ export function workspaceSiblingIssues(
       reason: "the shared engine sibling",
     });
   }
-  return required.filter((item) => !existsSync(item.path)).map((item) => ({
-    id: item.id,
-    message: `${item.reason} is missing at ${item.path}`,
-    remediation: `Run ${
-      harnessDir
-        ? workspaceShellRefreshCommand(harnessDir, harness)
-        : `aidlc config --harness ${harness}`
-    } to restore the complete ${harness} projection, including sibling directories.`,
-  }));
+  return required
+    .filter((item) => !existsSync(item.path))
+    .map((item) => ({
+      id: item.id,
+      message: `${item.reason} is missing at ${item.path}`,
+      remediation: `Run ${
+        harnessDir
+          ? workspaceShellRefreshCommand(harnessDir, harness)
+          : `aidlc config --harness ${harness}`
+      } to restore the complete ${harness} projection, including sibling directories.`,
+    }));
 }
 
 export function trustFilesForHarness(
@@ -1842,16 +2023,18 @@ export function trustFilesForHarness(
   harnessDir: string,
   harness: ModelHarness,
 ): string[] {
-  const files = [
-    join(projectDir, harnessDir, "tools", "data", "harness.json"),
-  ];
-  if (harness === "claude") files.push(join(projectDir, harnessDir, "settings.json"));
+  const files = [join(projectDir, harnessDir, "tools", "data", "harness.json")];
+  if (harness === "claude")
+    files.push(join(projectDir, harnessDir, "settings.json"));
   if (harness === "codex") {
     files.push(
       join(projectDir, harnessDir, "hooks.json"),
       join(projectDir, harnessDir, "rules", "default.rules"),
       join(projectDir, harnessDir, "trust-seed.toml"),
-      join(process.env.CODEX_HOME || join(process.env.HOME || homedir(), ".codex"), "config.toml"),
+      join(
+        process.env.CODEX_HOME || join(process.env.HOME || homedir(), ".codex"),
+        "config.toml",
+      ),
     );
   }
   if (harness === "kiro" || harness === "kiro-ide") {
@@ -1883,7 +2066,8 @@ export function trustFilesForHarness(
       join(projectDir, harnessDir, "cli.json"),
     );
   }
-  if (harness === "copilot") files.push(join(projectDir, ".github", "hooks", "aidlc.json"));
+  if (harness === "copilot")
+    files.push(join(projectDir, ".github", "hooks", "aidlc.json"));
   if (harness === "opencode") files.push(join(projectDir, "opencode.json"));
   return [...new Set(files)];
 }
@@ -1901,7 +2085,10 @@ export function trustStatus(
   if (harness === "kiro-ide") {
     const path = join(projectDir, ".vscode", "settings.json");
     try {
-      const value = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+      const value = JSON.parse(readFileSync(path, "utf-8")) as Record<
+        string,
+        unknown
+      >;
       const trusted = value["kiroAgent.trustedCommands"];
       if (!Array.isArray(trusted) || !trusted.includes("aidlc engine *")) {
         issues.push({
@@ -1953,37 +2140,40 @@ export function postApplyOutstandingActions(
       ...options.runtime,
       includeHarnessCli: false,
     });
-    actions.push(...runtimeIssues(diagnostics).map((issue) => ({
-      section: "runtime" as const,
-      id: issue.id,
-      message: issue.message,
-      command: `${invoke} config runtime`,
-    })));
+    actions.push(
+      ...runtimeIssues(diagnostics).map((issue) => ({
+        section: "runtime" as const,
+        id: issue.id,
+        message: issue.message,
+        command: `${invoke} config runtime`,
+      })),
+    );
   }
   if (!skipped.has("trust")) {
-    actions.push(...trustStatus(
-      projectDir,
-      harnessDir,
-      harness,
-      options.env,
-    ).issues.map((issue) => ({
-      section: "trust" as const,
-      id: issue.id,
-      message: issue.message,
-      command: `${invoke} config trust`,
-    })));
+    actions.push(
+      ...trustStatus(projectDir, harnessDir, harness, options.env).issues.map(
+        (issue) => ({
+          section: "trust" as const,
+          id: issue.id,
+          message: issue.message,
+          command: `${invoke} config trust`,
+        }),
+      ),
+    );
   }
   if (!skipped.has("providers")) {
     try {
       const record = readConfigDiagnosticRecords(
         join(projectDir, harnessDir),
       ).providers;
-      actions.push(...pendingProviderIssues(record, harness).map((issue) => ({
-        section: "providers" as const,
-        id: issue.id,
-        message: issue.message,
-        command: `${invoke} config providers --check`,
-      })));
+      actions.push(
+        ...pendingProviderIssues(record, harness).map((issue) => ({
+          section: "providers" as const,
+          id: issue.id,
+          message: issue.message,
+          command: `${invoke} config providers --check`,
+        })),
+      );
     } catch (error) {
       actions.push({
         section: "providers",
@@ -2039,16 +2229,17 @@ function instructionStates(
     "aidlc-manifest.json",
   );
   if (!existsSync(baselinePath)) {
-    const instructionPath = harness === "claude"
-      ? `${harnessDir}/CLAUDE.md`
-      : "AGENTS.md";
-    return [{
-      path: instructionPath,
-      kind: "whole-file",
-      state: existsSync(join(projectDir, instructionPath))
-        ? "intact"
-        : "missing",
-    }];
+    const instructionPath =
+      harness === "claude" ? `${harnessDir}/CLAUDE.md` : "AGENTS.md";
+    return [
+      {
+        path: instructionPath,
+        kind: "whole-file",
+        state: existsSync(join(projectDir, instructionPath))
+          ? "intact"
+          : "missing",
+      },
+    ];
   }
   const baseline = JSON.parse(
     readFileSync(baselinePath, "utf-8"),
@@ -2078,11 +2269,13 @@ function instructionStates(
     }
   }
   if (tracked.length === 0) {
-    return [{
-      path: baselinePath,
-      kind: "whole-file",
-      state: "missing",
-    }];
+    return [
+      {
+        path: baselinePath,
+        kind: "whole-file",
+        state: "missing",
+      },
+    ];
   }
   return tracked.map(({ path, contribution }) => {
     const target = join(projectDir, path);
@@ -2098,7 +2291,8 @@ function instructionStates(
       return {
         path,
         kind: contribution.policy,
-        state: sha256Bytes(content) === contribution.hash ? "intact" : "conflict",
+        state:
+          sha256Bytes(content) === contribution.hash ? "intact" : "conflict",
       };
     }
     const text = content.toString("utf-8");
@@ -2157,8 +2351,7 @@ export function instructionFileDoctorCheck(
     return {
       pass: false,
       severity: "warn",
-      label:
-        `Instruction file: hand-modified - conflict (${conflicts.map((item) => item.path).join(", ")})`,
+      label: `Instruction file: hand-modified - conflict (${conflicts.map((item) => item.path).join(", ")})`,
       fix: `review the local changes, then run \`${invoke} config\``,
     };
   }
@@ -2167,8 +2360,7 @@ export function instructionFileDoctorCheck(
     return {
       pass: false,
       severity: "warn",
-      label:
-        `Instruction file: block or file missing (${missing.map((item) => item.path).join(", ")})`,
+      label: `Instruction file: block or file missing (${missing.map((item) => item.path).join(", ")})`,
       fix: `run \`${invoke} config\``,
     };
   }
@@ -2176,11 +2368,12 @@ export function instructionFileDoctorCheck(
   const whole = states.some((item) => item.kind === "whole-file");
   return {
     pass: true,
-    label: managed && whole
-      ? "Instruction file: block present, user content preserved; framework-owned file intact"
-      : managed
-      ? "Instruction file: block present, user content preserved"
-      : "Instruction file: framework-owned file intact",
+    label:
+      managed && whole
+        ? "Instruction file: block present, user content preserved; framework-owned file intact"
+        : managed
+          ? "Instruction file: block present, user content preserved"
+          : "Instruction file: framework-owned file intact",
   };
 }
 
@@ -2194,8 +2387,8 @@ function selectedHarness(
 } | null {
   const harnesses = discoverProjectHarnesses(projectDir);
   const selected = harnessDirHint
-    ? harnesses.find((candidate) => candidate.harnessDir === harnessDirHint) ??
-      harnesses[0]
+    ? (harnesses.find((candidate) => candidate.harnessDir === harnessDirHint) ??
+      harnesses[0])
     : harnesses[0];
   if (!selected) return null;
   return {
@@ -2211,46 +2404,54 @@ export function runtimeDoctorChecks(
 ): DiagnosticDoctorCheck[] {
   const selected = selectedHarness(projectDir, harnessDirHint);
   if (!selected) {
-    return [{
-      pass: true,
-      label: "Runtime hook environment: no installed project harness",
-    }];
+    return [
+      {
+        pass: true,
+        label: "Runtime hook environment: no installed project harness",
+      },
+    ];
   }
   const diagnostics = probeRuntime(
     projectDir,
     selected.harnessDir,
     selected.harness,
   );
-  const checks: DiagnosticDoctorCheck[] = diagnostics.binaries.map((binary) => ({
-    pass: binary.status === "found" || binary.status === "not-required",
-    ...(binary.status === "found" || binary.status === "not-required"
-      ? {}
-      : { severity: "warn" as const }),
-    label: binary.status === "found"
-      ? `Runtime hook PATH: ${binary.name} -> ${binary.baselinePath} (non-interactive baseline)`
-      : binary.status === "not-required"
-      ? `Runtime hook PATH: ${binary.name} is not required by the selected projection`
-      : binary.status === "interactive-only"
-      ? `Runtime hook PATH: ${binary.name} is interactive-only at ${binary.interactivePath}`
-      : `Runtime hook PATH: ${binary.name} is missing`,
-    fix: binary.remediation,
-  }));
+  const checks: DiagnosticDoctorCheck[] = diagnostics.binaries.map(
+    (binary) => ({
+      pass: binary.status === "found" || binary.status === "not-required",
+      ...(binary.status === "found" || binary.status === "not-required"
+        ? {}
+        : { severity: "warn" as const }),
+      label:
+        binary.status === "found"
+          ? `Runtime hook PATH: ${binary.name} -> ${binary.baselinePath} (non-interactive baseline)`
+          : binary.status === "not-required"
+            ? `Runtime hook PATH: ${binary.name} is not required by the selected projection`
+            : binary.status === "interactive-only"
+              ? `Runtime hook PATH: ${binary.name} is interactive-only at ${binary.interactivePath}`
+              : `Runtime hook PATH: ${binary.name} is missing`,
+      fix: binary.remediation,
+    }),
+  );
   const cli = diagnostics.cli;
   checks.push({
-    pass: cli.status === "found" || cli.status === "not-applicable" ||
+    pass:
+      cli.status === "found" ||
+      cli.status === "not-applicable" ||
       (!cli.required && cli.status === "missing"),
     ...(cli.required && (cli.status === "missing" || cli.status === "too-old")
       ? { severity: "warn" as const }
       : {}),
-    label: cli.status === "found"
-      ? `Harness CLI: ${cli.command} ${cli.version || ""} at ${cli.path}`.trim()
-      : cli.status === "not-applicable"
-      ? `Harness CLI: none required for ${cli.harness}`
-      : cli.status === "too-old"
-      ? `Harness CLI: ${cli.command} ${cli.version || "unknown"} is below ${cli.minimumVersion}`
-      : cli.required
-      ? `Harness CLI: ${cli.command} is missing`
-      : `Harness CLI: optional ${cli.command} is not installed`,
+    label:
+      cli.status === "found"
+        ? `Harness CLI: ${cli.command} ${cli.version || ""} at ${cli.path}`.trim()
+        : cli.status === "not-applicable"
+          ? `Harness CLI: none required for ${cli.harness}`
+          : cli.status === "too-old"
+            ? `Harness CLI: ${cli.command} ${cli.version || "unknown"} is below ${cli.minimumVersion}`
+            : cli.required
+              ? `Harness CLI: ${cli.command} is missing`
+              : `Harness CLI: optional ${cli.command} is not installed`,
     fix: cli.remediation,
   });
   return checks;
@@ -2368,15 +2569,16 @@ export function settingsDoctorChecks(
   }
   const local = localSettingsPath(projectDir);
   if (existsSync(local) && existsSync(join(projectDir, ".git"))) {
-    const tracked = spawnSync(
-      "git",
-      ["ls-files", "--error-unmatch", "--", LOCAL_SETTINGS_FILE],
-      {
-        cwd: projectDir,
-        encoding: "utf-8",
-        timeout: 5_000,
-      },
-    ).status === 0;
+    const tracked =
+      spawnSync(
+        "git",
+        ["ls-files", "--error-unmatch", "--", LOCAL_SETTINGS_FILE],
+        {
+          cwd: projectDir,
+          encoding: "utf-8",
+          timeout: 5_000,
+        },
+      ).status === 0;
     checks.push({
       pass: !tracked,
       severity: tracked ? "warn" : undefined,
@@ -2397,11 +2599,21 @@ export function workspaceSiblingDoctorCheck(
 ): DiagnosticDoctorCheck {
   const selected = selectedHarness(projectDir, harnessDirHint);
   if (!selected) {
-    return { pass: true, label: "Workspace siblings: no installed project harness" };
+    return {
+      pass: true,
+      label: "Workspace siblings: no installed project harness",
+    };
   }
-  const issues = workspaceSiblingIssues(projectDir, selected.harness, selected.harnessDir);
+  const issues = workspaceSiblingIssues(
+    projectDir,
+    selected.harness,
+    selected.harnessDir,
+  );
   return issues.length === 0
-    ? { pass: true, label: "Workspace siblings: complete projection is present" }
+    ? {
+        pass: true,
+        label: "Workspace siblings: complete projection is present",
+      }
     : {
         pass: false,
         severity: "warn",

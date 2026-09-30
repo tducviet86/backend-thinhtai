@@ -22,37 +22,46 @@ All RE artifacts are created under `aidlc/spaces/<active-space>/codekb/<repo>/` 
 ## Developer Code Scan Results
 
 ### Scan Coverage
+
 - **Analyzed deeply**: [repo-relative dirs/files actually read and understood, one per line]
 - **Skimmed only**: [areas noted at directory granularity without deep reading]
 
 ### Packages Found
+
 - [package name] — [type] — [language] — [purpose]
 
 ### Build System
+
 - **Type**: [build system]
 - **Config Files**: [list]
 - **Build Dependencies**: [package → package relationships]
 
 ### APIs Discovered
+
 - [API type] — [location] — [endpoints/methods count]
 
 ### Frameworks & Libraries
+
 - [name] — [version] — [purpose]
 
 ### Test Coverage
+
 - **Test Directories**: [list]
 - **Test Frameworks**: [list]
 - **Coverage Config**: [present/absent]
 
 ### Code Quality Indicators
+
 - **Linting**: [tool and config location]
 - **CI/CD**: [pipeline files found]
 - **Documentation**: [README presence, doc comments quality]
 
 ### Technical Debt Signals
+
 - [signal description and location]
 
 ## Handoff Summary
+
 - **Intent-relevant finding**: [the finding most relevant to the active intent, with file/line evidence]
 - **Risks / follow-up**: [facts the architect or next stage must preserve; "None" if absent]
 ```
@@ -63,21 +72,27 @@ All RE artifacts are created under `aidlc/spaces/<active-space>/codekb/<repo>/` 
 ## Architecture Analysis
 
 ### System Overview
+
 [High-level description of the system]
 
 ### Architectural Style
+
 [Monolithic / Microservices / Serverless / Hybrid — with evidence]
 
 ### Component Relationships
+
 [Mermaid diagram showing component interactions]
 
 ### Data Flow
+
 [How data moves through the system]
 
 ### Key Design Decisions
+
 [Notable architectural choices and their implications]
 
 ### Improvement Opportunities
+
 [Areas where the architecture could be strengthened]
 ```
 
@@ -94,7 +109,10 @@ ACTUALLY covered deeply, not what the stage aspired to cover:
 scope_version: 1
 kind: partial
 intent: [active intent slug]
-fingerprint: [output of the mint command in stage Step 3 - verbatim; it prints "unknown" when not computable]
+fingerprint:
+  [
+    output of the mint command in stage Step 3 - verbatim; it prints "unknown" when not computable,
+  ]
 analyzed:
   paths:
     - [repo-relative dir (trailing slash) or file analyzed deeply, one per line]
@@ -107,6 +125,7 @@ shallow:
 ````
 
 Rules:
+
 - `kind: full` only when the scan genuinely covered the whole repo deeply; `analyzed.paths` MUST include the repo root (`./`). Anything less is `kind: partial`.
 - `kind: partial` MUST NOT include `./` in `analyzed.paths`.
 - `analyzed.paths` entries are repo-relative, directories end with `/`, no glob characters.

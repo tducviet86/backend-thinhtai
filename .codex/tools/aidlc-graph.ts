@@ -43,7 +43,13 @@
 //
 // See docs/reference/16-artifact-vocabulary.md for artifact naming.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -103,7 +109,10 @@ import {
   type SensorManifest,
   validateSensorManifest,
 } from "./aidlc-sensor-schema.ts";
-import { type StageFrontmatter, validateStageFrontmatter } from "./aidlc-stage-schema.ts";
+import {
+  type StageFrontmatter,
+  validateStageFrontmatter,
+} from "./aidlc-stage-schema.ts";
 
 // --- Types ---
 
@@ -244,10 +253,10 @@ function mutableDataDir(projectDir: string): string {
 }
 
 function requireInstalledHarness(projectDir: string): void {
-  const installedLib = resolveHarnessPath(
-    ["tools", "aidlc-lib.ts"],
-    { mutable: true, projectDir },
-  );
+  const installedLib = resolveHarnessPath(["tools", "aidlc-lib.ts"], {
+    mutable: true,
+    projectDir,
+  });
   if (!existsSync(installedLib)) {
     throw new Error(
       `compile requires an installed project harness at ${dirname(dirname(installedLib))}`,
@@ -261,8 +270,10 @@ function requireInstalledHarness(projectDir: string): void {
  *  scenarios where no stage may declare any imports). Evaluated at call
  *  time. */
 function stagesDir(): string {
-  return process.env.AIDLC_STAGES_DIR
-    ?? resolveHarnessPath(["aidlc-common", "stages"]);
+  return (
+    process.env.AIDLC_STAGES_DIR ??
+    resolveHarnessPath(["aidlc-common", "stages"])
+  );
 }
 
 /** Resolve the stage-graph.json path. Mirrors lib.ts:loadStageGraph()'s
@@ -270,12 +281,16 @@ function stagesDir(): string {
  *  loader and compile-check at a temp file. Evaluated at call time so tests
  *  that set/unset the env mid-process see the change. */
 function stageGraphPath(): string {
-  return process.env.AIDLC_STAGE_GRAPH ?? join(resolveDataDir(), "stage-graph.json");
+  return (
+    process.env.AIDLC_STAGE_GRAPH ?? join(resolveDataDir(), "stage-graph.json")
+  );
 }
 
 function mutableStageGraphPath(projectDir: string): string {
-  return process.env.AIDLC_STAGE_GRAPH
-    ?? join(mutableDataDir(projectDir), "stage-graph.json");
+  return (
+    process.env.AIDLC_STAGE_GRAPH ??
+    join(mutableDataDir(projectDir), "stage-graph.json")
+  );
 }
 
 // The relocated method ("memory") is harness-neutral and lives at the
@@ -345,8 +360,7 @@ function memoryDisplayPath(rel: string): string {
  *  `memorySegmentsForSpace`. (The TPL templates dir is this + "templates"; see
  *  `memoryTemplatesDir`.) */
 export function memoryDirFor(projectDir: string, space?: string): string {
-  const resolvedSpace =
-    space ?? resolveWorkflowSelection(projectDir).space;
+  const resolvedSpace = space ?? resolveWorkflowSelection(projectDir).space;
   return join(projectDir, ...memorySegmentsForSpace(resolvedSpace));
 }
 
@@ -359,9 +373,12 @@ export function memoryDirFor(projectDir: string, space?: string): string {
  *  gets teamB's templates. Kept here (not hardcoded in the dispatcher) so it
  *  stays byte-aligned with where the packager emits and the resolver reads. */
 export function memoryTemplatesDir(projectDir: string, space?: string): string {
-  const resolvedSpace =
-    space ?? resolveWorkflowSelection(projectDir).space;
-  return join(projectDir, ...memorySegmentsForSpace(resolvedSpace), "templates");
+  const resolvedSpace = space ?? resolveWorkflowSelection(projectDir).space;
+  return join(
+    projectDir,
+    ...memorySegmentsForSpace(resolvedSpace),
+    "templates",
+  );
 }
 
 /** The FRAMEWORK-DEFAULT templates dir — the read-only, engine-shipped middle
@@ -375,7 +392,10 @@ export function memoryTemplatesDir(projectDir: string, space?: string): string {
  *  falls through to the floor. AIDLC_FRAMEWORK_TEMPLATES_DIR is a test/relocation
  *  seam mirroring AIDLC_TEMPLATES_DIR. */
 export function frameworkTemplatesDir(): string {
-  return process.env.AIDLC_FRAMEWORK_TEMPLATES_DIR ?? join(resolveDataDir(), "templates");
+  return (
+    process.env.AIDLC_FRAMEWORK_TEMPLATES_DIR ??
+    join(resolveDataDir(), "templates")
+  );
 }
 
 /** Engine-only-install self-heal: the ENGINE-BUNDLED method ("memory") seed — the
@@ -388,7 +408,9 @@ export function frameworkTemplatesDir(): string {
  *  like frameworkTemplatesDir, so it is harness-correct on every harness.
  *  AIDLC_MEMORY_SEED_DIR is a test/relocation seam mirroring AIDLC_FRAMEWORK_TEMPLATES_DIR. */
 export function frameworkMemorySeedDir(): string {
-  return process.env.AIDLC_MEMORY_SEED_DIR ?? join(resolveDataDir(), "memory-seed");
+  return (
+    process.env.AIDLC_MEMORY_SEED_DIR ?? join(resolveDataDir(), "memory-seed")
+  );
 }
 
 /** Resolve the sensors directory. AIDLC_SENSORS_DIR env-var seam mirrors
@@ -403,12 +425,16 @@ function sensorsDir(): string {
  *  point `compile --check` at a tempfile without touching the real grid.
  *  Evaluated at call time so tests that set/unset mid-process see it. */
 function scopeGridPath(): string {
-  return process.env.AIDLC_SCOPE_GRID ?? join(resolveDataDir(), "scope-grid.json");
+  return (
+    process.env.AIDLC_SCOPE_GRID ?? join(resolveDataDir(), "scope-grid.json")
+  );
 }
 
 function mutableScopeGridPath(projectDir: string): string {
-  return process.env.AIDLC_SCOPE_GRID
-    ?? join(mutableDataDir(projectDir), "scope-grid.json");
+  return (
+    process.env.AIDLC_SCOPE_GRID ??
+    join(mutableDataDir(projectDir), "scope-grid.json")
+  );
 }
 
 let _graph: GraphStage[] | null = null;
@@ -513,9 +539,9 @@ const FIELD_ORDER = [
 // surface and no fractional override tier.
 
 export interface RuleFile {
-  path: string;          // "aidlc/spaces/default/memory/org.md"
+  path: string; // "aidlc/spaces/default/memory/org.md"
   scope: "org" | "team" | "project" | "phase";
-  phase?: string;        // populated only when scope === "phase"
+  phase?: string; // populated only when scope === "phase"
   frontmatter: RuleFrontmatter;
   // `## <heading>` -> concatenated body text, surfaced from the same `raw`
   // loadRules() already reads. The doctor rule-drift check reads this
@@ -541,10 +567,10 @@ const PHASE_FILE_REGEX = /^([a-z][a-z0-9-]*)\.md$/;
 // Scope-priority for the deterministic sort — the resolved chain reads
 // org → team → project → phase (a clean four-layer additive chain).
 const SCOPE_PRIORITY: Record<string, number> = {
-  "org": 0,
-  "team": 1,
-  "project": 2,
-  "phase": 3,
+  org: 0,
+  team: 1,
+  project: 2,
+  phase: 3,
 };
 
 /** Split a rule-file body into `## <heading>` -> concatenated body text.
@@ -720,7 +746,7 @@ export function resolveRulesForStage(
 
 export interface SensorFile {
   id: string;
-  path: string;        // ".claude/sensors/aidlc-<id>.md"
+  path: string; // ".claude/sensors/aidlc-<id>.md"
   manifest: SensorManifest;
 }
 
@@ -845,14 +871,14 @@ export function producersOf(artifact: string): GraphStage[] {
   return loadGraph().filter(
     (s) =>
       (s.produces ?? []).includes(artifact) ||
-      (s.optional_produces ?? []).includes(artifact)
+      (s.optional_produces ?? []).includes(artifact),
   );
 }
 
 /** Stages that consume the given artifact. */
 export function consumersOf(artifact: string): GraphStage[] {
   return loadGraph().filter((s) =>
-    (s.consumes ?? []).some((c) => c.artifact === artifact)
+    (s.consumes ?? []).some((c) => c.artifact === artifact),
   );
 }
 
@@ -867,8 +893,8 @@ export function consumedArtifactProducerCollisions(): {
   const consumedArtifacts = [
     ...new Set(
       loadGraph().flatMap((stage) =>
-        (stage.consumes ?? []).map((consume) => consume.artifact)
-      )
+        (stage.consumes ?? []).map((consume) => consume.artifact),
+      ),
     ),
   ].sort();
 
@@ -876,7 +902,9 @@ export function consumedArtifactProducerCollisions(): {
     .map((artifact) => ({
       artifact,
       producers: producersOf(artifact).map((stage) => stage.slug),
-      consumers: consumersOf(artifact).map((stage) => stage.slug).sort(),
+      consumers: consumersOf(artifact)
+        .map((stage) => stage.slug)
+        .sort(),
     }))
     .filter(({ producers }) => producers.length >= 2);
 }
@@ -901,7 +929,7 @@ export function templateEligibleArtifacts(produces: string[]): string[] {
       typeof a === "string" &&
       a.length > 0 &&
       !a.endsWith("-questions") &&
-      !a.endsWith("-timestamp")
+      !a.endsWith("-timestamp"),
   );
 }
 
@@ -952,7 +980,7 @@ export function topoSort(stages: GraphStage[]): string[] {
   if (result.length !== stages.length) {
     throw new Error(
       `topoSort: cycle detected. Processed ${result.length} of ` +
-        `${stages.length} nodes. Use findCycles() to enumerate.`
+        `${stages.length} nodes. Use findCycles() to enumerate.`,
     );
   }
   return result;
@@ -988,16 +1016,16 @@ export function findCycles(stages: GraphStage[]): string[][] {
           v,
           Math.min(
             mustGet(lowlink, v, "Tarjan.lowlink[v]"),
-            mustGet(lowlink, w, "Tarjan.lowlink[w]")
-          )
+            mustGet(lowlink, w, "Tarjan.lowlink[w]"),
+          ),
         );
       } else if (onStack.has(w)) {
         lowlink.set(
           v,
           Math.min(
             mustGet(lowlink, v, "Tarjan.lowlink[v]"),
-            mustGet(index, w, "Tarjan.index[w]")
-          )
+            mustGet(index, w, "Tarjan.index[w]"),
+          ),
         );
       }
     }
@@ -1046,14 +1074,14 @@ export function findCycles(stages: GraphStage[]): string[][] {
 export function subgraphForScope(scope: string): GraphStage[] {
   if (!validScopes().has(scope)) {
     throw new Error(
-      `Unknown scope: "${scope}". Valid scopes: ${[...validScopes()].join(", ")}`
+      `Unknown scope: "${scope}". Valid scopes: ${[...validScopes()].join(", ")}`,
     );
   }
   const entry = loadScopeGrid()[scope];
   const executeSlugs = new Set(
     Object.entries(entry?.stages ?? {})
       .filter(([, action]) => action === "EXECUTE")
-      .map(([slug]) => slug)
+      .map(([slug]) => slug),
   );
   return loadGraph()
     .filter((s) => executeSlugs.has(s.slug))
@@ -1069,26 +1097,28 @@ export function subgraphForScope(scope: string): GraphStage[] {
  *  `validate-grid` (against the composer's proposal); only the latter is a
  *  front/report stock-match authority. */
 export function nearestStockScopes(
-  grid: Record<string, "EXECUTE" | "SKIP">
+  grid: Record<string, "EXECUTE" | "SKIP">,
 ): Array<{ scope: string; diff: number; differs: string[] }> {
   const stockScopeNames = stageDeclaredScopeNames(loadGraph());
-  return Object.entries(loadScopeGrid())
-    // Composer-authored scopes are appended only to scope-grid.json; no stage
-    // declares them. They remain runnable but must never become stock-match
-    // candidates for an unrelated later composition.
-    .filter(([scope]) => stockScopeNames.has(scope))
-    .map(([scope, def]) => {
-      const differs: string[] = [];
-      const slugs = new Set([
-        ...Object.keys(def.stages),
-        ...Object.keys(grid),
-      ]);
-      for (const slug of slugs) {
-        if (grid[slug] !== def.stages[slug]) differs.push(slug);
-      }
-      return { scope, diff: differs.length, differs };
-    })
-    .sort((a, b) => a.diff - b.diff || a.scope.localeCompare(b.scope));
+  return (
+    Object.entries(loadScopeGrid())
+      // Composer-authored scopes are appended only to scope-grid.json; no stage
+      // declares them. They remain runnable but must never become stock-match
+      // candidates for an unrelated later composition.
+      .filter(([scope]) => stockScopeNames.has(scope))
+      .map(([scope, def]) => {
+        const differs: string[] = [];
+        const slugs = new Set([
+          ...Object.keys(def.stages),
+          ...Object.keys(grid),
+        ]);
+        for (const slug of slugs) {
+          if (grid[slug] !== def.stages[slug]) differs.push(slug);
+        }
+        return { scope, diff: differs.length, differs };
+      })
+      .sort((a, b) => a.diff - b.diff || a.scope.localeCompare(b.scope))
+  );
 }
 
 /** Resolve a scope's plan: the EXECUTE/SKIP slice over the full graph in
@@ -1097,11 +1127,11 @@ export function nearestStockScopes(
  *  `aidlc-graph resolve` subcommand writes this to .aidlc-engine/plan.json. The
  *  parity test asserts this matches the legacy plan across all 11 scopes. */
 export function resolvePlanForScope(
-  scope: string
+  scope: string,
 ): Array<{ slug: string; phase: string; action: "EXECUTE" | "SKIP" }> {
   if (!validScopes().has(scope)) {
     throw new Error(
-      `Unknown scope: "${scope}". Valid scopes: ${[...validScopes()].join(", ")}`
+      `Unknown scope: "${scope}". Valid scopes: ${[...validScopes()].join(", ")}`,
     );
   }
   const entry = loadScopeGrid()[scope];
@@ -1112,7 +1142,8 @@ export function resolvePlanForScope(
     .map((s) => ({
       slug: s.slug,
       phase: s.phase,
-      action: stages[s.slug] === "EXECUTE" ? ("EXECUTE" as const) : ("SKIP" as const),
+      action:
+        stages[s.slug] === "EXECUTE" ? ("EXECUTE" as const) : ("SKIP" as const),
     }));
 }
 
@@ -1136,7 +1167,7 @@ export function resolvePlanForScope(
  *  contributors extend opts rather than adding a new function. */
 export function validateScope(
   scope: string,
-  opts?: { projectType?: "brownfield" | "greenfield" }
+  opts?: { projectType?: "brownfield" | "greenfield" },
 ): ScopeValidation {
   // Delegate to the arbitrary-grid core over the named scope's EXECUTE set.
   // Default (lenient) mode preserves this function's historical behavior
@@ -1173,7 +1204,7 @@ export function validateGrid(
     projectType?: "brownfield" | "greenfield";
     strict?: boolean;
     label?: string;
-  }
+  },
 ): ScopeValidation {
   const label = opts?.label ?? "proposed grid";
   const graph = loadGraph();
@@ -1186,13 +1217,13 @@ export function validateGrid(
   for (const slug of Object.keys(grid)) {
     if (!knownSlugs.has(slug)) {
       errors.push(
-        `Grid names unknown stage "${slug}" - not in the compiled stage graph.`
+        `Grid names unknown stage "${slug}" - not in the compiled stage graph.`,
       );
     }
     const action = grid[slug];
     if (action !== "EXECUTE" && action !== "SKIP") {
       errors.push(
-        `Grid entry "${slug}" has invalid action "${action}" (expected EXECUTE or SKIP).`
+        `Grid entry "${slug}" has invalid action "${action}" (expected EXECUTE or SKIP).`,
       );
     }
   }
@@ -1209,7 +1240,7 @@ export function validateGrid(
   const onPath = new Set(
     Object.entries(grid)
       .filter(([slug, action]) => action === "EXECUTE" && knownSlugs.has(slug))
-      .map(([slug]) => slug)
+      .map(([slug]) => slug),
   );
   const subgraph = graph
     .filter((s) => onPath.has(s.slug))
@@ -1231,7 +1262,7 @@ export function validateGrid(
       if (producers.length === 0) {
         errors.push(
           `Stage "${stage.slug}" requires artifact "${consume.artifact}" ` +
-            `but no stage in the graph produces it.`
+            `but no stage in the graph produces it.`,
         );
         continue;
       }
@@ -1243,7 +1274,7 @@ export function validateGrid(
           `are not on the "${label}" path.`;
         if (opts?.strict) {
           errors.push(
-            `${message} Strict (recompose) mode rejects a starved required input.`
+            `${message} Strict (recompose) mode rejects a starved required input.`,
           );
         } else {
           advisories.push(`${message} Ensure existing artifact is current.`);
@@ -1256,9 +1287,7 @@ export function validateGrid(
   // validator's numbers, not a hand recount. Computed over the raw proposal
   // entries; unknown slugs already produced errors above and contribute only to
   // total/execute per gridCostSummary's graph-lookup guard.
-  const summary = gridCostSummary(
-    grid as Record<string, "EXECUTE" | "SKIP">,
-  );
+  const summary = gridCostSummary(grid as Record<string, "EXECUTE" | "SKIP">);
   // Distance to each stock scope travels with the validation for the same
   // reason as summary: the match decision must ride the validator's numbers.
   // Unknown and missing slugs already errored above; the ranking still counts
@@ -1266,7 +1295,13 @@ export function validateGrid(
   const nearest_stock = nearestStockScopes(
     grid as Record<string, "EXECUTE" | "SKIP">,
   );
-  return { valid: errors.length === 0, errors, advisories, summary, nearest_stock };
+  return {
+    valid: errors.length === 0,
+    errors,
+    advisories,
+    summary,
+    nearest_stock,
+  };
 }
 
 /** Check proposed (granted-at-the-gate) keywords against the keywords the
@@ -1284,15 +1319,15 @@ export function keywordCollisions(granted: string[]): string[] {
     const holders = Object.keys(mapping)
       .filter((scope) =>
         (mapping[scope]?.keywords ?? []).some(
-          (k) => k.toLowerCase() === kw.toLowerCase()
-        )
+          (k) => k.toLowerCase() === kw.toLowerCase(),
+        ),
       )
       .sort();
     if (holders.length > 0) {
       errors.push(
         `Keyword "${kw}" is already claimed by scope${holders.length > 1 ? "s" : ""} ` +
           `[${holders.join(", ")}] - granting it would shadow that scope in ` +
-          `keyword inference. Pick a keyword no existing scope claims.`
+          `keyword inference. Pick a keyword no existing scope claims.`,
       );
     }
   }
@@ -1300,7 +1335,9 @@ export function keywordCollisions(granted: string[]): string[] {
 }
 
 /** Union of produces[] and optional_produces[] across all stages. */
-export function artifactsRegistryFor(stages: readonly GraphStage[]): ReadonlySet<string> {
+export function artifactsRegistryFor(
+  stages: readonly GraphStage[],
+): ReadonlySet<string> {
   const names = new Set<string>();
   for (const stage of stages) {
     for (const name of stage.produces ?? []) {
@@ -1440,7 +1477,8 @@ export function transposeScopeGrid(
   const scopeNames = new Set<string>();
   for (const s of stages) {
     for (const name of s.scopes ?? []) {
-      if (allowedScopes === undefined || allowedScopes.has(name)) scopeNames.add(name);
+      if (allowedScopes === undefined || allowedScopes.has(name))
+        scopeNames.add(name);
     }
   }
   if (allowedScopes !== undefined) {
@@ -1493,13 +1531,18 @@ export function mergeComposedScopes(
   } catch {
     return fresh;
   }
-  if (typeof onDisk !== "object" || onDisk === null || Array.isArray(onDisk)) return fresh;
+  if (typeof onDisk !== "object" || onDisk === null || Array.isArray(onDisk))
+    return fresh;
   const merged: ScopeGrid = { ...fresh };
-  for (const [name, entry] of Object.entries(onDisk as Record<string, unknown>)) {
+  for (const [name, entry] of Object.entries(
+    onDisk as Record<string, unknown>,
+  )) {
     if (name in merged) continue;
     if (preserveNames !== undefined && !preserveNames.has(name)) continue;
     if (
-      typeof entry === "object" && entry !== null && !Array.isArray(entry) &&
+      typeof entry === "object" &&
+      entry !== null &&
+      !Array.isArray(entry) &&
       typeof (entry as { stages?: unknown }).stages === "object"
     ) {
       merged[name] = entry as ScopeGrid[string];
@@ -1531,7 +1574,9 @@ function composedScopeNames(
   );
 }
 
-function stageDeclaredScopeNames(stages: readonly Pick<GraphStage, "scopes">[]): ReadonlySet<string> {
+function stageDeclaredScopeNames(
+  stages: readonly Pick<GraphStage, "scopes">[],
+): ReadonlySet<string> {
   const names = new Set<string>();
   for (const stage of stages) {
     for (const name of stage.scopes ?? []) names.add(name);
@@ -1547,7 +1592,8 @@ function filterScopeGrid(
   if (allowedScopes === null) return grid;
   const filtered: ScopeGrid = {};
   for (const scope of Object.keys(grid).sort()) {
-    if (allowedScopes.has(scope) || exemptScopes.has(scope)) filtered[scope] = grid[scope];
+    if (allowedScopes.has(scope) || exemptScopes.has(scope))
+      filtered[scope] = grid[scope];
   }
   return filtered;
 }
@@ -1632,7 +1678,10 @@ function applyPluginSelection(stages: GraphStage[]): void {
 function validateSelectionClosure(stages: GraphStage[]): void {
   const producersByArtifact = new Map<string, GraphStage[]>();
   for (const stage of stages) {
-    for (const artifact of [...(stage.produces ?? []), ...(stage.optional_produces ?? [])]) {
+    for (const artifact of [
+      ...(stage.produces ?? []),
+      ...(stage.optional_produces ?? []),
+    ]) {
       const producers = producersByArtifact.get(artifact) ?? [];
       producers.push(stage);
       producersByArtifact.set(artifact, producers);
@@ -1650,11 +1699,13 @@ function validateSelectionClosure(stages: GraphStage[]): void {
         .map((p) => `${p.slug} (${stagePluginOwner(p)})`)
         .sort()
         .join(", ");
-      const disabledPlugins = [...new Set(producers.map(stagePluginOwner))].sort();
+      const disabledPlugins = [
+        ...new Set(producers.map(stagePluginOwner)),
+      ].sort();
       throw new Error(
         `Plugin selection closure failed: enabled stage "${stage.slug}" consumes required artifact "${consume.artifact}", ` +
           `but its only producer(s) are disabled: ${producerList}. ` +
-          `Enable plugin(s) ${disabledPlugins.join(", ")} or disable the consuming stage.`
+          `Enable plugin(s) ${disabledPlugins.join(", ")} or disable the consuming stage.`,
       );
     }
   }
@@ -1667,7 +1718,12 @@ function validateSelectionClosure(stages: GraphStage[]): void {
  *  core stages. But the silently-dropped edge is worth surfacing - doctor
  *  reports these as an advisory so a surprising walk order is explainable. */
 export function selectionDroppedOrderingEdges(
-  stages: Array<{ slug: string; plugin?: string; enabled?: boolean; requires_stage?: string[] }>,
+  stages: Array<{
+    slug: string;
+    plugin?: string;
+    enabled?: boolean;
+    requires_stage?: string[];
+  }>,
 ): string[] {
   const bySlug = new Map(stages.map((s) => [s.slug, s]));
   const dropped: string[] = [];
@@ -1675,7 +1731,9 @@ export function selectionDroppedOrderingEdges(
     for (const dep of stage.requires_stage ?? []) {
       const depStage = bySlug.get(dep);
       if (depStage?.enabled !== false) continue;
-      dropped.push(`${stage.slug} requires ${dep} (${stagePluginOwner(depStage)}, disabled)`);
+      dropped.push(
+        `${stage.slug} requires ${dep} (${stagePluginOwner(depStage)}, disabled)`,
+      );
     }
   }
   return dropped.sort();
@@ -1720,13 +1778,18 @@ export function compileStageGraph(): {
     if (!Number.isFinite(prefix) || !Number.isFinite(index)) continue;
     maxIndexByPhasePrefix.set(
       prefix,
-      Math.max(maxIndexByPhasePrefix.get(prefix) ?? 0, index)
+      Math.max(maxIndexByPhasePrefix.get(prefix) ?? 0, index),
     );
   }
   const stages: GraphStage[] = [];
   // NEW slugs (no pinned row yet), grouped by phase prefix for the
   // topological number seed after the walk.
-  type NewStageSeed = { data: StageFrontmatter; phase: string; prefix: number; name: string };
+  type NewStageSeed = {
+    data: StageFrontmatter;
+    phase: string;
+    prefix: number;
+    name: string;
+  };
   const newByPrefix = new Map<number, NewStageSeed[]>();
   // Track slug-to-first-file so duplicate-slug errors name both files.
   const slugToFile = new Map<string, string>();
@@ -1745,7 +1808,9 @@ export function compileStageGraph(): {
   for (const phase of readdirSync(stagesRoot)) {
     const pdir = join(stagesRoot, phase);
     if (!statSync(pdir).isDirectory()) continue;
-    for (const f of readdirSync(pdir).filter((f) => f.endsWith(".md")).sort()) {
+    for (const f of readdirSync(pdir)
+      .filter((f) => f.endsWith(".md"))
+      .sort()) {
       const filePath = join(pdir, f);
       const raw = readFileSync(filePath, "utf-8");
 
@@ -1766,10 +1831,12 @@ export function compileStageGraph(): {
       // via canonicalStageGraphJson's undefined skip). Passing knownAgents
       // activates the agent-registration cross-check (Rule 9): an unknown
       // lead_agent / support_agent fails here, not at runtime.
-      const validation = validateStageFrontmatter(parsed, { agents: knownAgents });
+      const validation = validateStageFrontmatter(parsed, {
+        agents: knownAgents,
+      });
       if (!validation.valid) {
         throw new Error(
-          `${filePath}: schema validation failed: ${validation.errors.join("; ")}`
+          `${filePath}: schema validation failed: ${validation.errors.join("; ")}`,
         );
       }
       const slug = validation.data.slug;
@@ -1777,7 +1844,7 @@ export function compileStageGraph(): {
       if (plugin !== undefined) {
         if (plugin === "aidlc") {
           throw new Error(
-            `${filePath}: stage "${slug}" declares plugin "aidlc"; omit plugin for core stages.`
+            `${filePath}: stage "${slug}" declares plugin "aidlc"; omit plugin for core stages.`,
           );
         }
         // `aidlc-` is core's namespace: runner dirs are `aidlc-<slug>` for core
@@ -1786,12 +1853,12 @@ export function compileStageGraph(): {
         // (/aidlc-<x>-... routes to the wrong stage).
         if (plugin.startsWith("aidlc-")) {
           throw new Error(
-            `${filePath}: stage "${slug}" declares plugin "${plugin}"; the "aidlc-" prefix is reserved for core (a plugin named aidlc-<x> collides with core runner paths). Rename the plugin.`
+            `${filePath}: stage "${slug}" declares plugin "${plugin}"; the "aidlc-" prefix is reserved for core (a plugin named aidlc-<x> collides with core runner paths). Rename the plugin.`,
           );
         }
         if (!slug.startsWith(`${plugin}-`)) {
           throw new Error(
-            `${filePath}: stage "${slug}" declares plugin "${plugin}", but plugin-owned stage slugs must start with "${plugin}-". Rename the slug or fix the plugin field.`
+            `${filePath}: stage "${slug}" declares plugin "${plugin}", but plugin-owned stage slugs must start with "${plugin}-". Rename the slug or fix the plugin field.`,
           );
         }
       }
@@ -1799,7 +1866,7 @@ export function compileStageGraph(): {
       const filenameStem = basename(filePath, ".md");
       if (filenameStem !== slug) {
         throw new Error(
-          `${filePath}: stage filename stem "${filenameStem}" does not match frontmatter slug "${slug}". Rename the file or fix the slug.`
+          `${filePath}: stage filename stem "${filenameStem}" does not match frontmatter slug "${slug}". Rename the file or fix the slug.`,
         );
       }
 
@@ -1810,7 +1877,7 @@ export function compileStageGraph(): {
       if (previousFile) {
         throw new Error(
           `Duplicate stage slug "${slug}" in ${filePath} — already declared ` +
-            `in ${previousFile}. Rename one of them.`
+            `in ${previousFile}. Rename one of them.`,
         );
       }
       slugToFile.set(slug, filePath);
@@ -1850,7 +1917,7 @@ export function compileStageGraph(): {
         // than invent a prefix.
         throw new Error(
           `Stage "${slug}" (${filePath}) is in an unknown phase directory ` +
-            `"${phase}". Stage phase directories must be one of: ${PHASES.join(", ")}.`
+            `"${phase}". Stage phase directories must be one of: ${PHASES.join(", ")}.`,
         );
       }
       const number = numberBySlug.get(slug);
@@ -1859,8 +1926,12 @@ export function compileStageGraph(): {
       if (number) {
         stages.push(buildGraphStage(validation.data, phase, number, name));
       } else {
-        newByPrefix.get(prefix)?.push({ data: validation.data, phase, prefix, name }) ??
-          newByPrefix.set(prefix, [{ data: validation.data, phase, prefix, name }]);
+        newByPrefix
+          .get(prefix)
+          ?.push({ data: validation.data, phase, prefix, name }) ??
+          newByPrefix.set(prefix, [
+            { data: validation.data, phase, prefix, name },
+          ]);
       }
     }
   }
@@ -1879,7 +1950,7 @@ export function compileStageGraph(): {
     throw new Error(
       `Duplicate producers for consumed artifact "${artifact}" in ${producerList} — ` +
         `consumed by stage "${consumer.slug}" in ${consumer.file}. ` +
-        `Rename one produced artifact or update the consumer.`
+        `Rename one produced artifact or update the consumer.`,
     );
   }
 
@@ -1905,7 +1976,8 @@ export function compileStageGraph(): {
     const indegree = new Map(batch.map((e) => [e.data.slug, 0]));
     for (const e of batch) {
       for (const dep of new Set(e.data.requires_stage ?? [])) {
-        if (inBatch.has(dep)) indegree.set(e.data.slug, (indegree.get(e.data.slug) ?? 0) + 1);
+        if (inBatch.has(dep))
+          indegree.set(e.data.slug, (indegree.get(e.data.slug) ?? 0) + 1);
       }
     }
     const hint = (e: NewStageSeed): number => {
@@ -1916,7 +1988,9 @@ export function compileStageGraph(): {
     };
     const byHintThenSlug = (a: NewStageSeed, b: NewStageSeed): number =>
       hint(a) - hint(b) || a.data.slug.localeCompare(b.data.slug);
-    const ready = batch.filter((e) => indegree.get(e.data.slug) === 0).sort(byHintThenSlug);
+    const ready = batch
+      .filter((e) => indegree.get(e.data.slug) === 0)
+      .sort(byHintThenSlug);
     const seeded: NewStageSeed[] = [];
     while (ready.length > 0) {
       const e = ready.shift()!;
@@ -1935,16 +2009,20 @@ export function compileStageGraph(): {
       // The unseeded set = the cycle's members plus anything downstream of
       // them, so name it "stuck", not "the cycle" — a stage can appear here
       // solely because its dependency is cyclic.
-      const stuck = batch.filter((e) => !seeded.includes(e)).map((e) => e.data.slug);
+      const stuck = batch
+        .filter((e) => !seeded.includes(e))
+        .map((e) => e.data.slug);
       throw new Error(
         `Cannot seed stage numbers for phase "${batch[0].phase}": ` +
-          `requires_stage cycle among new stages (stuck: ${stuck.join(", ")}). Break the cycle.`
+          `requires_stage cycle among new stages (stuck: ${stuck.join(", ")}). Break the cycle.`,
       );
     }
     for (const e of seeded) {
       const nextIndex = (maxIndexByPhasePrefix.get(prefix) ?? 0) + 1;
       maxIndexByPhasePrefix.set(prefix, nextIndex);
-      stages.push(buildGraphStage(e.data, e.phase, `${prefix}.${nextIndex}`, e.name));
+      stages.push(
+        buildGraphStage(e.data, e.phase, `${prefix}.${nextIndex}`, e.name),
+      );
     }
   }
 
@@ -1988,7 +2066,7 @@ export function compileStageGraph(): {
       if (!depNum) {
         throw new Error(
           `Unknown requires_stage: "${dep}" on stage "${stage.slug}". ` +
-            `Every requires_stage entry must reference a known stage slug.`
+            `Every requires_stage entry must reference a known stage slug.`,
         );
       }
       if (numericStageOrder(depNum, stage.number) >= 0) {
@@ -1996,7 +2074,7 @@ export function compileStageGraph(): {
           `Compile invariant violated: stage "${stage.slug}" (${stage.number}) ` +
             `requires "${dep}" (${depNum}) — dependency must be lower-numbered. ` +
             `Fix: either renumber in stage-graph.json to match the dependency ` +
-            `direction, or remove the offending requires_stage edge.`
+            `direction, or remove the offending requires_stage edge.`,
         );
       }
     }
@@ -2021,7 +2099,7 @@ export function compileStageGraph(): {
         `[advisory] stage "${stage.slug}" is the per-unit build stage ` +
           `(for_each: unit-of-work + workspace_requires) but mode is ` +
           `"${stage.mode}", not "subagent" — the autonomous Construction ` +
-          `swarm will NOT fire for it; units build serially.`
+          `swarm will NOT fire for it; units build serially.`,
       );
     }
   }
@@ -2046,7 +2124,9 @@ export function compileStageGraph(): {
   const seededScopeNames =
     selectedScopeNames === null
       ? undefined
-      : new Set([...selectedScopeNames].filter((name) => !composedNames.has(name)));
+      : new Set(
+          [...selectedScopeNames].filter((name) => !composedNames.has(name)),
+        );
   return {
     json: canonicalStageGraphJson(stages),
     gridJson: canonicalScopeGridJson(
@@ -2071,7 +2151,7 @@ function buildGraphStage(
   parsed: StageFrontmatter,
   phase: string,
   number: string,
-  name: string
+  name: string,
 ): GraphStage {
   const slug = parsed.slug;
   // Support_agents + produces + requires_stage are always arrays
@@ -2174,7 +2254,7 @@ function runCompileCheck(): void {
   const graphOnDisk = readFileSync(stageGraphPath(), "utf-8");
   if (json !== graphOnDisk) {
     console.error(
-      `stage-graph.json is out of date. Run \`${aidlcToolInvocation("graph", undefined, false)} compile\` to regenerate.`
+      `stage-graph.json is out of date. Run \`${aidlcToolInvocation("graph", undefined, false)} compile\` to regenerate.`,
     );
     process.exit(1);
   }
@@ -2204,7 +2284,7 @@ function runCompileCheck(): void {
   }
   if (gridJson !== gridOnDisk) {
     console.error(
-      `scope-grid.json is out of date. Run \`${aidlcToolInvocation("graph", undefined, false)} compile\` to regenerate.`
+      `scope-grid.json is out of date. Run \`${aidlcToolInvocation("graph", undefined, false)} compile\` to regenerate.`,
     );
     process.exit(1);
   }
@@ -2268,7 +2348,12 @@ interface ArsPriors {
   weights: Record<ArsComponent, number>;
   componentInfo: Record<ArsComponent, { name: string }>;
   componentBands: { lowMax: number; medMax: number };
-  compositeBands: Array<{ min: number; max: number; label: string; shape: string }>;
+  compositeBands: Array<{
+    min: number;
+    max: number;
+    label: string;
+    shape: string;
+  }>;
   evThresholds: Record<string, number>;
   stages: Record<
     string,
@@ -2307,7 +2392,10 @@ export interface ArsScreenRow {
 
 export interface ArsResult {
   schemaVersion: 1;
-  components: Record<ArsComponent, { name: string; score: number; band: ArsBand }>;
+  components: Record<
+    ArsComponent,
+    { name: string; score: number; band: ArsBand }
+  >;
   composite: { raw: number; total: number; label: string; shape: string };
   evScreen: ArsScreenRow[];
   screenGrid: Record<string, "EXECUTE" | "SKIP">;
@@ -2320,7 +2408,9 @@ export interface ArsResult {
 /** Resolve tools/data/ars-priors.json. AIDLC_ARS_PRIORS mirrors the
  *  AIDLC_SCOPE_GRID test seam. Evaluated at call time. */
 function arsPriorsPath(): string {
-  return process.env.AIDLC_ARS_PRIORS ?? join(resolveDataDir(), "ars-priors.json");
+  return (
+    process.env.AIDLC_ARS_PRIORS ?? join(resolveDataDir(), "ars-priors.json")
+  );
 }
 
 /** Load + schema-validate the priors file. Throws (-> exit 1 via main's
@@ -2340,7 +2430,7 @@ export function loadArsPriors(): ArsPriors {
   const priors = parsed as ArsPriors;
   if (priors.schemaVersion !== 1) {
     throw new Error(
-      `ars priors at ${p}: unsupported schemaVersion ${String(priors.schemaVersion)} (expected 1).`
+      `ars priors at ${p}: unsupported schemaVersion ${String(priors.schemaVersion)} (expected 1).`,
     );
   }
   let weightSum = 0;
@@ -2364,9 +2454,14 @@ export function loadArsPriors(): ArsPriors {
     typeof medMax !== "number" ||
     !(0 < lowMax && lowMax < medMax && medMax <= 1)
   ) {
-    throw new Error("ars priors: componentBands must satisfy 0 < lowMax < medMax <= 1.");
+    throw new Error(
+      "ars priors: componentBands must satisfy 0 < lowMax < medMax <= 1.",
+    );
   }
-  if (!Array.isArray(priors.compositeBands) || priors.compositeBands.length === 0) {
+  if (
+    !Array.isArray(priors.compositeBands) ||
+    priors.compositeBands.length === 0
+  ) {
     throw new Error("ars priors: compositeBands must be a non-empty array.");
   }
   let expectMin = 0;
@@ -2378,7 +2473,9 @@ export function loadArsPriors(): ArsPriors {
       typeof b.label !== "string" ||
       typeof b.shape !== "string"
     ) {
-      throw new Error("ars priors: compositeBands must tile 0..100 contiguously with label + shape.");
+      throw new Error(
+        "ars priors: compositeBands must tile 0..100 contiguously with label + shape.",
+      );
     }
     expectMin = b.max + 1;
   }
@@ -2387,13 +2484,18 @@ export function loadArsPriors(): ArsPriors {
   }
   for (const [key, t] of Object.entries(priors.evThresholds ?? {})) {
     if (typeof t !== "number" || t < 0 || t > 1) {
-      throw new Error(`ars priors: evThresholds["${key}"] must be a number in [0,1].`);
+      throw new Error(
+        `ars priors: evThresholds["${key}"] must be a number in [0,1].`,
+      );
     }
   }
   for (const [slug, st] of Object.entries(priors.stages ?? {})) {
-    if (!Array.isArray(st.targets) || st.targets.some((t) => !ARS_COMPONENTS.includes(t))) {
+    if (
+      !Array.isArray(st.targets) ||
+      st.targets.some((t) => !ARS_COMPONENTS.includes(t))
+    ) {
       throw new Error(
-        `ars priors: stages.${slug}.targets must be a subset of {${ARS_COMPONENTS.join(", ")}}.`
+        `ars priors: stages.${slug}.targets must be a subset of {${ARS_COMPONENTS.join(", ")}}.`,
       );
     }
     // Type before lookup: `String(cost) in evThresholds` alone accepts the
@@ -2401,11 +2503,13 @@ export function loadArsPriors(): ArsPriors {
     // breaks the `number | null` contract this interface declares.
     if (st.cost !== null && typeof st.cost !== "number") {
       throw new Error(
-        `ars priors: stages.${slug}.cost must be a number or null (got ${typeof st.cost}).`
+        `ars priors: stages.${slug}.cost must be a number or null (got ${typeof st.cost}).`,
       );
     }
     if (st.cost !== null && !(String(st.cost) in (priors.evThresholds ?? {}))) {
-      throw new Error(`ars priors: stages.${slug}.cost ${String(st.cost)} has no evThresholds entry.`);
+      throw new Error(
+        `ars priors: stages.${slug}.cost ${String(st.cost)} has no evThresholds entry.`,
+      );
     }
     if (st.projectTypes !== undefined) {
       if (
@@ -2414,7 +2518,7 @@ export function loadArsPriors(): ArsPriors {
         st.projectTypes.some((t) => !ARS_PROJECT_TYPES.includes(t))
       ) {
         throw new Error(
-          `ars priors: stages.${slug}.projectTypes must be a non-empty subset of {${ARS_PROJECT_TYPES.join(", ")}}.`
+          `ars priors: stages.${slug}.projectTypes must be a non-empty subset of {${ARS_PROJECT_TYPES.join(", ")}}.`,
         );
       }
     }
@@ -2428,13 +2532,15 @@ export function loadArsPriors(): ArsPriors {
  *  slugs (same typo discipline as validate-grid). */
 export function computeArs(
   scores: Record<ArsComponent, number>,
-  opts?: { completed?: string[]; projectType?: ArsProjectType }
+  opts?: { completed?: string[]; projectType?: ArsProjectType },
 ): ArsResult {
   const priors = loadArsPriors();
   for (const c of ARS_COMPONENTS) {
     const v = scores[c];
     if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > 1) {
-      throw new Error(`--${c} must be a number in [0.00, 1.00] (got ${String(v)}).`);
+      throw new Error(
+        `--${c} must be a number in [0.00, 1.00] (got ${String(v)}).`,
+      );
     }
     // The rubric and every rendered table speak in two decimals. Banding reads
     // the EXACT value while `fmt` renders it rounded, so a finer input makes
@@ -2442,7 +2548,9 @@ export function computeArs(
     // documented LOW < 0.30, and 0.4004 yields "reduces CSU=0.40 > threshold
     // 0.4". Rejecting here keeps table and band incapable of contradicting.
     if (Number(v.toFixed(2)) !== v) {
-      throw new Error(`--${c} must have at most two decimals (got ${String(v)}).`);
+      throw new Error(
+        `--${c} must have at most two decimals (got ${String(v)}).`,
+      );
     }
   }
   const graph = loadGraph();
@@ -2450,7 +2558,9 @@ export function computeArs(
   const completed = opts?.completed ?? [];
   for (const slug of completed) {
     if (!knownSlugs.has(slug)) {
-      throw new Error(`--completed names unknown stage "${slug}" - not in the compiled stage graph.`);
+      throw new Error(
+        `--completed names unknown stage "${slug}" - not in the compiled stage graph.`,
+      );
     }
   }
   // Same discipline for the priors themselves: an entry naming a stage the
@@ -2463,28 +2573,43 @@ export function computeArs(
   const compiledSlugs = new Set(loadStageGraphAll().map((s) => s.slug));
   for (const slug of Object.keys(priors.stages)) {
     if (!compiledSlugs.has(slug)) {
-      throw new Error(`ars priors: stages.${slug} is not in the compiled stage graph.`);
+      throw new Error(
+        `ars priors: stages.${slug} is not in the compiled stage graph.`,
+      );
     }
   }
 
   const band = (v: number): ArsBand =>
-    v < priors.componentBands.lowMax ? "LOW" : v < priors.componentBands.medMax ? "MED" : "HIGH";
+    v < priors.componentBands.lowMax
+      ? "LOW"
+      : v < priors.componentBands.medMax
+        ? "MED"
+        : "HIGH";
   const fmt = (v: number): string => v.toFixed(2);
   const sym = (c: ArsComponent): string => c.toUpperCase();
 
   const components = {} as ArsResult["components"];
   for (const c of ARS_COMPONENTS) {
-    components[c] = { name: priors.componentInfo[c].name, score: scores[c], band: band(scores[c]) };
+    components[c] = {
+      name: priors.componentInfo[c].name,
+      score: scores[c],
+      band: band(scores[c]),
+    };
   }
   const raw = Number(
-    (100 * ARS_COMPONENTS.reduce((acc, c) => acc + priors.weights[c] * scores[c], 0)).toFixed(
-      ARS_RAW_PRECISION
-    )
+    (
+      100 *
+      ARS_COMPONENTS.reduce((acc, c) => acc + priors.weights[c] * scores[c], 0)
+    ).toFixed(ARS_RAW_PRECISION),
   );
   const total = Math.round(raw);
-  const compositeBand = priors.compositeBands.find((b) => total >= b.min && total <= b.max);
+  const compositeBand = priors.compositeBands.find(
+    (b) => total >= b.min && total <= b.max,
+  );
   if (!compositeBand) {
-    throw new Error(`composite ${total} falls outside the compositeBands coverage.`);
+    throw new Error(
+      `composite ${total} falls outside the compositeBands coverage.`,
+    );
   }
 
   // Pass 1 - decide every stage except phase-gates (they key off the other
@@ -2516,7 +2641,8 @@ export function computeArs(
     } else if (!p || p.role === "structural" || p.cost === null) {
       decisionOf.set(s.slug, "SKIP");
     } else {
-      const maxTarget = p.targets.length > 0 ? Math.max(...p.targets.map((t) => scores[t])) : 0;
+      const maxTarget =
+        p.targets.length > 0 ? Math.max(...p.targets.map((t) => scores[t])) : 0;
       const threshold = priors.evThresholds[String(p.cost)];
       decisionOf.set(s.slug, maxTarget > threshold ? "EXECUTE" : "SKIP");
     }
@@ -2527,7 +2653,10 @@ export function computeArs(
   for (const s of graph) {
     if (!deferred.has(s.slug)) continue;
     const phaseActive = graph.some(
-      (o) => o.phase === s.phase && o.slug !== s.slug && decisionOf.get(o.slug) !== "SKIP"
+      (o) =>
+        o.phase === s.phase &&
+        o.slug !== s.slug &&
+        decisionOf.get(o.slug) !== "SKIP",
     );
     decisionOf.set(s.slug, phaseActive ? "EXECUTE" : "SKIP");
   }
@@ -2551,7 +2680,8 @@ export function computeArs(
       evScreen.push({
         ...base,
         screen: "completed",
-        reason: "completed - in-flight evidence; kept as EXECUTE in the derived grid",
+        reason:
+          "completed - in-flight evidence; kept as EXECUTE in the derived grid",
       });
     } else if (!p) {
       evScreen.push({
@@ -2566,9 +2696,17 @@ export function computeArs(
         reason: `project is ${String(projectType)} - the stage's compiled condition restricts it to ${(p.projectTypes ?? []).join("/")} projects`,
       });
     } else if (p.role === "initialization") {
-      evScreen.push({ ...base, screen: "initialization", reason: "initialization - always runs" });
+      evScreen.push({
+        ...base,
+        screen: "initialization",
+        reason: "initialization - always runs",
+      });
     } else if (p.role === "core") {
-      evScreen.push({ ...base, screen: "core", reason: "spine - always (core implementation / verification)" });
+      evScreen.push({
+        ...base,
+        screen: "core",
+        reason: "spine - always (core implementation / verification)",
+      });
     } else if (p.role === "phase-gate") {
       evScreen.push({
         ...base,
@@ -2582,16 +2720,20 @@ export function computeArs(
       evScreen.push({
         ...base,
         screen: "structural",
-        reason: "structural (decomposition) - not numerically screenable; mechanical default SKIP, human judgment at the gate",
+        reason:
+          "structural (decomposition) - not numerically screenable; mechanical default SKIP, human judgment at the gate",
       });
     } else if (p.cost === null) {
       evScreen.push({
         ...base,
         screen: "no-cost-prior",
-        reason: "no cost prior in the shipped table - not numerically screenable; human judgment at the gate",
+        reason:
+          "no cost prior in the shipped table - not numerically screenable; human judgment at the gate",
       });
     } else {
-      const maxSym = p.targets.reduce((a, b) => (scores[a] >= scores[b] ? a : b));
+      const maxSym = p.targets.reduce((a, b) =>
+        scores[a] >= scores[b] ? a : b,
+      );
       const maxTarget = scores[maxSym];
       const threshold = priors.evThresholds[String(p.cost)];
       evScreen.push({
@@ -2621,20 +2763,28 @@ export function computeArs(
     "| Component | Symbol | Score | Band |",
     "|-----------|--------|-------|------|",
     ...ARS_COMPONENTS.map(
-      (c) => `| ${components[c].name} | ${sym(c)} | ${fmt(scores[c])} | ${components[c].band} |`
+      (c) =>
+        `| ${components[c].name} | ${sym(c)} | ${fmt(scores[c])} | ${components[c].band} |`,
     ),
     `| **Composite ARS (advisory)** | - | **${total} / 100** | **${compositeBand.label}** |`,
   ].join("\n");
   const stageDecisions = [
     "| # | Stage | Decision | Reasoning |",
     "|---|-------|----------|-----------|",
-    ...evScreen.map((r) => `| ${r.number} | ${r.stage} | ${r.decision} | ${r.reason} |`),
+    ...evScreen.map(
+      (r) => `| ${r.number} | ${r.stage} | ${r.decision} | ${r.reason} |`,
+    ),
   ].join("\n");
 
   return {
     schemaVersion: 1,
     components,
-    composite: { raw, total, label: compositeBand.label, shape: compositeBand.shape },
+    composite: {
+      raw,
+      total,
+      label: compositeBand.label,
+      shape: compositeBand.shape,
+    },
     evScreen,
     screenGrid,
     nearestScopes,
@@ -2702,11 +2852,15 @@ const COMMANDS: Record<string, Handler> = {
       const rawScore = requireFlag(args, `--${c}`);
       const v = Number(rawScore);
       if (rawScore.trim() === "" || !Number.isFinite(v) || v < 0 || v > 1) {
-        console.error(`ars: --${c} must be a number in [0.00, 1.00] (got "${rawScore}").`);
+        console.error(
+          `ars: --${c} must be a number in [0.00, 1.00] (got "${rawScore}").`,
+        );
         process.exit(1);
       }
       if (Number(v.toFixed(2)) !== v) {
-        console.error(`ars: --${c} must have at most two decimals (got "${rawScore}").`);
+        console.error(
+          `ars: --${c} must have at most two decimals (got "${rawScore}").`,
+        );
         process.exit(1);
       }
       scores[c] = v;
@@ -2720,7 +2874,10 @@ const COMMANDS: Record<string, Handler> = {
     const completed =
       compRaw === undefined
         ? undefined
-        : compRaw.split(",").map((s) => s.trim()).filter(Boolean);
+        : compRaw
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
     const ptIdx = args.indexOf("--project-type");
     const ptRaw = ptIdx >= 0 ? args[ptIdx + 1] : undefined;
     // Same shape as the --completed guard one screen up: a trailing flag with
@@ -2729,14 +2886,18 @@ const COMMANDS: Record<string, Handler> = {
     // (A flag-as-value, `--project-type --completed x`, is already rejected by
     // the enum check below, which names what it read.)
     if (ptIdx >= 0 && ptRaw === undefined) {
-      console.error("ars: --project-type requires a value (brownfield or greenfield).");
+      console.error(
+        "ars: --project-type requires a value (brownfield or greenfield).",
+      );
       process.exit(1);
     }
     let projectType: ArsProjectType | undefined;
     if (ptRaw !== undefined) {
       const lowered = ptRaw.toLowerCase();
       if (lowered !== "brownfield" && lowered !== "greenfield") {
-        console.error(`ars: --project-type must be brownfield or greenfield (got "${ptRaw}").`);
+        console.error(
+          `ars: --project-type must be brownfield or greenfield (got "${ptRaw}").`,
+        );
         process.exit(1);
       }
       projectType = lowered;
@@ -2763,7 +2924,9 @@ const COMMANDS: Record<string, Handler> = {
     const kwIdx = args.indexOf("--keywords");
     const kwRaw = kwIdx >= 0 ? args[kwIdx + 1] : undefined;
     if (kwIdx >= 0 && (kwRaw === undefined || kwRaw.startsWith("--"))) {
-      console.error("validate-grid: --keywords requires a comma-separated value.");
+      console.error(
+        "validate-grid: --keywords requires a comma-separated value.",
+      );
       process.exit(1);
     }
     const ptIdx = args.indexOf("--project-type");
@@ -2773,7 +2936,7 @@ const COMMANDS: Record<string, Handler> = {
       const lowered = ptRaw.toLowerCase();
       if (lowered !== "brownfield" && lowered !== "greenfield") {
         console.error(
-          `validate-grid: --project-type must be brownfield or greenfield (got "${ptRaw}").`
+          `validate-grid: --project-type must be brownfield or greenfield (got "${ptRaw}").`,
         );
         process.exit(1);
       }
@@ -2783,27 +2946,40 @@ const COMMANDS: Record<string, Handler> = {
     try {
       parsed = JSON.parse(readFileSync(proposalPath, "utf-8"));
     } catch (err) {
-      console.error(`validate-grid: cannot read ${proposalPath}: ${errorMessage(err)}`);
+      console.error(
+        `validate-grid: cannot read ${proposalPath}: ${errorMessage(err)}`,
+      );
       process.exit(1);
     }
     // Accept either the bare {slug: action} map or a {stages: {...}} wrapper
     // (the shape of a scope-grid.json entry / the composer's proposal.grid).
     const obj = parsed as Record<string, unknown>;
     const gridRaw =
-      obj !== null && typeof obj === "object" && typeof obj.stages === "object" && obj.stages !== null
+      obj !== null &&
+      typeof obj === "object" &&
+      typeof obj.stages === "object" &&
+      obj.stages !== null
         ? (obj.stages as Record<string, unknown>)
         : obj;
-    if (gridRaw === null || typeof gridRaw !== "object" || Array.isArray(gridRaw)) {
+    if (
+      gridRaw === null ||
+      typeof gridRaw !== "object" ||
+      Array.isArray(gridRaw)
+    ) {
       console.error(
-        "validate-grid: proposal must be a JSON object of {\"<stage-slug>\": \"EXECUTE\"|\"SKIP\"} (or {stages: {...}})."
+        'validate-grid: proposal must be a JSON object of {"<stage-slug>": "EXECUTE"|"SKIP"} (or {stages: {...}}).',
       );
       process.exit(1);
     }
     const grid: Record<string, string> = {};
-    for (const [slug, action] of Object.entries(gridRaw)) grid[slug] = String(action);
+    for (const [slug, action] of Object.entries(gridRaw))
+      grid[slug] = String(action);
     const r = validateGrid(grid, { strict, projectType });
     if (kwRaw !== undefined) {
-      const granted = kwRaw.split(",").map((k) => k.trim()).filter(Boolean);
+      const granted = kwRaw
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean);
       for (const err of keywordCollisions(granted)) r.errors.push(err);
     }
     // The composer's Change Control proposal rides with the grid: `--change-control
@@ -2818,7 +2994,9 @@ const COMMANDS: Record<string, Handler> = {
           ? obj.changeControl
           : undefined;
     if (ccIdx >= 0 && (ccRaw === undefined || ccRaw.startsWith("--"))) {
-      console.error("validate-grid: --change-control requires <strict|relaxed>.");
+      console.error(
+        "validate-grid: --change-control requires <strict|relaxed>.",
+      );
       process.exit(1);
     }
     if (ccRaw !== undefined) {
@@ -2837,7 +3015,8 @@ const COMMANDS: Record<string, Handler> = {
             intent: intentIdx >= 0 ? args[intentIdx + 1] : undefined,
             space: spaceIdx >= 0 ? args[spaceIdx + 1] : undefined,
           }).find((declaration) => declaration.value === "strict");
-          if (memoryStrict) r.errors.push(changeControlMemoryStrictRefusal(memoryStrict));
+          if (memoryStrict)
+            r.errors.push(changeControlMemoryStrictRefusal(memoryStrict));
         }
       }
     }
@@ -2871,7 +3050,7 @@ const COMMANDS: Record<string, Handler> = {
         !auditLockOwnedByProcess(pd, inheritedOwner)
       ) {
         throw new Error(
-          "Refusing inherited workspace lock: the declared owner is not this process's live parent lock holder."
+          "Refusing inherited workspace lock: the declared owner is not this process's live parent lock holder.",
         );
       }
       writeCompiledGraph();
@@ -2887,15 +3066,14 @@ const COMMANDS: Record<string, Handler> = {
     // behind a gate until the orchestrator opts into engine-side resolution.
     if (process.env.AIDLC_GRAPH_RESOLVE !== "1") {
       console.error(
-        "aidlc-graph resolve is gated behind AIDLC_GRAPH_RESOLVE=1 (rollout flag)."
+        "aidlc-graph resolve is gated behind AIDLC_GRAPH_RESOLVE=1 (rollout flag).",
       );
       process.exit(1);
     }
     const scope = requireArg(args, "scope");
     const plan = resolvePlanForScope(scope);
     const pd = resolveProjectDir();
-    const outPath =
-      process.env.AIDLC_PLAN_PATH ?? planFilePath(pd);
+    const outPath = process.env.AIDLC_PLAN_PATH ?? planFilePath(pd);
     const planJson = `${JSON.stringify(plan, null, 2)}\n`;
     if (args.includes("--stdout")) {
       process.stdout.write(planJson);
@@ -2922,9 +3100,11 @@ const COMMANDS: Record<string, Handler> = {
       if (json !== expected) {
         console.error(
           `export --check: bundle drift vs ${fixturePath}. ` +
-            `Regenerate with: ${
-              aidlcToolInvocation("graph", undefined, false)
-            } export > ${fixturePath}`
+            `Regenerate with: ${aidlcToolInvocation(
+              "graph",
+              undefined,
+              false,
+            )} export > ${fixturePath}`,
         );
         process.exit(1);
       }
@@ -2994,16 +3174,14 @@ export async function main(argv: string[]): Promise<void> {
     // this shape (stderr-only, mentions "artifacts" to aid discovery).
     const available = Object.keys(COMMANDS).sort().join(", ");
     console.error(
-      `Usage: aidlc-graph <subcommand>. Valid: ${available}. Run with --help for detail.`
+      `Usage: aidlc-graph <subcommand>. Valid: ${available}. Run with --help for detail.`,
     );
     process.exit(1);
   }
   const handler = COMMANDS[cmd];
   if (!handler) {
     const available = Object.keys(COMMANDS).sort().join(", ");
-    console.error(
-      `Unknown subcommand: ${cmd}. Valid: ${available}`
-    );
+    console.error(`Unknown subcommand: ${cmd}. Valid: ${available}`);
     process.exit(1);
   }
   try {

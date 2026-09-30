@@ -52,7 +52,7 @@ function hasTopLevelField(frontmatter: string, key: string): boolean {
 // `^---\r?\n` regex anchor wouldn't match and the file would parse as
 // frontmatter-less, silently dropping `pairing:`.
 export function parseRuleFrontmatter(raw: string): RuleFrontmatter {
-  const cleaned = raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw;
+  const cleaned = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
   const m = cleaned.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return {};
   const fm = m[1];
@@ -84,7 +84,10 @@ export function validateRuleFrontmatter(
     if (typeof obj.pairing !== "string" || obj.pairing.length === 0) {
       throw new Error(`${file}: pairing must be a non-empty string`);
     }
-    if (obj.pairing !== "feedforward-only" && !obj.pairing.startsWith("aidlc-")) {
+    if (
+      obj.pairing !== "feedforward-only" &&
+      !obj.pairing.startsWith("aidlc-")
+    ) {
       throw new Error(
         `${file}: pairing must be "feedforward-only" or start with "aidlc-" ` +
           `(sensor id shape); got "${obj.pairing}"`,
@@ -119,10 +122,9 @@ export function validateRuleFrontmatter(
   }
 }
 
-export function isRuleStale(
-  obj: RuleFrontmatter,
-  today: string,
-): boolean {
-  return obj.status === "deprecated" ||
-    (obj.stale_after !== undefined && today > obj.stale_after);
+export function isRuleStale(obj: RuleFrontmatter, today: string): boolean {
+  return (
+    obj.status === "deprecated" ||
+    (obj.stale_after !== undefined && today > obj.stale_after)
+  );
 }

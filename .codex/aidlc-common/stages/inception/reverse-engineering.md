@@ -42,18 +42,20 @@ outputs: "aidlc/spaces/<active-space>/codekb/<repo>/ (9 artifacts: business-over
 
 This stage runs `mode: pipeline` (stage-protocol-ensemble.md §5): a two-link chain in
 which each link advances the work product directly. The developer lead (link
-1) scans and returns structured results; the architect (link 2, the final
-link) synthesizes those results and writes the 9 artifacts. The final link
-leaving the `produces[]` artifacts complete plus both tool-owned link receipts
-is the pipeline contract — no contribution files on pipeline stages. On resume,
-read `directive.pipeline.completed` and dispatch only the first missing link;
-multi-repo entries are qualified as `<repo>:<agent>`.
+
+1. scans and returns structured results; the architect (link 2, the final
+   link) synthesizes those results and writes the 9 artifacts. The final link
+   leaving the `produces[]` artifacts complete plus both tool-owned link receipts
+   is the pipeline contract — no contribution files on pipeline stages. On resume,
+   read `directive.pipeline.completed` and dispatch only the first missing link;
+   multi-repo entries are qualified as `<repo>:<agent>`.
 
 ## Steps
 
 ### Step 1: Check Conditions
 
 Read `<record>/aidlc-state.md` to confirm:
+
 - Project type is brownfield
 
 If the project is not brownfield, run
@@ -199,6 +201,7 @@ Only after every repository decision has been resolved:
 ### Step 2: Developer Code Scan
 
 Delegate to Task tool with aidlc-developer-agent:
+
 - subagent_type="aidlc-developer-agent"
 - The agent persona and knowledge are loaded automatically. Do NOT manually inject the persona.
 - Include workspace state from aidlc-state.md as context
@@ -218,6 +221,7 @@ repo's snapshot `paths`; the deeply analyzed result MUST stay within that set.
 For each repo selected for scanning, the developer scans `<repo>`'s codebase
 (the sibling dir `<workspace>/<repo>/`; for a single-repo intent this is the
 whole codebase) for:
+
 - All packages, modules, and their purposes
 - Build systems, configuration, and dependency relationships
 - External and internal APIs (endpoints, contracts, methods)
@@ -254,12 +258,14 @@ and architect run again.
 ### Step 3: Architect Synthesis
 
 Delegate to Task tool with aidlc-architect-agent:
+
 - subagent_type="aidlc-architect-agent"
 - The agent persona and knowledge are loaded automatically. Do NOT manually inject the persona.
 - Pass the developer scan handoff path, not its body; the architect reads that file
 - Include workspace state from aidlc-state.md
 
 Architect synthesizes scan results into a complete 9-artifact candidate:
+
 1. **business-overview.md** — Business domain, purpose, key functionality
 2. **architecture.md** — System architecture, patterns, component relationships (with Mermaid diagrams). MUST include Interaction Diagrams section depicting how business transactions are implemented across components (sequence or flow diagrams).
 3. **code-structure.md** — Package/module organization, file classification, code patterns
@@ -304,9 +310,9 @@ For the block's `fingerprint:` line, run the mint command with the final
 `analyzed.paths` from the merged or replaced block (comma-separated) and paste
 its output verbatim:
 
-   ```
-   aidlc engine workspace codekb-scope-diff --repo <repo> --mint --paths <analyzed paths>
-   ```
+```
+aidlc engine workspace codekb-scope-diff --repo <repo> --mint --paths <analyzed paths>
+```
 
 At Minimal depth, all nine artifacts and every required section above still
 exist. Keep them concise by recording each inventory or finding once in its
@@ -400,6 +406,7 @@ That `report` call owns every lifecycle transition and advancement; never perfor
 ### Step 5: Present Completion & Request Approval
 
 Use stage-protocol.md completion template:
+
 - Announcement with completion summary
 - Summary of all 9 artifacts produced **per repo** (for a multi-repo intent, list
   each repo's `aidlc/spaces/<active-space>/codekb/<repo>/` set — the directory
@@ -419,6 +426,7 @@ Use stage-protocol.md completion template:
   ```
 
   (COVERS, or no prior store, needs no warning line.)
+
 - Review path: `aidlc/spaces/<active-space>/codekb/<repo>/` for each repo in the set
 - Structured approval question with options: Approve (continue to Requirements Analysis) / Request Changes. If any repo returned NARROWER, the Approve option's description must say which stores now have narrower verified coverage (e.g. "Accept the narrower verified coverage for <repos>; continue to Requirements Analysis").
 

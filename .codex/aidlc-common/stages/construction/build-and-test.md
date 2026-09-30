@@ -73,6 +73,7 @@ Catalog all required test types from this inventory.
 ### Step 2: Generate Build Instructions
 
 Create `<record>/construction/build-and-test/build-instructions.md`:
+
 - Dependency installation steps
 - Environment setup (env vars, config files, local services)
 - Build commands (compile, bundle, transpile)
@@ -87,9 +88,11 @@ Consult the active test strategy from `aidlc-state.md` → `**Test Strategy**` (
 tests are covered per-unit by Code Generation.
 
 **Standard strategy** — generate:
+
 - `integration-test-instructions.md`: Key boundary tests, cross-unit interaction
 
 **Comprehensive strategy** — generate all applicable:
+
 - `integration-test-instructions.md`: Cross-unit interaction, external dependency handling
 - `performance-test-instructions.md` (IF NFR performance requirements exist): Load testing, benchmarks, regression detection
 - `security-test-instructions.md` (IF NFR security requirements exist): SAST/DAST, auth testing, injection testing
@@ -98,6 +101,7 @@ tests are covered per-unit by Code Generation.
 All files go in `<record>/construction/build-and-test/`.
 
 Each instruction file should include:
+
 - Test framework setup and configuration
 - How to run the tests (commands, flags, filters)
 - Expected coverage targets appropriate to the strategy level
@@ -108,6 +112,7 @@ These are soft guidelines — the LLM can generate additional test types at any 
 ### Step 8: Generate Build and Test Summary
 
 Create `<record>/construction/build-and-test/build-and-test-summary.md`:
+
 - Overall build status and prerequisites
 - Test type inventory (which test types were generated)
 - Coverage expectations per unit
@@ -186,7 +191,7 @@ quality target is never an acceptable fix.
    IMPACT — effort, financial cost, risk. Never declare a feasible path out of
    scope on an IMPACT-UNESTIMATED effort assumption.
 3. **Autonomous bounded loop-back** — if `Construction Autonomy Mode:
-   autonomous` (in aidlc-state.md), an impact-estimated fix exists, and fewer than
+autonomous` (in aidlc-state.md), an impact-estimated fix exists, and fewer than
    3 entries exist under `## Loop-Back Log` in test-results.md: follow the
    construction protocol module
    (`aidlc-common/protocols/stage-protocol-construction.md`),

@@ -4,11 +4,7 @@
   "productName": "Codex CLI",
   "configNextStep": "run `codex`, then `$aidlc --doctor`",
   "harnessDir": ".codex",
-  "managedDirectories": [
-    ".agents",
-    ".codex",
-    "aidlc"
-  ],
+  "managedDirectories": [".agents", ".codex", "aidlc"],
   "rootIntegrations": [
     {
       "path": ".gitignore",

@@ -75,15 +75,16 @@ function validateSelectedAsset(asset: ReleaseAsset, version: string): void {
   if (asset.kind === "binary" && asset.target) {
     const expected = `aidlc-${asset.target}${asset.target.startsWith("windows-") ? ".exe" : ""}`;
     const verification = asset.verification;
-    const verificationValid = verification === undefined ||
-      (
-        verification !== null &&
+    const verificationValid =
+      verification === undefined ||
+      (verification !== null &&
         typeof verification === "object" &&
-        (verification.status === "VERIFIED" || verification.status === "UNVERIFIED") &&
-        (verification.mode === "full-runtime" || verification.mode === "inspection-only") &&
+        (verification.status === "VERIFIED" ||
+          verification.status === "UNVERIFIED") &&
+        (verification.mode === "full-runtime" ||
+          verification.mode === "inspection-only") &&
         typeof verification.hostTarget === "string" &&
-        /^[a-z0-9][a-z0-9-]*$/.test(verification.hostTarget)
-      );
+        /^[a-z0-9][a-z0-9-]*$/.test(verification.hostTarget));
     if (asset.name === expected && verificationValid) return;
   }
   throw new Error(`${asset.name}: invalid selected release asset metadata`);
@@ -108,12 +109,16 @@ const GITHUB_API_HEADERS = {
   "X-GitHub-Api-Version": "2022-11-28",
 };
 
-function releaseTrust(version: string): { repository: string; workflow: string } {
+function releaseTrust(version: string): {
+  repository: string;
+  workflow: string;
+} {
   const repository =
     process.env.AIDLC_RELEASE_REPOSITORY ?? DEFAULT_RELEASE_REPOSITORY;
-  const workflowName = parseVersion(version).channel === PREVIEW_CHANNEL
-    ? "preview-release.yml"
-    : "release.yml";
+  const workflowName =
+    parseVersion(version).channel === PREVIEW_CHANNEL
+      ? "preview-release.yml"
+      : "release.yml";
   const workflow =
     process.env.AIDLC_RELEASE_WORKFLOW ??
     `${repository}/.github/workflows/${workflowName}`;
@@ -141,8 +146,14 @@ export function releaseApiUrl(baseUrl: string, explicit?: string): string {
     return configured.replace(/\/+$/, "");
   }
   const parsed = new URL(baseUrl);
-  const match = /^\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/releases\/?$/.exec(parsed.pathname);
-  if (parsed.protocol !== "https:" || parsed.hostname !== "github.com" || !match) {
+  const match = /^\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/releases\/?$/.exec(
+    parsed.pathname,
+  );
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.hostname !== "github.com" ||
+    !match
+  ) {
     throw new ReleaseUnavailableError(
       `${PREVIEW_CHANNEL} releases cannot be listed for ${redact(baseUrl)}; pass --release-api-url or set AIDLC_RELEASE_API_URL`,
     );
@@ -155,7 +166,9 @@ function progress(url: string, complete: boolean): void {
   const name = basename(new URL(url).pathname) || "release asset";
   const message = complete ? `Downloaded ${name}` : `Downloading ${name}...`;
   if (process.stderr.isTTY) {
-    process.stderr.write(`\r${message.slice(0, PROGRESS_WIDTH).padEnd(PROGRESS_WIDTH)}${complete ? "\n" : ""}`);
+    process.stderr.write(
+      `\r${message.slice(0, PROGRESS_WIDTH).padEnd(PROGRESS_WIDTH)}${complete ? "\n" : ""}`,
+    );
   } else if (complete) {
     process.stderr.write(`${message}\n`);
   }
@@ -177,10 +190,14 @@ function safeAssetName(name: string): string {
 function readChecksums(path: string): Map<string, string> {
   assertMetadataSize(path, "checksums.txt");
   const rows = new Map<string, string>();
-  for (const line of readFileSync(path, "utf-8").trim().split(/\r?\n/).filter(Boolean)) {
+  for (const line of readFileSync(path, "utf-8")
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean)) {
     const match = /^([a-f0-9]{64}) {2}([A-Za-z0-9][A-Za-z0-9._-]*)$/.exec(line);
     if (!match) throw new Error(`malformed checksums.txt row: ${line}`);
-    if (rows.has(match[2])) throw new Error(`duplicate checksums.txt row: ${match[2]}`);
+    if (rows.has(match[2]))
+      throw new Error(`duplicate checksums.txt row: ${match[2]}`);
     rows.set(match[2], match[1]);
   }
   return rows;
@@ -192,15 +209,19 @@ export function digest(path: string): string {
 
 function verifiedChecksums(directory: string): Map<string, string> {
   const checksumsPath = join(directory, "checksums.txt");
-  if (!existsSync(checksumsPath)) throw new Error("release is missing checksums.txt");
+  if (!existsSync(checksumsPath))
+    throw new Error("release is missing checksums.txt");
   const rows = readChecksums(checksumsPath);
   const expected = rows.get("version.json");
   if (!expected) throw new Error("checksums.txt has no version.json checksum");
   const manifestPath = join(directory, "version.json");
-  if (!existsSync(manifestPath)) throw new Error("release is missing version.json");
+  if (!existsSync(manifestPath))
+    throw new Error("release is missing version.json");
   const actual = digest(manifestPath);
   if (actual !== expected) {
-    throw new Error(`version.json: checksum mismatch (expected ${expected}, got ${actual})`);
+    throw new Error(
+      `version.json: checksum mismatch (expected ${expected}, got ${actual})`,
+    );
   }
   return rows;
 }
@@ -229,38 +250,44 @@ export function verifyReleaseProvenance(
       Buffer.from(capability.stdout ?? new Uint8Array()).toString("utf-8"),
       Buffer.from(capability.stderr ?? new Uint8Array()).toString("utf-8"),
     ].join("\n");
-    capabilityAvailable = capability.exitCode === 0 &&
+    capabilityAvailable =
+      capability.exitCode === 0 &&
       ["--signer-workflow", "--source-ref", "--source-digest"].every((flag) =>
-        help.includes(flag)
+        help.includes(flag),
       );
   } catch {
     return;
   }
   if (!capabilityAvailable) return;
-  const result = Bun.spawnSync([
-    gh,
-    "attestation",
-    "verify",
-    join(directory, "checksums.txt"),
-    "--bundle",
-    bundle,
-    "--repo",
-    trust.repository,
-    "--signer-workflow",
-    trust.workflow,
-    "--source-ref",
-    manifest.sourceRef ?? `refs/tags/v${manifest.version}`,
-    ...(manifest.sourceDigest
-      ? ["--source-digest", manifest.sourceDigest]
-      : []),
-  ], {
-    env: { ...process.env },
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const result = Bun.spawnSync(
+    [
+      gh,
+      "attestation",
+      "verify",
+      join(directory, "checksums.txt"),
+      "--bundle",
+      bundle,
+      "--repo",
+      trust.repository,
+      "--signer-workflow",
+      trust.workflow,
+      "--source-ref",
+      manifest.sourceRef ?? `refs/tags/v${manifest.version}`,
+      ...(manifest.sourceDigest
+        ? ["--source-digest", manifest.sourceDigest]
+        : []),
+    ],
+    {
+      env: { ...process.env },
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
   if (result.exitCode !== 0) {
-    const stderr = Buffer.from(result.stderr ?? new Uint8Array()).toString("utf-8").trim();
+    const stderr = Buffer.from(result.stderr ?? new Uint8Array())
+      .toString("utf-8")
+      .trim();
     throw new Error(
       `release provenance verification failed${
         stderr ? `: ${stderr.split(/\r?\n/)[0]}` : ""
@@ -273,31 +300,38 @@ export function readReleaseManifest(directory: string): ReleaseManifest {
   assertMetadataSize(join(directory, "version.json"), "version.json");
   let manifest: ReleaseManifest;
   try {
-    manifest = JSON.parse(readFileSync(join(directory, "version.json"), "utf-8")) as ReleaseManifest;
+    manifest = JSON.parse(
+      readFileSync(join(directory, "version.json"), "utf-8"),
+    ) as ReleaseManifest;
   } catch (error) {
-    throw new Error(`invalid version.json: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `invalid version.json: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
-  if (manifest.schemaVersion !== 1) throw new Error(`unsupported release schema ${manifest.schemaVersion}`);
+  if (manifest.schemaVersion !== 1)
+    throw new Error(`unsupported release schema ${manifest.schemaVersion}`);
   const releaseVersion = parseVersion(manifest.version);
   const hasSourceRef = manifest.sourceRef !== undefined;
   const hasSourceDigest = manifest.sourceDigest !== undefined;
   if (hasSourceRef !== hasSourceDigest) {
-    throw new Error("version.json must provide sourceRef and sourceDigest together");
+    throw new Error(
+      "version.json must provide sourceRef and sourceDigest together",
+    );
   }
   if (
     hasSourceRef &&
-    (
-      manifest.sourceRef !== (
-        releaseVersion.channel === PREVIEW_CHANNEL
-          ? "refs/heads/main"
-          : `refs/tags/v${manifest.version}`
-      ) ||
-      !/^[a-f0-9]{40}$/.test(manifest.sourceDigest ?? "")
-    )
+    (manifest.sourceRef !==
+      (releaseVersion.channel === PREVIEW_CHANNEL
+        ? "refs/heads/main"
+        : `refs/tags/v${manifest.version}`) ||
+      !/^[a-f0-9]{40}$/.test(manifest.sourceDigest ?? ""))
   ) {
     throw new Error("version.json contains an invalid release source identity");
   }
-  if (!Array.isArray(manifest.distributions) || manifest.distributions.length === 0) {
+  if (
+    !Array.isArray(manifest.distributions) ||
+    manifest.distributions.length === 0
+  ) {
     throw new Error("version.json contains no distributions");
   }
   const distributions = new Set<string>();
@@ -309,7 +343,9 @@ export function readReleaseManifest(directory: string): ReleaseManifest {
       distribution.productName.trim().length === 0 ||
       distributions.has(distribution.name)
     ) {
-      throw new Error("version.json contains an invalid or duplicate distribution");
+      throw new Error(
+        "version.json contains an invalid or duplicate distribution",
+      );
     }
     distributions.add(distribution.name);
   }
@@ -319,19 +355,25 @@ export function readReleaseManifest(directory: string): ReleaseManifest {
   const names = new Set<string>();
   for (const asset of manifest.assets) {
     safeAssetName(asset.name);
-    if (names.has(asset.name)) throw new Error(`duplicate release asset: ${asset.name}`);
+    if (names.has(asset.name))
+      throw new Error(`duplicate release asset: ${asset.name}`);
     names.add(asset.name);
     if (!/^[a-f0-9]{64}$/.test(asset.sha256)) {
       throw new Error(`${asset.name}: invalid SHA-256`);
     }
-    if (!Number.isSafeInteger(asset.bytes) || asset.bytes < 0 || asset.bytes > MAX_ASSET_BYTES) {
+    if (
+      !Number.isSafeInteger(asset.bytes) ||
+      asset.bytes < 0 ||
+      asset.bytes > MAX_ASSET_BYTES
+    ) {
       throw new Error(`${asset.name}: invalid byte length`);
     }
     if (
       typeof asset.kind !== "string" ||
       !/^[a-z][a-z0-9-]*$/.test(asset.kind) ||
       (asset.target !== undefined &&
-        (typeof asset.target !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(asset.target)))
+        (typeof asset.target !== "string" ||
+          !/^[a-z0-9][a-z0-9-]*$/.test(asset.target)))
     ) {
       throw new Error(`${asset.name}: invalid asset metadata`);
     }
@@ -344,7 +386,9 @@ export function verifyReleaseDirectory(
   required: readonly string[] = [],
   allowSubset = false,
 ): ReleaseManifest {
-  const root = isAbsolute(directory) ? directory : resolve(process.cwd(), directory);
+  const root = isAbsolute(directory)
+    ? directory
+    : resolve(process.cwd(), directory);
   const checksumRows = verifiedChecksums(root);
   const manifest = readReleaseManifest(root);
   const manifestNames = new Set(manifest.assets.map((asset) => asset.name));
@@ -361,7 +405,9 @@ export function verifyReleaseDirectory(
     }
     const actual = digest(path);
     if (actual !== asset.sha256 || checksumRows.get(asset.name) !== actual) {
-      throw new Error(`${asset.name}: checksum mismatch (expected ${asset.sha256}, got ${actual})`);
+      throw new Error(
+        `${asset.name}: checksum mismatch (expected ${asset.sha256}, got ${actual})`,
+      );
     }
     if (readFileSync(path).byteLength !== asset.bytes) {
       throw new Error(`${asset.name}: size mismatch`);
@@ -377,7 +423,11 @@ export function verifyReleaseDirectory(
   return manifest;
 }
 
-function releaseUrl(base: string, version: string | undefined, name: string): string {
+function releaseUrl(
+  base: string,
+  version: string | undefined,
+  name: string,
+): string {
   const clean = base.replace(/\/+$/, "");
   const segment = version ? `download/v${version}` : "latest/download";
   return `${clean}/${segment}/${name}`;
@@ -401,7 +451,9 @@ function redact(url: string): string {
 function remainingTimeout(deadline: number, label: string): number {
   const remaining = deadline - Date.now();
   if (remaining <= 0) {
-    throw new ReleaseUnavailableError(`${label} timed out before the release metadata completed`);
+    throw new ReleaseUnavailableError(
+      `${label} timed out before the release metadata completed`,
+    );
   }
   return remaining;
 }
@@ -418,8 +470,10 @@ function assertReleaseUrl(url: string, allowQuery = false): URL {
   }
   if (
     parsed.protocol !== "https:" &&
-    !(parsed.protocol === "http:" &&
-      (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost"))
+    !(
+      parsed.protocol === "http:" &&
+      (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost")
+    )
   ) {
     throw new Error(`release URL must use HTTPS: ${redact(url)}`);
   }
@@ -437,7 +491,8 @@ function proxyFor(url: URL): string | undefined {
     if (entry === "*") return undefined;
     const withoutScheme = entry.replace(/^[a-z]+:\/\//i, "").split("/")[0];
     const lastColon = withoutScheme.lastIndexOf(":");
-    const hasPort = lastColon > 0 && /^\d+$/.test(withoutScheme.slice(lastColon + 1));
+    const hasPort =
+      lastColon > 0 && /^\d+$/.test(withoutScheme.slice(lastColon + 1));
     const host = (hasPort ? withoutScheme.slice(0, lastColon) : withoutScheme)
       .replace(/^\./, "")
       .toLowerCase();
@@ -506,22 +561,28 @@ async function fetchBytes(
       } catch (error) {
         if (
           controller.signal.aborted ||
-          error instanceof DOMException && error.name === "AbortError" ||
-          error instanceof Error && error.name === "TimeoutError"
+          (error instanceof DOMException && error.name === "AbortError") ||
+          (error instanceof Error && error.name === "TimeoutError")
         ) {
           throw new ReleaseUnavailableError(
             `${redact(current)} timed out after ${reportedTimeoutMs}ms`,
           );
         }
-        throw new ReleaseUnavailableError(`${redact(current)} transport failure`);
+        throw new ReleaseUnavailableError(
+          `${redact(current)} transport failure`,
+        );
       }
       if (![301, 302, 303, 307, 308].includes(response.status)) break;
       const location = response.headers.get("location");
       if (!location) {
-        throw new ReleaseUnavailableError(`${redact(current)} returned a redirect without Location`);
+        throw new ReleaseUnavailableError(
+          `${redact(current)} returned a redirect without Location`,
+        );
       }
       if (redirects === 5) {
-        throw new ReleaseUnavailableError(`${redact(url)} exceeded the 5 redirect limit`);
+        throw new ReleaseUnavailableError(
+          `${redact(url)} exceeded the 5 redirect limit`,
+        );
       }
       await response.body?.cancel();
       current = new URL(location, current).toString();
@@ -533,13 +594,20 @@ async function fetchBytes(
         );
       }
     }
-    if (!response) throw new ReleaseUnavailableError(`${redact(url)} returned no response`);
+    if (!response)
+      throw new ReleaseUnavailableError(`${redact(url)} returned no response`);
     if (response.status === 404) throw new ReleaseUnavailableError(notFound);
     if (!response.ok) {
-      throw new ReleaseUnavailableError(`${redact(url)} returned HTTP ${response.status}`);
+      throw new ReleaseUnavailableError(
+        `${redact(url)} returned HTTP ${response.status}`,
+      );
     }
-    const contentType = response.headers.get("content-type")?.split(";", 1)[0]
-      .trim().toLowerCase() ?? "";
+    const contentType =
+      response.headers
+        .get("content-type")
+        ?.split(";", 1)[0]
+        .trim()
+        .toLowerCase() ?? "";
     if (contentTypes.length > 0 && !contentTypes.includes(contentType)) {
       throw new Error(
         `${redact(url)} returned unexpected content type ${contentType || "<missing>"}`,
@@ -547,35 +615,46 @@ async function fetchBytes(
     }
     const length = Number(response.headers.get("content-length") || 0);
     if (Number.isFinite(length) && length > maxBytes) {
-      throw new Error(`${redact(url)} exceeds the ${maxBytes} byte download limit`);
+      throw new Error(
+        `${redact(url)} exceeds the ${maxBytes} byte download limit`,
+      );
     }
     if (!response.body) {
-      throw new ReleaseUnavailableError(`${redact(url)} returned an empty response body`);
+      throw new ReleaseUnavailableError(
+        `${redact(url)} returned an empty response body`,
+      );
     }
     const chunks: Uint8Array[] = [];
     let bytes = 0;
     const reader = response.body.getReader();
     while (true) {
       const chunk = await reader.read().catch(() => {
-        throw new ReleaseUnavailableError(`${redact(current)} transport failure`);
+        throw new ReleaseUnavailableError(
+          `${redact(current)} transport failure`,
+        );
       });
       if (chunk.done) break;
       bytes += chunk.value.byteLength;
       if (bytes > maxBytes) {
         await reader.cancel();
-        throw new Error(`${redact(url)} exceeds the ${maxBytes} byte download limit`);
+        throw new Error(
+          `${redact(url)} exceeds the ${maxBytes} byte download limit`,
+        );
       }
       chunks.push(chunk.value);
     }
     return {
-      bytes: Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)), bytes),
+      bytes: Buffer.concat(
+        chunks.map((chunk) => Buffer.from(chunk)),
+        bytes,
+      ),
       headers: response.headers,
     };
   } catch (error) {
     if (error instanceof ReleaseUnavailableError) throw error;
     if (
-      error instanceof DOMException && error.name === "AbortError" ||
-      error instanceof Error && error.name === "TimeoutError"
+      (error instanceof DOMException && error.name === "AbortError") ||
+      (error instanceof Error && error.name === "TimeoutError")
     ) {
       throw new ReleaseUnavailableError(
         `${redact(url)} timed out after ${reportedTimeoutMs}ms`,
@@ -608,7 +687,10 @@ async function download(
     writeFileSync(path, bytes);
     progress(url, true);
   } catch (error) {
-    if (process.env.AIDLC_ROUTE_OUTPUT_MODE === "human" && process.stderr.isTTY) {
+    if (
+      process.env.AIDLC_ROUTE_OUTPUT_MODE === "human" &&
+      process.stderr.isTTY
+    ) {
       process.stderr.write(`\r${"".padEnd(PROGRESS_WIDTH)}\r`);
     }
     throw error;
@@ -620,15 +702,19 @@ async function download(
 // `v` plus a preview id. Stable discovery never comes through here (it is the
 // `latest/download` redirect), and a preview lookup never falls back to stable:
 // every API or transport failure, rate limiting included, is "unavailable".
-export async function resolvePreviewVersion(options: {
-  baseUrl?: string;
-  apiUrl?: string;
-  caBundle?: string;
-  timeoutMs?: number;
-} = {}): Promise<string> {
+export async function resolvePreviewVersion(
+  options: {
+    baseUrl?: string;
+    apiUrl?: string;
+    caBundle?: string;
+    timeoutMs?: number;
+  } = {},
+): Promise<string> {
   const settings = resolvedReleaseSettings(options);
   if (settings.offline) {
-    throw new ReleaseUnavailableError(`${PREVIEW_CHANNEL} discovery is unavailable while offline`);
+    throw new ReleaseUnavailableError(
+      `${PREVIEW_CHANNEL} discovery is unavailable while offline`,
+    );
   }
   const baseUrl = settings.baseUrl || defaultReleaseBaseUrl();
   const listUrl = releaseApiUrl(baseUrl, options.apiUrl);
@@ -651,10 +737,14 @@ export async function resolvePreviewVersion(options: {
     try {
       listed = JSON.parse(bytes.toString("utf-8"));
     } catch {
-      throw new ReleaseUnavailableError(`${redact(listUrl)} returned malformed release JSON`);
+      throw new ReleaseUnavailableError(
+        `${redact(listUrl)} returned malformed release JSON`,
+      );
     }
     if (!Array.isArray(listed)) {
-      throw new ReleaseUnavailableError(`${redact(listUrl)} returned a non-array release list`);
+      throw new ReleaseUnavailableError(
+        `${redact(listUrl)} returned a non-array release list`,
+      );
     }
     for (const entry of listed) {
       if (
@@ -685,23 +775,29 @@ export async function resolvePreviewVersion(options: {
   return newest;
 }
 
-export async function fetchReleaseMetadata(options: {
-  version?: string;
-  offline?: boolean;
-  baseUrl?: string;
-  caBundle?: string;
-  metadataTimeoutMs?: number;
-} = {}): Promise<{
+export async function fetchReleaseMetadata(
+  options: {
+    version?: string;
+    offline?: boolean;
+    baseUrl?: string;
+    caBundle?: string;
+    metadataTimeoutMs?: number;
+  } = {},
+): Promise<{
   directory: string;
   manifest: ReleaseManifest;
   cleanup: string;
 }> {
   if (process.env.AIDLC_ROUTE_NETWORK_POLICY === "forbidden") {
-    throw new Error(`route ${process.env.AIDLC_ROUTE_ID ?? "unknown"} forbids network access`);
+    throw new Error(
+      `route ${process.env.AIDLC_ROUTE_ID ?? "unknown"} forbids network access`,
+    );
   }
   const settings = resolvedReleaseSettings(options);
   if (settings.offline) {
-    throw new ReleaseUnavailableError("update metadata is unavailable while offline");
+    throw new ReleaseUnavailableError(
+      "update metadata is unavailable while offline",
+    );
   }
   const version = options.version ? requireVersion(options.version) : undefined;
   const baseUrl = settings.baseUrl || defaultReleaseBaseUrl();
@@ -715,7 +811,13 @@ export async function fetchReleaseMetadata(options: {
       remainingTimeout(metadataDeadline, "release metadata"),
       settings.caBundle,
       MAX_METADATA_BYTES,
-      ["application/json", "text/json", "application/octet-stream", "binary/octet-stream", "text/plain"],
+      [
+        "application/json",
+        "text/json",
+        "application/octet-stream",
+        "binary/octet-stream",
+        "text/plain",
+      ],
       metadataTimeoutMs,
     );
     await download(
@@ -733,7 +835,12 @@ export async function fetchReleaseMetadata(options: {
       remainingTimeout(metadataDeadline, "release provenance"),
       settings.caBundle,
       MAX_METADATA_BYTES,
-      ["application/json", "application/octet-stream", "binary/octet-stream", "text/plain"],
+      [
+        "application/json",
+        "application/octet-stream",
+        "binary/octet-stream",
+        "text/plain",
+      ],
       metadataTimeoutMs,
     );
     const manifest = readReleaseManifest(temporary);
@@ -744,7 +851,9 @@ export async function fetchReleaseMetadata(options: {
     verifiedChecksums(temporary);
     if (manifest.sourceDigest) verifyReleaseProvenance(temporary, manifest);
     if (version && manifest.version !== version) {
-      throw new Error(`release endpoint returned ${manifest.version}, not requested ${version}`);
+      throw new Error(
+        `release endpoint returned ${manifest.version}, not requested ${version}`,
+      );
     }
     return { directory: temporary, manifest, cleanup: temporary };
   } catch (error) {
@@ -756,16 +865,26 @@ export async function fetchReleaseMetadata(options: {
 export async function acquireRelease(options: {
   version?: string;
   from?: string;
-  names?: readonly string[] | ((manifest: ReleaseManifest) => readonly string[]);
+  names?:
+    readonly string[] | ((manifest: ReleaseManifest) => readonly string[]);
   offline?: boolean;
   baseUrl?: string;
   caBundle?: string;
   metadataTimeoutMs?: number;
-}): Promise<{ directory: string; manifest: ReleaseManifest; cleanup?: string }> {
+}): Promise<{
+  directory: string;
+  manifest: ReleaseManifest;
+  cleanup?: string;
+}> {
   if (options.from) {
-    const directory = isAbsolute(options.from) ? options.from : resolve(process.cwd(), options.from);
+    const directory = isAbsolute(options.from)
+      ? options.from
+      : resolve(process.cwd(), options.from);
     const manifest = readReleaseManifest(directory);
-    const names = typeof options.names === "function" ? options.names(manifest) : options.names;
+    const names =
+      typeof options.names === "function"
+        ? options.names(manifest)
+        : options.names;
     verifyReleaseProvenance(directory, {
       ...manifest,
       sourceDigest: undefined,
@@ -774,16 +893,22 @@ export async function acquireRelease(options: {
     if (manifest.sourceDigest) verifyReleaseProvenance(directory, manifest);
     verifyReleaseDirectory(directory, names, Boolean(names?.length));
     if (options.version && manifest.version !== options.version) {
-      throw new Error(`local release is ${manifest.version}, not requested ${options.version}`);
+      throw new Error(
+        `local release is ${manifest.version}, not requested ${options.version}`,
+      );
     }
     return { directory, manifest };
   }
   if (process.env.AIDLC_ROUTE_NETWORK_POLICY === "forbidden") {
-    throw new Error(`route ${process.env.AIDLC_ROUTE_ID ?? "unknown"} forbids network access`);
+    throw new Error(
+      `route ${process.env.AIDLC_ROUTE_ID ?? "unknown"} forbids network access`,
+    );
   }
   const settings = resolvedReleaseSettings(options);
   if (settings.offline) {
-    throw new ReleaseUnavailableError("--offline requires --from <release-directory>");
+    throw new ReleaseUnavailableError(
+      "--offline requires --from <release-directory>",
+    );
   }
   const version = options.version ? requireVersion(options.version) : undefined;
   const metadata = await fetchReleaseMetadata({
@@ -797,25 +922,34 @@ export async function acquireRelease(options: {
   try {
     const releasedChecksums = verifiedChecksums(temporary);
     const manifest = metadata.manifest;
-    const names = typeof options.names === "function" ? options.names(manifest) : options.names;
+    const names =
+      typeof options.names === "function"
+        ? options.names(manifest)
+        : options.names;
     const selected = names?.length
       ? manifest.assets.filter((asset) => names.includes(asset.name))
       : manifest.assets;
-    const missing = (names ?? []).filter((name) => !selected.some((asset) => asset.name === name));
+    const missing = (names ?? []).filter(
+      (name) => !selected.some((asset) => asset.name === name),
+    );
     if (missing.length > 0) {
-      throw new ReleaseUnavailableError(`release does not provide: ${missing.join(", ")}`);
+      throw new ReleaseUnavailableError(
+        `release does not provide: ${missing.join(", ")}`,
+      );
     }
     if (names?.length) {
-      for (const asset of selected) validateSelectedAsset(asset, manifest.version);
+      for (const asset of selected)
+        validateSelectedAsset(asset, manifest.version);
     }
     for (const asset of selected) {
       if (releasedChecksums.get(asset.name) !== asset.sha256) {
-        throw new Error(`${asset.name}: released checksum does not match version.json`);
+        throw new Error(
+          `${asset.name}: released checksum does not match version.json`,
+        );
       }
       await download(
         releaseUrl(
-          settings.baseUrl ||
-            defaultReleaseBaseUrl(),
+          settings.baseUrl || defaultReleaseBaseUrl(),
           version || manifest.version,
           asset.name,
         ),
@@ -825,15 +959,18 @@ export async function acquireRelease(options: {
       );
     }
     const subset: ReleaseManifest = { ...manifest, assets: selected };
-    writeFileSync(join(temporary, "version.json"), `${JSON.stringify(subset, null, 2)}\n`);
+    writeFileSync(
+      join(temporary, "version.json"),
+      `${JSON.stringify(subset, null, 2)}\n`,
+    );
     writeFileSync(
       join(temporary, "checksums.txt"),
-      `${
-        [
-          `${digest(join(temporary, "version.json"))}  version.json`,
-          ...selected.map((asset) => `${releasedChecksums.get(asset.name)}  ${asset.name}`),
-        ].join("\n")
-      }\n`,
+      `${[
+        `${digest(join(temporary, "version.json"))}  version.json`,
+        ...selected.map(
+          (asset) => `${releasedChecksums.get(asset.name)}  ${asset.name}`,
+        ),
+      ].join("\n")}\n`,
     );
     verifyReleaseDirectory(temporary, names);
     return { directory: temporary, manifest: subset, cleanup: temporary };
@@ -851,17 +988,19 @@ export function copyReleaseSubset(
   const manifest = verifyReleaseDirectory(source, names);
   mkdirSync(destination, { recursive: true, mode: 0o700 });
   const assets = manifest.assets.filter((asset) => names.includes(asset.name));
-  for (const asset of assets) copyFileSync(join(source, asset.name), join(destination, asset.name));
+  for (const asset of assets)
+    copyFileSync(join(source, asset.name), join(destination, asset.name));
   const subset: ReleaseManifest = { ...manifest, assets };
-  writeFileSync(join(destination, "version.json"), `${JSON.stringify(subset, null, 2)}\n`);
+  writeFileSync(
+    join(destination, "version.json"),
+    `${JSON.stringify(subset, null, 2)}\n`,
+  );
   writeFileSync(
     join(destination, "checksums.txt"),
-    `${
-      [
-        `${digest(join(destination, "version.json"))}  version.json`,
-        ...assets.map((asset) => `${asset.sha256}  ${asset.name}`),
-      ].join("\n")
-    }\n`,
+    `${[
+      `${digest(join(destination, "version.json"))}  version.json`,
+      ...assets.map((asset) => `${asset.sha256}  ${asset.name}`),
+    ].join("\n")}\n`,
   );
   return subset;
 }

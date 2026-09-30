@@ -97,6 +97,7 @@ Read NFR requirements from `<record>/construction/{unit-name}/nfr-requirements/`
 Create a questions file at `<record>/construction/{unit-name}/nfr-design/nfr-design-questions.md` with context-appropriate questions using [Answer]: tags.
 
 Focus areas:
+
 - Resilience patterns (circuit breakers, bulkheads, fallback strategies)
 - Scalability patterns (horizontal vs vertical, data partitioning, caching tiers)
 - Performance optimization (latency budgets, throughput targets, resource pooling)
@@ -107,6 +108,7 @@ Focus areas:
 ### Step 3: Collect and Analyze Answers
 
 Collect answers following stage-protocol.md §3 question flow (offer interaction mode choice, collect answers, write back to file). After collecting answers, perform MANDATORY ambiguity analysis:
+
 - Identify vague answers ("mix of", "not sure", "depends", "probably")
 - Check for contradictions between answers
 - Flag missing details needed for artifact generation
@@ -144,7 +146,11 @@ concrete design solution:
   "unit": "u1-auth",
   "upstream_ids": ["NFR1.1", "NFR1.2"],
   "coverage": [
-    { "id": "NFR1.1", "status": "OK", "target": "Redis cache with connection pooling" },
+    {
+      "id": "NFR1.1",
+      "status": "OK",
+      "target": "Redis cache with connection pooling"
+    },
     { "id": "NFR1.2", "status": "GAP" }
   ]
 }

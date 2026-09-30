@@ -5,19 +5,25 @@ Building visibility into system behaviour through metrics, logs, and traces to e
 ## The Three Pillars of Observability
 
 ### 1. Metrics
+
 Numeric measurements aggregated over time. Low cardinality, low cost, ideal for alerting and dashboards.
+
 - **Types**: Counters (always increase), Gauges (can go up/down), Histograms (distribution of values).
 - **AWS**: CloudWatch Metrics, CloudWatch Embedded Metric Format (EMF) for custom metrics from Lambda/ECS.
 - Emit custom business metrics: orders placed per minute, payment failures per hour, sign-ups per day.
 
 ### 2. Logs
+
 Timestamped records of discrete events. High cardinality, high volume.
+
 - Use structured logging (JSON) with consistent fields: `timestamp`, `level`, `requestId`, `service`, `message`.
 - Correlate logs across services using a shared `requestId` or `traceId` propagated through headers.
 - **AWS**: CloudWatch Logs, with Log Groups per service and environment.
 
 ### 3. Traces
+
 End-to-end path of a request through multiple services. Shows latency breakdown and dependency relationships.
+
 - **AWS**: X-Ray for distributed tracing. Auto-instruments SDK calls to AWS services.
 - Instrument custom segments for business logic, database queries, and external HTTP calls.
 - Use trace maps to visualize service dependencies and identify latency bottlenecks.
@@ -34,12 +40,14 @@ Monitor these four signals for every service:
 ## CloudWatch Dashboards and Alarms
 
 ### Dashboard Design
+
 - One dashboard per service with golden signals at the top.
 - Include dependency health: downstream service latency, database connections, queue depth.
 - Use CloudWatch Metrics Math for derived metrics: error rate = errors / (errors + successes) * 100.
 - Standardize dashboard layouts across services for consistency.
 
 ### Alarm Configuration
+
 - Alarm on symptoms, not causes. Alert on "error rate > 1%" not "CPU > 80%".
 - Use composite alarms to reduce noise: only alert when multiple conditions are true simultaneously.
 - Set appropriate evaluation periods: avoid single-datapoint alarms that fire on transient spikes. Use `3 out of 5 datapoints` for stability.

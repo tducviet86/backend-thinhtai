@@ -49,6 +49,7 @@ outputs: runbooks.md, incident-plan.md, escalation-matrix.md, incident-response-
 ### Step 2: Generate Clarifying Questions
 
 Create questions file covering:
+
 - What are the most likely failure modes?
 - What are the escalation paths and on-call rotations?
 - What automated remediation is possible?

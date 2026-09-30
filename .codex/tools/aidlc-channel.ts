@@ -15,7 +15,10 @@ export const PREVIEW_CHANNEL = "preview";
 
 export type ReleaseChannel = typeof STABLE_CHANNEL | typeof PREVIEW_CHANNEL;
 
-export const RELEASE_CHANNELS: readonly ReleaseChannel[] = [STABLE_CHANNEL, PREVIEW_CHANNEL];
+export const RELEASE_CHANNELS: readonly ReleaseChannel[] = [
+  STABLE_CHANNEL,
+  PREVIEW_CHANNEL,
+];
 
 // Environment variable that stamps a release build with a preview id. The
 // packager renders every projected aidlc-version.ts copy and projection stamp
@@ -101,7 +104,8 @@ export function compareVersions(left: string, right: string): number {
   }
   if (a.channel !== b.channel) return a.channel === STABLE_CHANNEL ? 1 : -1;
   if (a.channel === STABLE_CHANNEL) return 0;
-  if (a.date !== b.date) return (a.date as string) < (b.date as string) ? -1 : 1;
+  if (a.date !== b.date)
+    return (a.date as string) < (b.date as string) ? -1 : 1;
   const aBuild = a.build as number;
   const bBuild = b.build as number;
   return aBuild === bBuild ? 0 : aBuild < bBuild ? -1 : 1;
@@ -111,15 +115,23 @@ export function utcBuildDate(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10).replaceAll("-", "");
 }
 
-export function previewVersion(base: string, date: string, build: number): string {
+export function previewVersion(
+  base: string,
+  date: string,
+  build: number,
+): string {
   if (!STABLE_VERSION.test(base)) {
-    throw new Error(`preview base must be a stable x.y.z version, got "${base}"`);
+    throw new Error(
+      `preview base must be a stable x.y.z version, got "${base}"`,
+    );
   }
   if (!/^\d{8}$/.test(date)) {
     throw new Error(`preview build date must be YYYYMMDD, got "${date}"`);
   }
   if (!Number.isSafeInteger(build) || build < 1) {
-    throw new Error(`preview build counter must be a positive integer, got ${String(build)}`);
+    throw new Error(
+      `preview build counter must be a positive integer, got ${String(build)}`,
+    );
   }
   return requireVersion(`${base}-${PREVIEW_CHANNEL}.${date}.${build}`);
 }
@@ -127,9 +139,14 @@ export function previewVersion(base: string, date: string, build: number): strin
 export function nextPatchVersion(version: string): string {
   const parsed = parseVersion(version);
   if (parsed.channel !== STABLE_CHANNEL) {
-    throw new Error(`next patch base must be a stable x.y.z version, got "${version}"`);
+    throw new Error(
+      `next patch base must be a stable x.y.z version, got "${version}"`,
+    );
   }
-  if (!Number.isSafeInteger(parsed.patch) || parsed.patch >= Number.MAX_SAFE_INTEGER) {
+  if (
+    !Number.isSafeInteger(parsed.patch) ||
+    parsed.patch >= Number.MAX_SAFE_INTEGER
+  ) {
     throw new Error(`cannot increment patch version "${version}" safely`);
   }
   return `${parsed.major}.${parsed.minor}.${parsed.patch + 1}`;
@@ -140,7 +157,9 @@ export function nextPatchVersion(version: string): string {
 // patch after the source tree's current AIDLC_VERSION. The preview does not edit
 // that source version or decide whether the eventual stable release is a patch
 // or a minor.
-export function releaseBuildVersion(env: NodeJS.ProcessEnv = process.env): string {
+export function releaseBuildVersion(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   const configured = env[BUILD_VERSION_ENV]?.trim();
   if (!configured || configured === AIDLC_VERSION) return AIDLC_VERSION;
   const parsed = parseVersion(configured);

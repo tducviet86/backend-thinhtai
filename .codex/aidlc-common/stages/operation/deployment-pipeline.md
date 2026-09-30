@@ -62,6 +62,7 @@ that exists - never invent a missing CI or infrastructure artifact.
 ### Step 2: Generate Clarifying Questions
 
 Create questions file covering:
+
 - What deployment strategy (blue/green, canary, rolling)?
 - What environment promotion gates (dev → staging → prod)?
 - What approval workflows for production?

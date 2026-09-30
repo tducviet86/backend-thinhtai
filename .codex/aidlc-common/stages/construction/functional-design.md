@@ -91,6 +91,7 @@ Incremental scopes (refactor) deliberately skip units-generation and domain-desi
 Analyze the unit's scope and create a functional design questions file at `<record>/construction/{unit-name}/functional-design/functional-design-questions.md` with context-appropriate questions using [Answer]: tags.
 
 Focus areas:
+
 - Business logic workflows and algorithms
 - Domain models and entity relationships
 - Business rules, constraints, and validation logic
@@ -103,6 +104,7 @@ Focus areas:
 ### Step 3: Collect and Analyze Answers
 
 Collect answers following stage-protocol.md §3 question flow (offer interaction mode choice, collect answers, write back to file). After collecting answers, perform MANDATORY ambiguity analysis:
+
 - Identify vague answers ("mix of", "not sure", "depends", "probably")
 - Check for contradictions between answers
 - Flag missing details needed for artifact generation

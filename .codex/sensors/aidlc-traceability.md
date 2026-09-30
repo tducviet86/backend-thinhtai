@@ -47,9 +47,7 @@ Deterministic element-level verification of each stage's JSON coverage table:
     { "id": "AC1.1.1", "status": "OK", "target": "BR1.1" },
     { "id": "AC1.2.1", "status": "GAP" }
   ],
-  "reverse": [
-    { "id": "BR1.3", "status": "ORPHAN" }
-  ]
+  "reverse": [{ "id": "BR1.3", "status": "ORPHAN" }]
 }
 ```
 

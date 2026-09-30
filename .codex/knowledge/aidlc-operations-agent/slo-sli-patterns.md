@@ -15,16 +15,17 @@ Choose SLIs that reflect the user's experience, not internal system metrics.
 
 ### Common SLI Types
 
-| SLI Type | Definition | Measurement |
-|----------|-----------|-------------|
-| **Availability** | Proportion of successful requests | `(successful requests / total requests) * 100` |
-| **Latency** | Proportion of requests faster than threshold | `(requests < 200ms / total requests) * 100` |
-| **Throughput** | Requests processed per unit time | CloudWatch metric: `RequestCount` per minute |
-| **Error Rate** | Proportion of requests returning errors | `(5xx responses / total responses) * 100` |
-| **Freshness** | Proportion of data updated within threshold | Time since last successful sync vs target |
-| **Correctness** | Proportion of responses with correct output | Validated against ground truth or invariants |
+| SLI Type         | Definition                                   | Measurement                                    |
+| ---------------- | -------------------------------------------- | ---------------------------------------------- |
+| **Availability** | Proportion of successful requests            | `(successful requests / total requests) * 100` |
+| **Latency**      | Proportion of requests faster than threshold | `(requests < 200ms / total requests) * 100`    |
+| **Throughput**   | Requests processed per unit time             | CloudWatch metric: `RequestCount` per minute   |
+| **Error Rate**   | Proportion of requests returning errors      | `(5xx responses / total responses) * 100`      |
+| **Freshness**    | Proportion of data updated within threshold  | Time since last successful sync vs target      |
+| **Correctness**  | Proportion of responses with correct output  | Validated against ground truth or invariants   |
 
 ### SLI Specification Best Practices
+
 - Measure at the point closest to the user (API Gateway, ALB) not at the application.
 - Exclude health check traffic and synthetic monitoring from SLI calculations.
 - Use CloudWatch Metrics Math or CloudWatch Contributor Insights for SLI computation.
@@ -33,12 +34,14 @@ Choose SLIs that reflect the user's experience, not internal system metrics.
 ## SLO Target Setting
 
 ### Process
+
 1. Measure current performance for 2-4 weeks to establish a baseline.
 2. Set the SLO slightly below the observed baseline (if p99 latency is consistently 150ms, set SLO at 200ms).
 3. Validate with stakeholders that the target aligns with user expectations and business requirements.
 4. Start conservative; tighten SLOs as reliability improves and tooling matures.
 
 ### Guidelines
+
 - Do not set SLOs at 100%. It is impossible to achieve and eliminates the error budget for deployments and improvements.
 - Typical SLO targets: 99.9% for customer-facing services, 99.5% for internal services, 99% for batch processing.
 - Use a 30-day rolling window, not calendar month, to avoid reset-day gaming.
@@ -49,14 +52,15 @@ Choose SLIs that reflect the user's experience, not internal system metrics.
 The error budget is the inverse of the SLO: `error budget = 1 - SLO target`.
 
 ### Error Budget Policy
+
 Define what happens when the error budget is consumed:
 
-| Budget Status | Implication | Action |
-|--------------|-------------|--------|
-| > 50% remaining | Healthy | Normal feature development velocity |
-| 25-50% remaining | Caution | Increase deployment monitoring, review recent incidents |
-| < 25% remaining | At risk | Slow deployments, prioritize reliability work |
-| Exhausted (0%) | Frozen | Halt feature releases, all engineering effort on reliability |
+| Budget Status    | Implication | Action                                                       |
+| ---------------- | ----------- | ------------------------------------------------------------ |
+| > 50% remaining  | Healthy     | Normal feature development velocity                          |
+| 25-50% remaining | Caution     | Increase deployment monitoring, review recent incidents      |
+| < 25% remaining  | At risk     | Slow deployments, prioritize reliability work                |
+| Exhausted (0%)   | Frozen      | Halt feature releases, all engineering effort on reliability |
 
 Error budgets create a shared language between product and engineering: "We can afford to ship this risky feature because we have budget, or we cannot because the budget is low."
 
@@ -90,6 +94,7 @@ Toil is repetitive, automatable operational work that scales with service size.
 ## SLO Dashboards
 
 Build a dashboard per service showing:
+
 - Current SLO compliance (percentage) vs target, with the measurement window
 - Error budget remaining (absolute and percentage)
 - Burn rate trend over the last 7 and 30 days

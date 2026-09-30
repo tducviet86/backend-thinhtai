@@ -15,20 +15,17 @@ export function colorEnabled(stream: ColorStream): boolean {
   const cached = decisions.get(key);
   if (cached !== undefined) return cached;
   const force = process.env.FORCE_COLOR;
-  const enabled = !explicitNoColor &&
+  const enabled =
+    !explicitNoColor &&
     !Object.hasOwn(process.env, "NO_COLOR") &&
-    (
-      (typeof force === "string" && force.length > 0 && force !== "0") ||
-      (stream.isTTY === true && process.env.TERM !== "dumb")
-    );
+    ((typeof force === "string" && force.length > 0 && force !== "0") ||
+      (stream.isTTY === true && process.env.TERM !== "dumb"));
   decisions.set(key, enabled);
   return enabled;
 }
 
 function sgr(value: string, code: number, stream: ColorStream): string {
-  return colorEnabled(stream)
-    ? `\x1b[${code}m${value}\x1b[0m`
-    : value;
+  return colorEnabled(stream) ? `\x1b[${code}m${value}\x1b[0m` : value;
 }
 
 export function heading(value: string, stream: ColorStream): string {

@@ -174,17 +174,17 @@ function isSingleStageRow(block: string): boolean {
 
 function pairStartedCompleted(
   audit: string,
-  sinceTimestamp: string
+  sinceTimestamp: string,
 ): Map<string, PairingEntry> {
   // findAllEvents returns blocks chronologically (timestamp-sorted, ties broken
   // by buffer position). sinceTimestamp filters out rows from prior workflows on
   // the same audit log (the `--init --force` re-init case appends without
   // truncating). Synthetic single-stage rows are excluded regardless of timestamp.
   const startedEvents = findAllEvents(audit, "STAGE_STARTED").filter(
-    (e) => e.timestamp >= sinceTimestamp && !isSingleStageRow(e.block)
+    (e) => e.timestamp >= sinceTimestamp && !isSingleStageRow(e.block),
   );
   const completedEvents = findAllEvents(audit, "STAGE_COMPLETED").filter(
-    (e) => e.timestamp >= sinceTimestamp && !isSingleStageRow(e.block)
+    (e) => e.timestamp >= sinceTimestamp && !isSingleStageRow(e.block),
   );
 
   // Merge into a single chronological stream. ISO timestamps sort
@@ -198,10 +198,20 @@ function pairStartedCompleted(
     index: number;
   }> = [];
   startedEvents.forEach((e, i) => {
-    stream.push({ kind: "STARTED", timestamp: e.timestamp, block: e.block, index: i });
+    stream.push({
+      kind: "STARTED",
+      timestamp: e.timestamp,
+      block: e.block,
+      index: i,
+    });
   });
   completedEvents.forEach((e, i) => {
-    stream.push({ kind: "COMPLETED", timestamp: e.timestamp, block: e.block, index: i + 100000 });
+    stream.push({
+      kind: "COMPLETED",
+      timestamp: e.timestamp,
+      block: e.block,
+      index: i + 100000,
+    });
   });
   stream.sort((a, b) => {
     if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
@@ -241,14 +251,15 @@ function pairStartedCompleted(
 // the first row would identify a dead workflow.
 function buildWorkflowHeader(
   audit: string,
-  stateContent: string | null
+  stateContent: string | null,
 ): { workflow_id: string; scope: string; started_at: string } | null {
   const started = findAllEvents(audit, "WORKFLOW_STARTED");
   if (started.length === 0) return null;
   const latest = started[started.length - 1];
   const scopeFromAudit = latest.block.match(/^\*\*Scope\*\*:\s*(.+)$/m);
   const scopeFromState = stateContent ? getField(stateContent, "Scope") : null;
-  const scope = scopeFromState || (scopeFromAudit ? scopeFromAudit[1].trim() : "");
+  const scope =
+    scopeFromState || (scopeFromAudit ? scopeFromAudit[1].trim() : "");
   return {
     workflow_id: latest.timestamp,
     scope,
@@ -274,7 +285,7 @@ function buildPhaseMap(): Map<string, { phase: string; agent: string }> {
 function readMemory(
   projectDir: string,
   phase: string,
-  stageSlug: string
+  stageSlug: string,
 ): { memory_entries: number | null; memory_breakdown: MemoryBreakdown | null } {
   const path = memoryFilePath(projectDir, phase, stageSlug);
   if (!existsSync(path)) {
@@ -307,7 +318,7 @@ function computeBoltDag(projectDir: string): BoltDag | undefined {
   if (!parsed.ok) {
     process.stderr.write(
       `aidlc-runtime: unit-of-work-dependency.md edge block ${parsed.reason} ` +
-        `(${parsed.detail}); bolt_dag node omitted\n`
+        `(${parsed.detail}); bolt_dag node omitted\n`,
     );
     return undefined;
   }
@@ -323,7 +334,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
   const statePath = stateFilePath(projectDir);
   if (!existsSync(statePath)) {
     process.stderr.write(
-      "aidlc-runtime: no aidlc-state.md, skipping (likely pre-init)\n"
+      "aidlc-runtime: no aidlc-state.md, skipping (likely pre-init)\n",
     );
     return { skipped: "no-state" };
   }
@@ -483,8 +494,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
       const wt = fieldFromBlock(ev.block, "Worktree path");
       if (!slug) continue;
       slugsInWindow.set(slug, {
-        worktree:
-          wt === null ? "" : resolveAuditWorktreePath(projectDir, wt),
+        worktree: wt === null ? "" : resolveAuditWorktreePath(projectDir, wt),
         started_at: ev.timestamp,
       });
     }
@@ -591,7 +601,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
   >();
   const recordTerminal = (
     rows: { timestamp: string; block: string }[],
-    kind: TerminalKind
+    kind: TerminalKind,
   ) => {
     for (const ev of rows) {
       const fireId = fieldFromBlock(ev.block, "Fire id");
@@ -600,13 +610,13 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
       const existing = terminalByFireId.get(fireId);
       if (existing && existing.ts >= ev.timestamp) {
         process.stderr.write(
-          `aidlc-runtime: duplicate terminal for Fire id ${fireId} (keeping latest-ts)\n`
+          `aidlc-runtime: duplicate terminal for Fire id ${fireId} (keeping latest-ts)\n`,
         );
         continue;
       }
       if (existing) {
         process.stderr.write(
-          `aidlc-runtime: duplicate terminal for Fire id ${fireId} (keeping latest-ts)\n`
+          `aidlc-runtime: duplicate terminal for Fire id ${fireId} (keeping latest-ts)\n`,
         );
       }
       terminalByFireId.set(fireId, {
@@ -641,7 +651,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
     slug: string,
     windowStart: string,
     windowEnd: string | null,
-    outputUnderWorktree: ((outputPath: string) => boolean) | null
+    outputUnderWorktree: ((outputPath: string) => boolean) | null,
   ): SensorFiring[] => {
     const firings: SensorFiring[] = [];
     for (const ev of firedRows) {
@@ -650,11 +660,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
       if (fieldFromBlock(ev.block, "Stage slug") !== slug) continue;
       if (outputUnderWorktree !== null) {
         const out = fieldFromBlock(ev.block, "Output path") ?? "";
-        if (
-          !outputUnderWorktree(
-            resolveAuditWorktreePath(projectDir, out),
-          )
-        ) {
+        if (!outputUnderWorktree(resolveAuditWorktreePath(projectDir, out))) {
           continue;
         }
       }
@@ -668,21 +674,33 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
           fire_id: fireId,
           result: terminal.kind,
           ts: ev.timestamp,
-          ...(terminal.detail_path ? { detail_path: terminal.detail_path } : {}),
+          ...(terminal.detail_path
+            ? { detail_path: terminal.detail_path }
+            : {}),
         });
         continue;
       }
       // Orphan: no terminal row paired by fire_id.
       if (windowEnd !== null) {
         // Closed window — window-end IS the cutoff; orphan is incomplete.
-        firings.push({ id: sensorId, fire_id: fireId, result: "incomplete", ts: ev.timestamp });
+        firings.push({
+          id: sensorId,
+          fire_id: fireId,
+          result: "incomplete",
+          ts: ev.timestamp,
+        });
       } else {
         // Open window — incomplete only once baseline_ts has advanced ≥60s
         // past the FIRED ts; younger orphans are omitted (no 5th "pending").
         const ageSeconds =
           (Date.parse(baselineTs) - Date.parse(ev.timestamp)) / 1000;
         if (ageSeconds >= ORPHAN_CUTOFF_SECONDS) {
-          firings.push({ id: sensorId, fire_id: fireId, result: "incomplete", ts: ev.timestamp });
+          firings.push({
+            id: sensorId,
+            fire_id: fireId,
+            result: "incomplete",
+            ts: ev.timestamp,
+          });
         }
       }
     }
@@ -694,7 +712,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
   const countLearnings = (
     slug: string,
     windowStart: string,
-    windowEnd: string | null
+    windowEnd: string | null,
   ): { from_orchestrator: number; from_user_addition: number } => {
     let fromOrchestrator = 0;
     let fromUserAddition = 0;
@@ -706,7 +724,10 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
       if (source === "user_addition") fromUserAddition++;
       else fromOrchestrator++;
     }
-    return { from_orchestrator: fromOrchestrator, from_user_addition: fromUserAddition };
+    return {
+      from_orchestrator: fromOrchestrator,
+      from_user_addition: fromUserAddition,
+    };
   };
 
   for (const stage of stages) {
@@ -719,7 +740,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
           stage.stage_slug,
           inst.started_at,
           inst.completed_at,
-          (out) => inst.worktree !== "" && out.startsWith(inst.worktree)
+          (out) => inst.worktree !== "" && out.startsWith(inst.worktree),
         );
       }
       // Parent window spans the earliest instance start to the latest
@@ -744,7 +765,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
         stage.stage_slug,
         parentStart,
         parentEnd,
-        (out) => !worktrees.some((wt) => wt !== "" && out.startsWith(wt))
+        (out) => !worktrees.some((wt) => wt !== "" && out.startsWith(wt)),
       );
       // learnings_captured stays as the rollup left it (null on non-approved).
     } else if (stage.started_at !== null) {
@@ -752,13 +773,13 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
         stage.stage_slug,
         stage.started_at,
         stage.completed_at,
-        null
+        null,
       );
       if (stage.outcome === "approved") {
         stage.learnings_captured = countLearnings(
           stage.stage_slug,
           stage.started_at,
-          stage.completed_at
+          stage.completed_at,
         );
       }
     }
@@ -803,15 +824,19 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
       const fields: Record<string, string> = { Stage: ze.slug };
       appendAuditEntryUnlocked("MEMORY_EMPTY", fields, projectDir);
     }
-    writeFileAtomic(runtimeGraphPath(projectDir), `${JSON.stringify(graph, null, 2)}\n`);
+    writeFileAtomic(
+      runtimeGraphPath(projectDir),
+      `${JSON.stringify(graph, null, 2)}\n`,
+    );
   });
 
   return { written: runtimeGraphPath(projectDir) };
 }
 
-export function compileRuntime(
-  projectDir: string,
-): { skipped?: string; written?: string } {
+export function compileRuntime(projectDir: string): {
+  skipped?: string;
+  written?: string;
+} {
   return compile({ projectDir });
 }
 
@@ -830,7 +855,7 @@ function writeEmptyGraph(
   projectDir: string,
   opts?: { acquireLock?: boolean },
   intent?: string,
-  space?: string
+  space?: string,
 ): { written: string } {
   const acquireLock = opts?.acquireLock ?? true;
   const stateContent = readStateFile(projectDir, intent, space);
@@ -842,7 +867,10 @@ function writeEmptyGraph(
     stages: [],
   };
   const writer = () => {
-    writeFileAtomic(runtimeGraphPath(projectDir, intent, space), `${JSON.stringify(graph, null, 2)}\n`);
+    writeFileAtomic(
+      runtimeGraphPath(projectDir, intent, space),
+      `${JSON.stringify(graph, null, 2)}\n`,
+    );
   };
   if (acquireLock) {
     withAuditLock(projectDir, writer, intent, space);
@@ -930,7 +958,9 @@ interface RuntimeSummary {
 
 type SummaryOutcome = "approved" | "failed" | "pending";
 
-function completedStateOverlay(projectDir: string): Map<string, SummaryOutcome> | null {
+function completedStateOverlay(
+  projectDir: string,
+): Map<string, SummaryOutcome> | null {
   const path = stateFilePath(projectDir);
   if (!existsSync(path)) return null;
   const state = readStateFile(projectDir);
@@ -992,15 +1022,19 @@ function summarize(projectDir: string): RuntimeSummary | null {
       learnings.from_user_addition += s.learnings_captured.from_user_addition;
     }
     const completedAt = s.completed_at ?? maxInstanceCompletedAt(s);
-    if (completedAt && (latestCompleted === null || completedAt > latestCompleted)) {
+    if (
+      completedAt &&
+      (latestCompleted === null || completedAt > latestCompleted)
+    ) {
       latestCompleted = completedAt;
     }
     const overlayOutcome = stateOverlay?.get(s.stage_slug);
     const hasInstances = (s.instances?.length ?? 0) > 0;
     for (const baseUnit of unitsForStage(s)) {
-      const u = overlayOutcome && !hasInstances
-        ? { ...baseUnit, outcome: overlayOutcome }
-        : baseUnit;
+      const u =
+        overlayOutcome && !hasInstances
+          ? { ...baseUnit, outcome: overlayOutcome }
+          : baseUnit;
       stages.total++;
       byPhase[phase].total++;
       stages[u.outcome]++;
@@ -1066,13 +1100,14 @@ function durationMinutes(start: string, end: string | null): number | null {
 }
 
 function renderSummary(s: RuntimeSummary): string {
-  const dur = s.duration_minutes === null ? "in progress" : `${s.duration_minutes} min`;
+  const dur =
+    s.duration_minutes === null ? "in progress" : `${s.duration_minutes} min`;
   const phaseLines = Object.entries(s.by_phase)
     .map(
       ([phase, c]) =>
         `  ${phase.padEnd(14)} ${c.approved}/${c.total} approved` +
         (c.failed ? `, ${c.failed} failed` : "") +
-        (c.pending ? `, ${c.pending} pending` : "")
+        (c.pending ? `, ${c.pending} pending` : ""),
     )
     .join("\n");
   return `Session Summary
@@ -1159,7 +1194,7 @@ function handleFragmentFork(rest: string[], projectDir: string): void {
   }
   if (!flags.slug) {
     process.stderr.write(
-      "aidlc-runtime fragment-fork: --slug <slug> required\n"
+      "aidlc-runtime fragment-fork: --slug <slug> required\n",
     );
     process.exit(1);
   }
@@ -1205,13 +1240,13 @@ function handleFragmentFork(rest: string[], projectDir: string): void {
 
   if (!existsSync(wtPath)) {
     process.stderr.write(
-      `aidlc-runtime fragment-fork: worktree directory not found at ${wtPath}; run aidlc-worktree create first\n`
+      `aidlc-runtime fragment-fork: worktree directory not found at ${wtPath}; run aidlc-worktree create first\n`,
     );
     process.exit(1);
   }
   if (existsSync(wtFragmentPath)) {
     process.stderr.write(
-      `aidlc-runtime fragment-fork: fragment already exists at ${wtFragmentPath}; refusing to overwrite (fragment-fork is one-shot)\n`
+      `aidlc-runtime fragment-fork: fragment already exists at ${wtFragmentPath}; refusing to overwrite (fragment-fork is one-shot)\n`,
     );
     process.exit(1);
   }
@@ -1244,7 +1279,7 @@ function handleFragmentFork(rest: string[], projectDir: string): void {
       source_runtime_graph_hash: sourceHash,
       fragment_path: wtFragmentPath,
       source_present: sourcePresent,
-    })
+    }),
   );
 }
 
@@ -1277,7 +1312,7 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
   }
   if (!flags.slug) {
     process.stderr.write(
-      "aidlc-runtime fragment-merge: --slug <slug> required\n"
+      "aidlc-runtime fragment-merge: --slug <slug> required\n",
     );
     process.exit(1);
   }
@@ -1307,7 +1342,7 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
       JSON.stringify({
         status: "fragment-absent",
         slug: flags.slug,
-      })
+      }),
     );
     return;
   }
@@ -1322,7 +1357,7 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
       status: "fragment-merged",
       slug: flags.slug,
       fragment_runtime_graph_hash: fragmentHash,
-    })
+    }),
   );
 }
 
@@ -1392,7 +1427,9 @@ const handleRead: SubcommandHandler = (rest, projectDir) => {
   }
   const row = readStage(stageSlug, projectDir);
   if (!row) {
-    process.stderr.write(`aidlc-runtime read: no row for slug "${stageSlug}"\n`);
+    process.stderr.write(
+      `aidlc-runtime read: no row for slug "${stageSlug}"\n`,
+    );
     process.exit(1);
   }
   console.log(JSON.stringify(row, null, 2));
@@ -1402,7 +1439,7 @@ const handleSummary: SubcommandHandler = (rest, projectDir) => {
   const summary = summarize(projectDir);
   if (!summary) {
     process.stderr.write(
-      "aidlc-runtime summary: no runtime-graph.json found — run a workflow first\n"
+      "aidlc-runtime summary: no runtime-graph.json found — run a workflow first\n",
     );
     process.exit(1);
   }
@@ -1431,7 +1468,10 @@ const SUBCOMMANDS: Record<string, SubcommandHandler> = {
 // — without this pre-strip, `cmd === "--project-dir"` and dispatch fails.
 // Existing flag-less callers (the post-Bash compile hook, direct user
 // invocations) still work via resolveProjectDir's cwd-based fallback.
-function stripProjectDir(args: string[]): { projectDirArg: string | undefined; rest: string[] } {
+function stripProjectDir(args: string[]): {
+  projectDirArg: string | undefined;
+  rest: string[];
+} {
   const out = [...args];
   const pdIdx = out.indexOf("--project-dir");
   if (pdIdx !== -1 && pdIdx + 1 < out.length) {
@@ -1459,7 +1499,9 @@ export function main(argv: string[]): void {
 
     const handler = SUBCOMMANDS[cmd];
     if (!handler) {
-      throw new Error(`Unknown subcommand: ${cmd}. Run aidlc-runtime --help for usage.`);
+      throw new Error(
+        `Unknown subcommand: ${cmd}. Run aidlc-runtime --help for usage.`,
+      );
     }
 
     handler(subargs, resolveProjectDir(projectDirArg));

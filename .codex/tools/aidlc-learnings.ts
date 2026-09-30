@@ -105,7 +105,14 @@
 // judgement (user). No LLM call lives in this tool.
 
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { appendAuditEntryUnlocked } from "./aidlc-audit.ts";
 import { memoryDirFor } from "./aidlc-graph.ts";
@@ -155,7 +162,11 @@ function fail(message: string, code: 1 | 2): never {
 // active-space cursor when omitted, which is exactly the bug: the lock and
 // audit read/write were already pinned to the surfaced space, but this path
 // alone kept reading whatever space happened to be active when persist ran.
-function practiceFilePath(projectDir: string, scope: "project" | "team", space: string): string {
+function practiceFilePath(
+  projectDir: string,
+  scope: "project" | "team",
+  space: string,
+): string {
   return join(memoryDirFor(projectDir, space), `${scope}.md`);
 }
 
@@ -186,7 +197,10 @@ function sensorManifestPath(projectDir: string, sensorId: string): string {
 // edit (two-write sensor bind) lands here. AIDLC_STAGES_DIR mirrors the
 // graph resolver's seam so tests can point at a fixture stage tree.
 function stagesDir(projectDir: string): string {
-  return process.env.AIDLC_STAGES_DIR ?? join(projectDir, harnessDir(), "aidlc-common", "stages");
+  return (
+    process.env.AIDLC_STAGES_DIR ??
+    join(projectDir, harnessDir(), "aidlc-common", "stages")
+  );
 }
 
 // --- surface ---
@@ -223,7 +237,10 @@ interface SurfaceOutput {
 // records exist but no cursor names a valid one — is genuine ambiguity, not
 // a legacy shape, and must fail rather than silently degrade to the same
 // shared "unscoped" identity the #735 fix exists to avoid colliding under.
-function resolveSurfaceIntent(projectDir: string, space: string): string | null {
+function resolveSurfaceIntent(
+  projectDir: string,
+  space: string,
+): string | null {
   if (listIntentDirs(projectDir, space).length === 0) return null;
   const resolved = activeIntent(projectDir, space);
   if (resolved !== null) return resolved;
@@ -231,7 +248,7 @@ function resolveSurfaceIntent(projectDir: string, space: string): string | null 
     `cannot resolve the active intent unambiguously in space "${space}": multiple intent ` +
       `records exist with no valid active-intent cursor. Set aidlc/spaces/${space}/intents/` +
       `active-intent to the intended record, then retry.`,
-    1
+    1,
   );
 }
 
@@ -248,7 +265,7 @@ function readRuntimeStageRow(
   projectDir: string,
   slug: string,
   intent?: string,
-  space?: string
+  space?: string,
 ): RuntimeStageRow {
   const path = runtimeGraphPath(projectDir, intent, space);
   if (!existsSync(path)) {
@@ -270,7 +287,8 @@ function readRuntimeStageRow(
   const stages: unknown[] = stagesRaw;
   for (const raw of stages) {
     if (isRecord(raw) && raw.stage_slug === slug) {
-      const memoryPath = typeof raw.memory_path === "string" ? raw.memory_path : undefined;
+      const memoryPath =
+        typeof raw.memory_path === "string" ? raw.memory_path : undefined;
       return { stage_slug: slug, memory_path: memoryPath };
     }
   }
@@ -286,7 +304,10 @@ function assertActiveStage(stateContent: string, slug: string): void {
     fail("state file has no Current Stage field", 1);
   }
   if (current !== slug) {
-    fail(`slug mismatch: requested "${slug}" but Current Stage is "${current}"`, 1);
+    fail(
+      `slug mismatch: requested "${slug}" but Current Stage is "${current}"`,
+      1,
+    );
   }
 }
 
@@ -294,7 +315,10 @@ function handleSurface(args: string[], projectDir: string): void {
   const flags = parseFlags(args);
   const slug = flags.slug;
   if (!slug) {
-    fail("Usage: aidlc-learnings.ts surface --slug <stage-slug> [--project-dir <path>]", 1);
+    fail(
+      "Usage: aidlc-learnings.ts surface --slug <stage-slug> [--project-dir <path>]",
+      1,
+    );
   }
 
   // LOCAL FIX (#747 review): resolve space/intent FIRST, before touching any
@@ -425,20 +449,38 @@ function narrowSelection(raw: unknown): Selection {
   if (candidateId === undefined) {
     fail("selections-json malformed: selection missing candidate_id", 1);
   }
-  const source = raw.source === "user_addition" ? "user_addition" : raw.source === "orchestrator" ? "orchestrator" : undefined;
+  const source =
+    raw.source === "user_addition"
+      ? "user_addition"
+      : raw.source === "orchestrator"
+        ? "orchestrator"
+        : undefined;
 
   if (raw.type === "sensor") {
     const originStage = str(raw.origin_stage);
     if (originStage === undefined || !isRecord(raw.manifest_fields)) {
-      fail("selections-json malformed: sensor selection needs origin_stage + manifest_fields", 1);
+      fail(
+        "selections-json malformed: sensor selection needs origin_stage + manifest_fields",
+        1,
+      );
     }
     const mf = raw.manifest_fields;
-    const required = ["id", "kind", "command", "default_severity", "description", "matches"] as const;
+    const required = [
+      "id",
+      "kind",
+      "command",
+      "default_severity",
+      "description",
+      "matches",
+    ] as const;
     const fields: Record<string, string> = {};
     for (const k of required) {
       const v = str(mf[k]);
       if (v === undefined) {
-        fail(`selections-json malformed: manifest_fields.${k} must be a string`, 1);
+        fail(
+          `selections-json malformed: manifest_fields.${k} must be a string`,
+          1,
+        );
       }
       fields[k] = v;
     }
@@ -449,10 +491,17 @@ function narrowSelection(raw: unknown): Selection {
       default_severity: fields.default_severity,
       description: fields.description,
       matches: fields.matches,
-      timeout_seconds: typeof mf.timeout_seconds === "number" ? mf.timeout_seconds : undefined,
+      timeout_seconds:
+        typeof mf.timeout_seconds === "number" ? mf.timeout_seconds : undefined,
       category: str(mf.category),
     };
-    return { candidate_id: candidateId, type: "sensor", origin_stage: originStage, manifest_fields: manifestFields, source };
+    return {
+      candidate_id: candidateId,
+      type: "sensor",
+      origin_stage: originStage,
+      manifest_fields: manifestFields,
+      source,
+    };
   }
 
   // Default to a learning selection.
@@ -460,9 +509,19 @@ function narrowSelection(raw: unknown): Selection {
   const heading = str(raw.heading);
   const text = str(raw.text);
   if (heading === undefined || text === undefined) {
-    fail("selections-json malformed: learning selection needs heading + text", 1);
+    fail(
+      "selections-json malformed: learning selection needs heading + text",
+      1,
+    );
   }
-  return { candidate_id: candidateId, type: "learning", scope, heading, text, source };
+  return {
+    candidate_id: candidateId,
+    type: "learning",
+    scope,
+    heading,
+    text,
+    source,
+  };
 }
 
 function parseSelectionsFile(path: string): SelectionsFile {
@@ -476,23 +535,32 @@ function parseSelectionsFile(path: string): SelectionsFile {
     fail(`selections-json is malformed: ${errorMessage(e)}`, 1);
   }
   if (!isRecord(parsed) || typeof parsed.stage_slug !== "string") {
-    fail("selections-json is malformed: expected { stage_slug, space, intent, selections[] }", 1);
+    fail(
+      "selections-json is malformed: expected { stage_slug, space, intent, selections[] }",
+      1,
+    );
   }
   // Provenance pinned at surface() time — required, not inferred here.
   // (LOCAL FIX, #747 review: re-deriving it in persist is the exact defect
   // this fix removes.)
   if (typeof parsed.space !== "string") {
-    fail("selections-json is malformed: missing or non-string space (bind it from surface's output)", 1);
+    fail(
+      "selections-json is malformed: missing or non-string space (bind it from surface's output)",
+      1,
+    );
   }
   if (validSpaceFlag(parsed.space) === null) {
     fail(
       "selections-json is malformed: space must be a lowercase slug beginning with a letter " +
         "and containing only lowercase letters, digits, or hyphens (bind it from surface's output)",
-      1
+      1,
     );
   }
   if (parsed.intent !== null && typeof parsed.intent !== "string") {
-    fail("selections-json is malformed: intent must be a string or null (bind it from surface's output)", 1);
+    fail(
+      "selections-json is malformed: intent must be a string or null (bind it from surface's output)",
+      1,
+    );
   }
   if (
     typeof parsed.intent === "string" &&
@@ -505,12 +573,15 @@ function parseSelectionsFile(path: string): SelectionsFile {
     fail(
       "selections-json is malformed: intent must be a non-empty record-directory name without " +
         'path separators or ".." (bind it from surface\'s output)',
-      1
+      1,
     );
   }
   const selectionsRaw: unknown = parsed.selections;
   if (!Array.isArray(selectionsRaw)) {
-    fail("selections-json is malformed: expected { stage_slug, space, intent, selections[] }", 1);
+    fail(
+      "selections-json is malformed: expected { stage_slug, space, intent, selections[] }",
+      1,
+    );
   }
   const rawSelections: unknown[] = selectionsRaw;
   return {
@@ -544,10 +615,20 @@ function parseSelectionsFile(path: string): SelectionsFile {
 // every real invocation (surface() only ever proposes a sensor for the
 // stage whose Learnings Ritual is currently running, i.e. the same stage
 // persist is being invoked for).
-function priorSensorProposedRow(auditContent: string, stage: string, sensorId: string): boolean {
+function priorSensorProposedRow(
+  auditContent: string,
+  stage: string,
+  sensorId: string,
+): boolean {
   const rows = findAllEvents(auditContent, "SENSOR_PROPOSED");
-  const stageRe = new RegExp(`^\\*\\*Stage\\*\\*:\\s*${escapeRegex(stage)}\\s*$`, "m");
-  const sensorIdRe = new RegExp(`^\\*\\*Sensor ID\\*\\*:\\s*${escapeRegex(sensorId)}\\s*$`, "m");
+  const stageRe = new RegExp(
+    `^\\*\\*Stage\\*\\*:\\s*${escapeRegex(stage)}\\s*$`,
+    "m",
+  );
+  const sensorIdRe = new RegExp(
+    `^\\*\\*Sensor ID\\*\\*:\\s*${escapeRegex(sensorId)}\\s*$`,
+    "m",
+  );
   return rows.some((r) => stageRe.test(r.block) && sensorIdRe.test(r.block));
 }
 
@@ -557,17 +638,31 @@ function escapeRegex(s: string): string {
 
 // The STABLE learnings idempotency check (content-hash, not candidate-id —
 // see cidMarker's comment).
-function priorAuditRowByHash(auditContent: string, slug: string, hash: string): boolean {
+function priorAuditRowByHash(
+  auditContent: string,
+  slug: string,
+  hash: string,
+): boolean {
   const rows = findAllEvents(auditContent, "RULE_LEARNED");
-  const stageRe = new RegExp(`^\\*\\*Stage\\*\\*:\\s*${escapeRegex(slug)}\\s*$`, "m");
-  const hashRe = new RegExp(`^\\*\\*Content-Hash\\*\\*:\\s*${escapeRegex(hash)}\\s*$`, "m");
+  const stageRe = new RegExp(
+    `^\\*\\*Stage\\*\\*:\\s*${escapeRegex(slug)}\\s*$`,
+    "m",
+  );
+  const hashRe = new RegExp(
+    `^\\*\\*Content-Hash\\*\\*:\\s*${escapeRegex(hash)}\\s*$`,
+    "m",
+  );
   return rows.some((r) => stageRe.test(r.block) && hashRe.test(r.block));
 }
 
 // Compatibility for PR revisions that persisted only the first 8 hex chars
 // of SHA-256. Require the exact short hash field and a text-gated marker match
 // at the call site so a 32-bit collision cannot suppress different content.
-function priorTruncatedHashAuditRow(auditContent: string, slug: string, hash: string): boolean {
+function priorTruncatedHashAuditRow(
+  auditContent: string,
+  slug: string,
+  hash: string,
+): boolean {
   return priorAuditRowByHash(auditContent, slug, hash.slice(0, 8));
 }
 
@@ -580,12 +675,25 @@ function priorTruncatedHashAuditRow(auditContent: string, slug: string, hash: st
 // reintroducing finding #1's collision. A row missing Content-Hash can only
 // have been written by code older than this fix.
 const CONTENT_HASH_FIELD_RE = /^\*\*Content-Hash\*\*:/m;
-function priorLegacyAuditRow(auditContent: string, slug: string, candidateId: string): boolean {
+function priorLegacyAuditRow(
+  auditContent: string,
+  slug: string,
+  candidateId: string,
+): boolean {
   const rows = findAllEvents(auditContent, "RULE_LEARNED");
-  const stageRe = new RegExp(`^\\*\\*Stage\\*\\*:\\s*${escapeRegex(slug)}\\s*$`, "m");
-  const cidRe = new RegExp(`^\\*\\*Candidate-ID\\*\\*:\\s*${escapeRegex(candidateId)}\\s*$`, "m");
+  const stageRe = new RegExp(
+    `^\\*\\*Stage\\*\\*:\\s*${escapeRegex(slug)}\\s*$`,
+    "m",
+  );
+  const cidRe = new RegExp(
+    `^\\*\\*Candidate-ID\\*\\*:\\s*${escapeRegex(candidateId)}\\s*$`,
+    "m",
+  );
   return rows.some(
-    (r) => stageRe.test(r.block) && cidRe.test(r.block) && !CONTENT_HASH_FIELD_RE.test(r.block)
+    (r) =>
+      stageRe.test(r.block) &&
+      cidRe.test(r.block) &&
+      !CONTENT_HASH_FIELD_RE.test(r.block),
   );
 }
 
@@ -660,7 +768,11 @@ function contentHash(text: string): string {
 function legacyMarkerPreIntentScope(slug: string, candidateId: string): string {
   return `<!-- cid:${slug}:${candidateId} -->`; // pre-#735
 }
-function legacyMarkerCandidateIdScoped(intentSlug: string, slug: string, candidateId: string): string {
+function legacyMarkerCandidateIdScoped(
+  intentSlug: string,
+  slug: string,
+  candidateId: string,
+): string {
   return `<!-- cid:${intentSlug}:${slug}:${candidateId} -->`; // #735's own first fix (PR #747 head)
 }
 
@@ -673,10 +785,14 @@ function legacyMarkerCandidateIdScoped(intentSlug: string, slug: string, candida
 // post-upgrade would otherwise be silently dropped as a false "retry" of
 // the original. Matches the exact line shape persist itself writes:
 // `- <text> (learned <date>) <marker>`.
-function legacyLineMatchesText(content: string, marker: string, text: string): boolean {
+function legacyLineMatchesText(
+  content: string,
+  marker: string,
+  text: string,
+): boolean {
   const re = new RegExp(
     `^- ${escapeRegex(text)} \\(learned \\d{4}-\\d{2}-\\d{2}\\) ${escapeRegex(marker)}\\s*$`,
-    "m"
+    "m",
   );
   return re.test(content);
 }
@@ -688,7 +804,7 @@ function handlePersist(args: string[], projectDir: string): void {
   if (!selectionsJson) {
     fail(
       "Usage: aidlc-learnings.ts persist --slug <stage-slug> --selections-json <path> [--project-dir <path>]",
-      1
+      1,
     );
   }
 
@@ -696,7 +812,7 @@ function handlePersist(args: string[], projectDir: string): void {
   if (slug !== undefined && slug !== selFile.stage_slug) {
     fail(
       `slug mismatch: selections were surfaced for "${selFile.stage_slug}" but persist requested "${slug}"`,
-      1
+      1,
     );
   }
   const stageSlug = selFile.stage_slug;
@@ -715,224 +831,273 @@ function handlePersist(args: string[], projectDir: string): void {
   // and the audit read below are both pinned to the SAME surface-time
   // space/intent so the audit row and the practice line can never land
   // under different intents (PR #747 review note).
-  let lockResult: { rule_learned: number; sensor_proposed: number; bound_stages: string[] };
+  let lockResult: {
+    rule_learned: number;
+    sensor_proposed: number;
+    bound_stages: string[];
+  };
   try {
-    lockResult = withAuditLock(projectDir, () => {
-      if (!isRealDirectory(join(spacesRoot(projectDir), pinnedSpace))) {
-        fail(
-          `cannot persist selections for missing space "${pinnedSpace}". ` +
-            "Re-run the stage's surface step and regenerate the selections file, then retry.",
-          1
-        );
-      }
-      const intentDirs = listIntentDirs(projectDir, pinnedSpace);
-      if (selFile.intent === null && intentDirs.length > 0) {
-        fail(
-          `cannot persist an unscoped selections replay in space "${pinnedSpace}": the selections ` +
-            "file was surfaced when the space had no intent records, but intent records now exist. " +
-            "Re-run the stage's surface step and regenerate the selections file, then retry.",
-          1
-        );
-      }
-      const pinnedIntentDir =
-        selFile.intent === null ? null : join(intentsDir(projectDir, pinnedSpace), selFile.intent);
-      if (
-        selFile.intent !== null &&
-        (!intentDirs.includes(selFile.intent) ||
-          pinnedIntentDir === null ||
-          !isRealDirectory(pinnedIntentDir) ||
-          !isRealFile(join(pinnedIntentDir, "aidlc-state.md")))
-      ) {
-        fail(
-          `cannot persist selections for missing intent record "${selFile.intent}" in space ` +
-            `"${pinnedSpace}". Re-run the stage's surface step and regenerate the selections ` +
-            "file, then retry.",
-          1
-        );
-      }
-      // Read across every per-clone audit shard of the PINNED intent (single
-      // shard in the common case).
-      const auditContent = readAllAuditShards(projectDir, pinnedIntent, pinnedSpace);
-      const batchRuleHashes = new Set<string>();
-
-      let ruleLearned = 0;
-      let sensorProposed = 0;
-      const boundStages: string[] = [];
-
-      // --- Learnings-as-practices: group by destination method file, read
-      // once, thread the append through accumulating in-memory content
-      // (mirrors handlePracticesPromote's same-file write-and-emit
-      // precedent). A confirmed learning is appended as a PRACTICE under the
-      // orchestrator-routed heading in {project,team}.md — the relocated
-      // files the resolver reads. ---
-      const learnings = selFile.selections.filter(
-        (s): s is LearningSelection => s.type === "learning"
-      );
-
-      // Bucket destination files; load (or template) each once. ensureFile
-      // returns { path, content } so callers never re-fetch from the Map.
-      const fileContent = new Map<string, string>();
-      const ensureFile = (scope: "project" | "team"): { path: string; content: string } => {
-        const path = practiceFilePath(projectDir, scope, pinnedSpace);
-        const existing = fileContent.get(path);
-        if (existing !== undefined) {
-          return { path, content: existing };
+    lockResult = withAuditLock(
+      projectDir,
+      () => {
+        if (!isRealDirectory(join(spacesRoot(projectDir), pinnedSpace))) {
+          fail(
+            `cannot persist selections for missing space "${pinnedSpace}". ` +
+              "Re-run the stage's surface step and regenerate the selections file, then retry.",
+            1,
+          );
         }
-        const initial = existsSync(path)
-          ? readFileSync(path, "utf-8")
-          : practiceFileTemplate(scope);
-        fileContent.set(path, initial);
-        return { path, content: initial };
-      };
+        const intentDirs = listIntentDirs(projectDir, pinnedSpace);
+        if (selFile.intent === null && intentDirs.length > 0) {
+          fail(
+            `cannot persist an unscoped selections replay in space "${pinnedSpace}": the selections ` +
+              "file was surfaced when the space had no intent records, but intent records now exist. " +
+              "Re-run the stage's surface step and regenerate the selections file, then retry.",
+            1,
+          );
+        }
+        const pinnedIntentDir =
+          selFile.intent === null
+            ? null
+            : join(intentsDir(projectDir, pinnedSpace), selFile.intent);
+        if (
+          selFile.intent !== null &&
+          (!intentDirs.includes(selFile.intent) ||
+            pinnedIntentDir === null ||
+            !isRealDirectory(pinnedIntentDir) ||
+            !isRealFile(join(pinnedIntentDir, "aidlc-state.md")))
+        ) {
+          fail(
+            `cannot persist selections for missing intent record "${selFile.intent}" in space ` +
+              `"${pinnedSpace}". Re-run the stage's surface step and regenerate the selections ` +
+              "file, then retry.",
+            1,
+          );
+        }
+        // Read across every per-clone audit shard of the PINNED intent (single
+        // shard in the common case).
+        const auditContent = readAllAuditShards(
+          projectDir,
+          pinnedIntent,
+          pinnedSpace,
+        );
+        const batchRuleHashes = new Set<string>();
 
-      for (const sel of learnings) {
-        const hash = contentHash(sel.text);
-        if (batchRuleHashes.has(hash)) continue;
+        let ruleLearned = 0;
+        let sensorProposed = 0;
+        const boundStages: string[] = [];
 
-        const bucket = ensureFile(sel.scope);
-        const path = bucket.path;
-        let content = bucket.content;
-        const marker = cidMarker(intentSlug, stageSlug, hash);
-        const truncatedHashMarker = cidMarker(intentSlug, stageSlug, hash.slice(0, 8));
-        const today = isoTimestamp().slice(0, 10);
-        const source = sel.source ?? "orchestrator";
-        // The orchestrator routes the learning to the fitting practice heading
-        // (KNOWLEDGE); normalise + ensure-exists it before the append.
-        const heading = practiceHeading(sel.heading);
+        // --- Learnings-as-practices: group by destination method file, read
+        // once, thread the append through accumulating in-memory content
+        // (mirrors handlePracticesPromote's same-file write-and-emit
+        // precedent). A confirmed learning is appended as a PRACTICE under the
+        // orchestrator-routed heading in {project,team}.md — the relocated
+        // files the resolver reads. ---
+        const learnings = selFile.selections.filter(
+          (s): s is LearningSelection => s.type === "learning",
+        );
 
-        // Content-hash match is the stable check; the legacy candidate-id
-        // match is the upgrade-compat fallback for rows/lines written before
-        // this fix shipped. A legacy match is gated on the marked LINE's own
-        // text equalling sel.text (PR #747 review, round 2) — see
-        // legacyLineMatchesText's own comment for why candidate_id alone is
-        // not a safe legacy-retry key. priorLegacyAuditRow itself additionally
-        // requires Content-Hash's ABSENCE so it can never mistake a fresh,
-        // different-content row for a legacy retry — see its own comment.
-        const legacyLineMatch =
-          legacyLineMatchesText(
+        // Bucket destination files; load (or template) each once. ensureFile
+        // returns { path, content } so callers never re-fetch from the Map.
+        const fileContent = new Map<string, string>();
+        const ensureFile = (
+          scope: "project" | "team",
+        ): { path: string; content: string } => {
+          const path = practiceFilePath(projectDir, scope, pinnedSpace);
+          const existing = fileContent.get(path);
+          if (existing !== undefined) {
+            return { path, content: existing };
+          }
+          const initial = existsSync(path)
+            ? readFileSync(path, "utf-8")
+            : practiceFileTemplate(scope);
+          fileContent.set(path, initial);
+          return { path, content: initial };
+        };
+
+        for (const sel of learnings) {
+          const hash = contentHash(sel.text);
+          if (batchRuleHashes.has(hash)) continue;
+
+          const bucket = ensureFile(sel.scope);
+          const path = bucket.path;
+          let content = bucket.content;
+          const marker = cidMarker(intentSlug, stageSlug, hash);
+          const truncatedHashMarker = cidMarker(
+            intentSlug,
+            stageSlug,
+            hash.slice(0, 8),
+          );
+          const today = isoTimestamp().slice(0, 10);
+          const source = sel.source ?? "orchestrator";
+          // The orchestrator routes the learning to the fitting practice heading
+          // (KNOWLEDGE); normalise + ensure-exists it before the append.
+          const heading = practiceHeading(sel.heading);
+
+          // Content-hash match is the stable check; the legacy candidate-id
+          // match is the upgrade-compat fallback for rows/lines written before
+          // this fix shipped. A legacy match is gated on the marked LINE's own
+          // text equalling sel.text (PR #747 review, round 2) — see
+          // legacyLineMatchesText's own comment for why candidate_id alone is
+          // not a safe legacy-retry key. priorLegacyAuditRow itself additionally
+          // requires Content-Hash's ABSENCE so it can never mistake a fresh,
+          // different-content row for a legacy retry — see its own comment.
+          const legacyLineMatch =
+            legacyLineMatchesText(
+              content,
+              legacyMarkerCandidateIdScoped(
+                intentSlug,
+                stageSlug,
+                sel.candidate_id,
+              ),
+              sel.text,
+            ) ||
+            legacyLineMatchesText(
+              content,
+              legacyMarkerPreIntentScope(stageSlug, sel.candidate_id),
+              sel.text,
+            );
+          const truncatedHashLineMatch = legacyLineMatchesText(
             content,
-            legacyMarkerCandidateIdScoped(intentSlug, stageSlug, sel.candidate_id),
-            sel.text
-          ) || legacyLineMatchesText(content, legacyMarkerPreIntentScope(stageSlug, sel.candidate_id), sel.text);
-        const truncatedHashLineMatch = legacyLineMatchesText(
-          content,
-          truncatedHashMarker,
-          sel.text
-        );
-        const hasRow =
-          priorAuditRowByHash(auditContent, stageSlug, hash) ||
-          (truncatedHashLineMatch && priorTruncatedHashAuditRow(auditContent, stageSlug, hash)) ||
-          (legacyLineMatch && priorLegacyAuditRow(auditContent, stageSlug, sel.candidate_id));
-        const hasLine = content.includes(marker) || truncatedHashLineMatch || legacyLineMatch;
+            truncatedHashMarker,
+            sel.text,
+          );
+          const hasRow =
+            priorAuditRowByHash(auditContent, stageSlug, hash) ||
+            (truncatedHashLineMatch &&
+              priorTruncatedHashAuditRow(auditContent, stageSlug, hash)) ||
+            (legacyLineMatch &&
+              priorLegacyAuditRow(auditContent, stageSlug, sel.candidate_id));
+          const hasLine =
+            content.includes(marker) ||
+            truncatedHashLineMatch ||
+            legacyLineMatch;
 
-        // no-op: audit row AND line both present.
-        if (hasRow && hasLine) {
+          // no-op: audit row AND line both present.
+          if (hasRow && hasLine) {
+            batchRuleHashes.add(hash);
+            continue;
+          }
+
+          // Write the line unless it is already present (recovery: row exists,
+          // line missing → write only; fresh: neither → write + emit). Create the
+          // routed heading first when the method file doesn't carry it.
+          if (!hasLine) {
+            content = ensureHeading(content, heading);
+            const line = `- ${sel.text} (learned ${today}) ${marker}\n`;
+            content = appendUnderHeading(content, heading, line);
+            fileContent.set(path, content);
+          }
+
+          // Emit only when this is fresh (no prior audit row). Candidate-ID is
+          // kept for human audit-trail readability (which numbered candidate
+          // in that surface batch this was); Content-Hash is the actual dedup
+          // identity going forward.
+          if (!hasRow) {
+            appendAuditEntryUnlocked(
+              "RULE_LEARNED",
+              {
+                Stage: stageSlug,
+                "Candidate-ID": sel.candidate_id,
+                "Content-Hash": hash,
+                Destination: path,
+                Heading: heading,
+                Source: source,
+              },
+              projectDir,
+              pinnedIntent,
+              pinnedSpace,
+            );
+            ruleLearned++;
+          }
           batchRuleHashes.add(hash);
-          continue;
         }
 
-        // Write the line unless it is already present (recovery: row exists,
-        // line missing → write only; fresh: neither → write + emit). Create the
-        // routed heading first when the method file doesn't carry it.
-        if (!hasLine) {
-          content = ensureHeading(content, heading);
-          const line = `- ${sel.text} (learned ${today}) ${marker}\n`;
-          content = appendUnderHeading(content, heading, line);
-          fileContent.set(path, content);
+        // Flush each method file once (atomic).
+        for (const [path, content] of fileContent) {
+          mkdirSync(dirname(path), { recursive: true });
+          writeFileAtomic(path, content);
         }
 
-        // Emit only when this is fresh (no prior audit row). Candidate-ID is
-        // kept for human audit-trail readability (which numbered candidate
-        // in that surface batch this was); Content-Hash is the actual dedup
-        // identity going forward.
-        if (!hasRow) {
-          appendAuditEntryUnlocked(
-            "RULE_LEARNED",
-            {
-              Stage: stageSlug,
-              "Candidate-ID": sel.candidate_id,
-              "Content-Hash": hash,
-              Destination: path,
-              Heading: heading,
-              Source: source,
-            },
-            projectDir,
-            pinnedIntent,
-            pinnedSpace
+        // --- Sensors: two-write atomic bind (manifest + stage frontmatter). ---
+        const sensors = selFile.selections.filter(
+          (s): s is SensorSelection => s.type === "sensor",
+        );
+        for (const sel of sensors) {
+          const sensorId = sel.manifest_fields.id;
+          const manifestPath = sensorManifestPath(projectDir, sensorId);
+
+          // Reject framework-distribution paths — a per-project learning loop
+          // must not mutate the shipped framework (plan deviation 3.4).
+          if (isFrameworkDistributionPath(manifestPath)) {
+            fail(
+              `refusing to scaffold a sensor manifest under the framework distribution: ${manifestPath}`,
+              1,
+            );
+          }
+
+          const hasRow = priorSensorProposedRow(
+            auditContent,
+            stageSlug,
+            sensorId,
           );
-          ruleLearned++;
-        }
-        batchRuleHashes.add(hash);
-      }
+          const hasManifest = existsSync(manifestPath);
 
-      // Flush each method file once (atomic).
-      for (const [path, content] of fileContent) {
-        mkdirSync(dirname(path), { recursive: true });
-        writeFileAtomic(path, content);
-      }
+          if (hasRow && hasManifest) {
+            // no-op
+            boundStages.push(sel.origin_stage);
+            continue;
+          }
 
-      // --- Sensors: two-write atomic bind (manifest + stage frontmatter). ---
-      const sensors = selFile.selections.filter(
-        (s): s is SensorSelection => s.type === "sensor"
-      );
-      for (const sel of sensors) {
-        const sensorId = sel.manifest_fields.id;
-        const manifestPath = sensorManifestPath(projectDir, sensorId);
+          // Write 1: the manifest (project-tier).
+          if (!hasManifest) {
+            mkdirSync(dirname(manifestPath), { recursive: true });
+            writeFileAtomic(
+              manifestPath,
+              renderSensorManifest(sel.manifest_fields),
+            );
+          }
 
-        // Reject framework-distribution paths — a per-project learning loop
-        // must not mutate the shipped framework (plan deviation 3.4).
-        if (isFrameworkDistributionPath(manifestPath)) {
-          fail(`refusing to scaffold a sensor manifest under the framework distribution: ${manifestPath}`, 1);
-        }
-
-        const hasRow = priorSensorProposedRow(auditContent, stageSlug, sensorId);
-        const hasManifest = existsSync(manifestPath);
-
-        if (hasRow && hasManifest) {
-          // no-op
-          boundStages.push(sel.origin_stage);
-          continue;
-        }
-
-        // Write 1: the manifest (project-tier).
-        if (!hasManifest) {
-          mkdirSync(dirname(manifestPath), { recursive: true });
-          writeFileAtomic(manifestPath, renderSensorManifest(sel.manifest_fields));
-        }
-
-        // Write 2: append the id to the originating stage's sensors:
-        // frontmatter (the pull-authoring two-write install).
-        const bound = bindSensorToStage(projectDir, sel.origin_stage, sensorId);
-        if (bound) boundStages.push(sel.origin_stage);
-
-        if (!hasRow) {
-          appendAuditEntryUnlocked(
-            "SENSOR_PROPOSED",
-            {
-              Stage: stageSlug,
-              "Candidate-ID": sel.candidate_id,
-              "Sensor ID": sensorId,
-              "Manifest path": manifestPath,
-              Matches: sel.manifest_fields.matches,
-              // Plural array field to match the frozen destinations[]
-              // contract name under the explainer's single-origin model.
-              Destinations: JSON.stringify([sel.origin_stage]),
-              Source: sel.source ?? "orchestrator",
-            },
+          // Write 2: append the id to the originating stage's sensors:
+          // frontmatter (the pull-authoring two-write install).
+          const bound = bindSensorToStage(
             projectDir,
-            pinnedIntent,
-            pinnedSpace
+            sel.origin_stage,
+            sensorId,
           );
-          sensorProposed++;
-        }
-      }
+          if (bound) boundStages.push(sel.origin_stage);
 
-      return {
-        rule_learned: ruleLearned,
-        sensor_proposed: sensorProposed,
-        bound_stages: boundStages,
-      };
-    }, pinnedIntent, pinnedSpace);
+          if (!hasRow) {
+            appendAuditEntryUnlocked(
+              "SENSOR_PROPOSED",
+              {
+                Stage: stageSlug,
+                "Candidate-ID": sel.candidate_id,
+                "Sensor ID": sensorId,
+                "Manifest path": manifestPath,
+                Matches: sel.manifest_fields.matches,
+                // Plural array field to match the frozen destinations[]
+                // contract name under the explainer's single-origin model.
+                Destinations: JSON.stringify([sel.origin_stage]),
+                Source: sel.source ?? "orchestrator",
+              },
+              projectDir,
+              pinnedIntent,
+              pinnedSpace,
+            );
+            sensorProposed++;
+          }
+        }
+
+        return {
+          rule_learned: ruleLearned,
+          sensor_proposed: sensorProposed,
+          bound_stages: boundStages,
+        };
+      },
+      pinnedIntent,
+      pinnedSpace,
+    );
   } catch (e) {
     // Lock-acquire failure (or any in-lock throw) — name the lock path +
     // manual remedy so a hard-killed predecessor's orphaned lock is
@@ -942,7 +1107,7 @@ function handlePersist(args: string[], projectDir: string): void {
       fail(
         `${msg}. The audit lock dir may be orphaned by a hard-killed run; ` +
           `remove it manually (look under the system temp dir for the aidlc audit lock) and retry.`,
-        1
+        1,
       );
     }
     fail(`persist failed: ${msg}`, 1);
@@ -952,7 +1117,7 @@ function handlePersist(args: string[], projectDir: string): void {
   if (lockResult.bound_stages.length > 0) {
     const uniq = [...new Set(lockResult.bound_stages)];
     notes.push(
-      `manifest created + bound to ${uniq.join(", ")}; fires from next compile`
+      `manifest created + bound to ${uniq.join(", ")}; fires from next compile`,
     );
   }
   console.log(
@@ -961,7 +1126,7 @@ function handlePersist(args: string[], projectDir: string): void {
       rule_learned: lockResult.rule_learned,
       sensor_proposed: lockResult.sensor_proposed,
       notes,
-    })
+    }),
   );
 }
 
@@ -976,7 +1141,8 @@ function renderSensorManifest(f: SensorManifestFields): string {
   lines.push(`description: ${f.description}`);
   if (f.category !== undefined) lines.push(`category: ${f.category}`);
   lines.push(`matches: "${f.matches}"`);
-  if (f.timeout_seconds !== undefined) lines.push(`timeout_seconds: ${f.timeout_seconds}`);
+  if (f.timeout_seconds !== undefined)
+    lines.push(`timeout_seconds: ${f.timeout_seconds}`);
   lines.push("---");
   lines.push("");
   lines.push(`# ${f.id} sensor`);
@@ -1028,7 +1194,11 @@ function findStageFile(projectDir: string, slug: string): string | null {
 // "stage frontmatter is immutable in shape, not in contents"). Returns true
 // when the id was newly added (or already present); false when the stage
 // file could not be located.
-function bindSensorToStage(projectDir: string, slug: string, sensorId: string): boolean {
+function bindSensorToStage(
+  projectDir: string,
+  slug: string,
+  sensorId: string,
+): boolean {
   const stageFile = findStageFile(projectDir, slug);
   if (!stageFile) return false;
   const raw = readFileSync(stageFile, "utf-8");
@@ -1040,9 +1210,10 @@ function bindSensorToStage(projectDir: string, slug: string, sensorId: string): 
   // Already bound? Idempotent.
   const sensorsBlock = fmBody.match(/^sensors:\s*\n((?:[ \t]+-[ \t]+.*\n?)*)/m);
   if (sensorsBlock) {
-    const already = new RegExp(`^[ \\t]+-[ \\t]+${escapeRegex(sensorId)}\\s*$`, "m").test(
-      sensorsBlock[1]
-    );
+    const already = new RegExp(
+      `^[ \\t]+-[ \\t]+${escapeRegex(sensorId)}\\s*$`,
+      "m",
+    ).test(sensorsBlock[1]);
     if (already) {
       writeFileAtomic(stageFile, raw); // no-op rewrite keeps semantics uniform
       return true;
@@ -1084,7 +1255,10 @@ function parseFlags(args: string[]): Record<string, string> {
   return flags;
 }
 
-function stripProjectDir(args: string[]): { projectDirArg: string | undefined; rest: string[] } {
+function stripProjectDir(args: string[]): {
+  projectDirArg: string | undefined;
+  rest: string[];
+} {
   const out = [...args];
   const pdIdx = out.indexOf("--project-dir");
   if (pdIdx !== -1 && pdIdx + 1 < out.length) {
@@ -1111,7 +1285,7 @@ function printHelp(): void {
       "      under one withAuditLock.",
       "  --help",
       "",
-    ].join("\n")
+    ].join("\n"),
   );
 }
 
@@ -1137,7 +1311,10 @@ export function main(argv: string[]): void {
       handlePersist(subargs, projectDir);
       break;
     default:
-      fail(`Unknown subcommand: ${cmd}. Run aidlc-learnings.ts --help for usage.`, 2);
+      fail(
+        `Unknown subcommand: ${cmd}. Run aidlc-learnings.ts --help for usage.`,
+        2,
+      );
   }
 }
 

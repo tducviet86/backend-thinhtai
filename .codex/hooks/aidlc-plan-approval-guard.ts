@@ -53,7 +53,15 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { appendAuditEntryUnlocked } from "../tools/aidlc-audit.ts";
 import {
   acquireAuditLock,
@@ -217,7 +225,9 @@ export interface PlanApprovalVerdict {
   appendixInBrief?: boolean;
 }
 
-function approvalEvidenceIsCurrent(evidence: UnitEvidence | undefined): boolean {
+function approvalEvidenceIsCurrent(
+  evidence: UnitEvidence | undefined,
+): boolean {
   return (
     evidence?.planExists === true &&
     evidence.instructionsExist &&
@@ -307,7 +317,8 @@ export function evaluatePlanApprovalDispatch(
   // `brief` command produces the body-only handoff; a prompt that quotes the
   // appendix is refused whether the approval is otherwise current or not.
   const appendixInBrief =
-    target !== undefined && promptCarriesReviewAppendix(promptText, target.reviewAppendix);
+    target !== undefined &&
+    promptCarriesReviewAppendix(promptText, target.reviewAppendix);
   return {
     block:
       target === undefined ||
@@ -352,7 +363,10 @@ export function appendixBlockReason(mentioned: string[]): string {
 // PreToolUse error channel. Self-explaining and redirecting: it names the
 // missing evidence and the exact stage steps that produce it, so the
 // conductor self-corrects instead of retrying the same call.
-export function blockReason(mentioned: string[], detail: string | null = null): string {
+export function blockReason(
+  mentioned: string[],
+  detail: string | null = null,
+): string {
   const scope =
     mentioned.length === 1
       ? mentioned[0] === `stage:${GUARDED_STAGE}`
@@ -394,7 +408,8 @@ export function mutationBlockReason(
   opaqueShell = false,
   detail: string | null = null,
 ): string {
-  const scope = unit === null ? "the zero-Unit stage-level implementation" : `unit ${unit}`;
+  const scope =
+    unit === null ? "the zero-Unit stage-level implementation" : `unit ${unit}`;
   const action = opaqueShell
     ? `run mutation-capable ${target}`
     : `modify workspace path "${target}"`;
@@ -432,8 +447,11 @@ export function knownUnits(projectDir: string, recordDir: string): string[] {
   try {
     const constructionDir = join(recordDir, "construction");
     if (existsSync(constructionDir)) {
-      for (const entry of readdirSync(constructionDir, { withFileTypes: true })) {
-        if (entry.isDirectory() && entry.name !== GUARDED_STAGE) units.add(entry.name);
+      for (const entry of readdirSync(constructionDir, {
+        withFileTypes: true,
+      })) {
+        if (entry.isDirectory() && entry.name !== GUARDED_STAGE)
+          units.add(entry.name);
       }
     }
   } catch {
@@ -443,10 +461,16 @@ export function knownUnits(projectDir: string, recordDir: string): string[] {
 }
 
 /** The plan's terminal review appendix for a target, or undefined when it has none. */
-function planAppendixFor(projectDir: string, unit: string | null): string | undefined {
+function planAppendixFor(
+  projectDir: string,
+  unit: string | null,
+): string | undefined {
   try {
     const plan = readFileSync(
-      join(codeGenerationRecordDir(projectDir, unit), "code-generation-plan.md"),
+      join(
+        codeGenerationRecordDir(projectDir, unit),
+        "code-generation-plan.md",
+      ),
       "utf-8",
     );
     const appendix = planReviewAppendix(plan);
@@ -456,7 +480,10 @@ function planAppendixFor(projectDir: string, unit: string | null): string | unde
   }
 }
 
-export function gatherUnitEvidence(projectDir: string, units: string[]): UnitEvidence[] {
+export function gatherUnitEvidence(
+  projectDir: string,
+  units: string[],
+): UnitEvidence[] {
   return units.map((unit) => {
     const approval = evaluateCodeGenerationApproval(projectDir, { unit });
     const reviewAppendix = planAppendixFor(projectDir, unit);
@@ -475,8 +502,13 @@ export function gatherUnitEvidence(projectDir: string, units: string[]): UnitEvi
   });
 }
 
-export function gatherApprovalEvidence(projectDir: string, units: string[]): UnitEvidence[] {
-  const stageApproval = evaluateCodeGenerationApproval(projectDir, { unit: null });
+export function gatherApprovalEvidence(
+  projectDir: string,
+  units: string[],
+): UnitEvidence[] {
+  const stageApproval = evaluateCodeGenerationApproval(projectDir, {
+    unit: null,
+  });
   const reviewAppendix = planAppendixFor(projectDir, null);
   return [
     {
@@ -497,7 +529,10 @@ export function gatherApprovalEvidence(projectDir: string, units: string[]): Uni
 
 function isWithinDir(path: string, dir: string): boolean {
   const rel = relative(dir, path);
-  return rel === "" || (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`));
+  return (
+    rel === "" ||
+    (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`))
+  );
 }
 
 function isTrustedRecordTarget(
@@ -531,7 +566,9 @@ interface MutationIntent {
 }
 
 function normalizedCommandName(name: string): string {
-  return basename(name).toLowerCase().replace(/\.exe$/, "");
+  return basename(name)
+    .toLowerCase()
+    .replace(/\.exe$/, "");
 }
 
 function lastFlagValue(args: string[], flag: string): string | null {
@@ -546,7 +583,10 @@ function lastFlagValue(args: string[], flag: string): string | null {
   return value;
 }
 
-function isNativePlanApprovalPrerequisite(name: string, args: string[]): boolean {
+function isNativePlanApprovalPrerequisite(
+  name: string,
+  args: string[],
+): boolean {
   const command = name.toLowerCase();
   return (
     (command === "aidlc" || command === "aidlc.exe") &&
@@ -572,7 +612,8 @@ function isPlanApprovalPrerequisite(args: string[]): boolean {
   ) {
     return true;
   }
-  if (noun !== "log" || (verb !== "decision" && verb !== "answer")) return false;
+  if (noun !== "log" || (verb !== "decision" && verb !== "answer"))
+    return false;
 
   const routeArgs = args.slice(3);
   return (
@@ -615,12 +656,13 @@ function isFrameworkToolInvocation(
   }
   if (normalizedCommandName(name) !== "bun") return false;
   if (
-    args.some((arg) =>
-      arg === "-r" ||
-      arg === "--require" ||
-      arg === "--preload" ||
-      arg.startsWith("--require=") ||
-      arg.startsWith("--preload=")
+    args.some(
+      (arg) =>
+        arg === "-r" ||
+        arg === "--require" ||
+        arg === "--preload" ||
+        arg.startsWith("--require=") ||
+        arg.startsWith("--preload="),
     )
   ) {
     return false;
@@ -635,7 +677,8 @@ function isFrameworkToolInvocation(
   const unifiedEntryPoint = basename(absolute) === "aidlc.ts";
   if (
     dirname(absolute) !== trustedToolsDir ||
-    (!unifiedEntryPoint && !/^aidlc-[A-Za-z0-9._-]+\.ts$/.test(basename(absolute)))
+    (!unifiedEntryPoint &&
+      !/^aidlc-[A-Za-z0-9._-]+\.ts$/.test(basename(absolute)))
   ) {
     return false;
   }
@@ -645,13 +688,11 @@ function isFrameworkToolInvocation(
   // invocation. The same real-file/no-symlink boundary below still applies.
   if (
     unifiedEntryPoint &&
-    (
-      !["bun", "bun.exe"].includes(name.toLowerCase()) ||
+    (!["bun", "bun.exe"].includes(name.toLowerCase()) ||
       wrapped ||
       executableResolutionChanged ||
       dataDriven ||
-      !isPlanApprovalPrerequisite(args.slice(scriptIndex + 1))
-    )
+      !isPlanApprovalPrerequisite(args.slice(scriptIndex + 1)))
   ) {
     return false;
   }
@@ -661,7 +702,9 @@ function isFrameworkToolInvocation(
       projectReal,
       relative(projectLexical, absolute),
     );
-    return lstatSync(absolute).isFile() && !lstatSync(absolute).isSymbolicLink();
+    return (
+      lstatSync(absolute).isFile() && !lstatSync(absolute).isSymbolicLink()
+    );
   } catch {
     return false;
   }
@@ -683,7 +726,8 @@ function shellInvocationNeedsApproval(
   const name = normalizedCommandName(invocation.name);
   if (name === "sort") {
     return invocation.args.some(
-      (arg) => arg === "-o" || arg === "--output" || arg.startsWith("--output="),
+      (arg) =>
+        arg === "-o" || arg === "--output" || arg.startsWith("--output="),
     );
   }
   if (name === "uniq") {
@@ -786,7 +830,12 @@ async function mutationIntent(
       shellUsesDynamicEvaluation(command) ||
       shellCommandAltersExecutableResolution(command) ||
       shellCommandInvocationDetails(command).some((invocation) =>
-        shellInvocationNeedsApproval(projectDir, cwd, invocation, targets.length > 0)
+        shellInvocationNeedsApproval(
+          projectDir,
+          cwd,
+          invocation,
+          targets.length > 0,
+        ),
       );
   } else if (WRITE_TOOLS.has(toolName)) {
     const input = toolInput ?? {};
@@ -800,7 +849,7 @@ async function mutationIntent(
   }
   return {
     targets: targets.map((target) =>
-      isAbsolute(target) ? resolve(target) : resolve(cwd, target)
+      isAbsolute(target) ? resolve(target) : resolve(cwd, target),
     ),
     opaqueShell,
     shellCommand,
@@ -833,7 +882,10 @@ function recordGuardDisabled(input: string): void {
     for (let index = blocks.length - 1; index >= 0; index--) {
       const event = auditBlockField(blocks[index], "Event");
       if (event === null) continue;
-      if (event === "GUARD_DISABLED" && auditBlockField(blocks[index], "Guard") === HOOK_NAME) {
+      if (
+        event === "GUARD_DISABLED" &&
+        auditBlockField(blocks[index], "Guard") === HOOK_NAME
+      ) {
         return;
       }
       break;
@@ -867,7 +919,11 @@ export async function run(input: string): Promise<number> {
   try {
     const healthDir = hooksHealthDir(projectDir);
     mkdirSync(healthDir, { recursive: true });
-    writeFileSync(join(healthDir, `${HOOK_NAME}.last`), isoTimestamp(), "utf-8");
+    writeFileSync(
+      join(healthDir, `${HOOK_NAME}.last`),
+      isoTimestamp(),
+      "utf-8",
+    );
   } catch {
     // Heartbeat failure is non-fatal - never let it affect the decision.
   }
@@ -927,8 +983,7 @@ export async function run(input: string): Promise<number> {
       durableStage === GUARDED_STAGE ||
       (guardedDispatch && explicitPlanDispatch);
     if (!codeGenerationRelevant) return 0;
-    const knownMutationTool =
-      toolName === "Bash" || WRITE_TOOLS.has(toolName);
+    const knownMutationTool = toolName === "Bash" || WRITE_TOOLS.has(toolName);
     const mutation = guardedDispatch
       ? { targets: [], opaqueShell: false, shellCommand: null }
       : knownMutationTool
@@ -938,28 +993,36 @@ export async function run(input: string): Promise<number> {
             opaqueShell: true,
             shellCommand: `unknown mutation-capable tool: ${toolName}`,
           };
-    if (!guardedDispatch && mutation.targets.length === 0 && !mutation.opaqueShell) {
+    if (
+      !guardedDispatch &&
+      mutation.targets.length === 0 &&
+      !mutation.opaqueShell
+    ) {
       return 0;
     }
 
-    if (
-      activeDirective?.version !== 2 ||
-      directiveStage !== GUARDED_STAGE
-    ) {
+    if (activeDirective?.version !== 2 || directiveStage !== GUARDED_STAGE) {
       authorityFailure =
         "the current state has no matching v2 code-generation active directive";
       verdict = { block: true, mentioned: [] };
     } else {
       const recordDir = docsRoot(projectDir);
-      units = gatherApprovalEvidence(projectDir, knownUnits(projectDir, recordDir));
+      units = gatherApprovalEvidence(
+        projectDir,
+        knownUnits(projectDir, recordDir),
+      );
       if (guardedDispatch) {
-        verdict = evaluatePlanApprovalDispatch(toolName, subagentType, dispatchPrompt, {
-          currentStage: activeDirective.stage,
-          units,
-        });
+        verdict = evaluatePlanApprovalDispatch(
+          toolName,
+          subagentType,
+          dispatchPrompt,
+          {
+            currentStage: activeDirective.stage,
+            units,
+          },
+        );
       } else if (activeDirective.kind !== "run-stage") {
-        authorityFailure =
-          `workspace mutation cannot select one approval target from directive kind "${activeDirective.kind}"`;
+        authorityFailure = `workspace mutation cannot select one approval target from directive kind "${activeDirective.kind}"`;
         verdict = { block: true, mentioned: [] };
       } else {
         const unit = activeDirective.unit?.trim() || null;
@@ -1000,8 +1063,7 @@ export async function run(input: string): Promise<number> {
     }
   } catch (e) {
     recordHookDrop(projectDir, HOOK_NAME, errorMessage(e));
-    authorityFailure =
-      `Plan Approval authority evaluation failed closed: ${errorMessage(e)}`;
+    authorityFailure = `Plan Approval authority evaluation failed closed: ${errorMessage(e)}`;
     verdict = { block: true, mentioned: [] };
   }
   if (!verdict.block) {
@@ -1014,8 +1076,7 @@ export async function run(input: string): Promise<number> {
         for (const mentioned of verdict.mentioned) {
           changeNotices.push(
             ...beginCodeGeneration(projectDir, {
-              unit:
-                mentioned === `stage:${GUARDED_STAGE}` ? null : mentioned,
+              unit: mentioned === `stage:${GUARDED_STAGE}` ? null : mentioned,
             }),
           );
         }
@@ -1055,7 +1116,9 @@ export async function run(input: string): Promise<number> {
             "PLAN_APPROVAL_BLOCKED",
             {
               Tool: toolName,
-              Target: guardedDispatch ? subagentType : blockedMutation?.target ?? "",
+              Target: guardedDispatch
+                ? subagentType
+                : (blockedMutation?.target ?? ""),
               Stage: GUARDED_STAGE,
               Unit:
                 blockedMutation?.unit ??
@@ -1081,18 +1144,23 @@ export async function run(input: string): Promise<number> {
   }
 
   process.stderr.write(
-    `${authorityFailure
-      ? authorityBlockReason(authorityFailure)
-      : blockedMutation
-      ? mutationBlockReason(
-          blockedMutation.target,
-          blockedMutation.unit,
-          blockedMutation.opaqueShell,
-          blockedMutation.detail,
-        )
-      : verdict.appendixInBrief
-      ? appendixBlockReason(verdict.mentioned)
-      : blockReason(verdict.mentioned, receiptDetail(units, verdict.mentioned))}\n`,
+    `${
+      authorityFailure
+        ? authorityBlockReason(authorityFailure)
+        : blockedMutation
+          ? mutationBlockReason(
+              blockedMutation.target,
+              blockedMutation.unit,
+              blockedMutation.opaqueShell,
+              blockedMutation.detail,
+            )
+          : verdict.appendixInBrief
+            ? appendixBlockReason(verdict.mentioned)
+            : blockReason(
+                verdict.mentioned,
+                receiptDetail(units, verdict.mentioned),
+              )
+    }\n`,
   );
   return 2; // harness PreToolUse reject contract: exit 2 + stderr blocks
 }

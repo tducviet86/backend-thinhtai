@@ -15,10 +15,7 @@ import {
   machineTransactionRoot,
   windowsUninstallFencePath,
 } from "./aidlc-install-paths.ts";
-import {
-  executePlan,
-  writeOperation,
-} from "./aidlc-transaction.ts";
+import { executePlan, writeOperation } from "./aidlc-transaction.ts";
 
 export type WindowsUninstallJournal = {
   schemaVersion: 1;
@@ -65,7 +62,7 @@ function cleanupScript(journal: WindowsUninstallJournal): string {
     "    if (-not (Get-Process -Id $TargetPid -ErrorAction SilentlyContinue)) { return }",
     "    Start-Sleep -Milliseconds 100",
     "  }",
-    "  throw \"process $TargetPid did not exit before uninstall cleanup timed out\"",
+    '  throw "process $TargetPid did not exit before uninstall cleanup timed out"',
     "}",
     "Wait-ForExit ([int]$journal.parentPid)",
     "if ($null -ne $journal.shimPid) { Wait-ForExit ([int]$journal.shimPid) }",
@@ -102,17 +99,22 @@ function cleanupScript(journal: WindowsUninstallJournal): string {
   ].join("\r\n");
 }
 
-function fenceReferencesJournal(fencePath: string, journalPath: string): boolean {
+function fenceReferencesJournal(
+  fencePath: string,
+  journalPath: string,
+): boolean {
   try {
     const value = JSON.parse(readFileSync(fencePath, "utf-8")) as {
       schemaVersion?: unknown;
       operation?: unknown;
       journalPath?: unknown;
     };
-    return value.schemaVersion === 1 &&
+    return (
+      value.schemaVersion === 1 &&
       value.operation === "windows-uninstall-continuation" &&
       typeof value.journalPath === "string" &&
-      resolve(value.journalPath) === resolve(journalPath);
+      resolve(value.journalPath) === resolve(journalPath)
+    );
   } catch {
     return false;
   }
@@ -122,7 +124,9 @@ function readJournal(path: string): WindowsUninstallJournal | null {
   try {
     const match = /^aidlc-uninstall-([0-9a-f-]+)\.json$/.exec(basename(path));
     if (!match) return null;
-    const value = JSON.parse(readFileSync(path, "utf-8")) as Partial<WindowsUninstallJournal>;
+    const value = JSON.parse(
+      readFileSync(path, "utf-8"),
+    ) as Partial<WindowsUninstallJournal>;
     const cleanupPath = join(tmpdir(), `aidlc-uninstall-${match[1]}.ps1`);
     if (
       value.schemaVersion !== 1 ||
@@ -149,11 +153,7 @@ function readJournal(path: string): WindowsUninstallJournal | null {
       return null;
     }
     const prefix = `${resolve(value.installRoot)}${sep}`;
-    if (
-      value.preserved.some((entry) =>
-        !resolve(entry).startsWith(prefix)
-      )
-    ) {
+    if (value.preserved.some((entry) => !resolve(entry).startsWith(prefix))) {
       return null;
     }
     return value as WindowsUninstallJournal;
@@ -176,11 +176,9 @@ export function scanWindowsUninstallJournals(): {
   const pending: Array<{ path: string; journal: WindowsUninstallJournal }> = [];
   const invalid: string[] = [];
   try {
-    for (
-      const entry of readdirSync(tmpdir())
-        .filter((name) => /^aidlc-uninstall-[0-9a-f-]+\.json$/.test(name))
-        .sort()
-    ) {
+    for (const entry of readdirSync(tmpdir())
+      .filter((name) => /^aidlc-uninstall-[0-9a-f-]+\.json$/.test(name))
+      .sort()) {
       const path = join(tmpdir(), entry);
       let belongsToCurrentInstall = false;
       try {
@@ -191,7 +189,8 @@ export function scanWindowsUninstallJournals(): {
           invalid.push(path);
           continue;
         }
-        belongsToCurrentInstall = typeof raw.installRoot === "string" &&
+        belongsToCurrentInstall =
+          typeof raw.installRoot === "string" &&
           resolve(raw.installRoot) === resolve(installRoot());
       } catch {
         invalid.push(path);
@@ -223,10 +222,11 @@ function launch(path: string, journal: WindowsUninstallJournal): void {
     parentPid: process.pid,
     shimPid: Number.isSafeInteger(shimPid) && shimPid > 0 ? shimPid : null,
   };
-  writeFileSync(path, `${JSON.stringify(recovering, null, 2)}\n`, { mode: 0o600 });
+  writeFileSync(path, `${JSON.stringify(recovering, null, 2)}\n`, {
+    mode: 0o600,
+  });
   try {
-    const processArgument = (value: string): string =>
-      `'"${quoted(value)}"'`;
+    const processArgument = (value: string): string => `'"${quoted(value)}"'`;
     const broker = [
       "$ErrorActionPreference = 'Stop'",
       [
@@ -262,7 +262,9 @@ function launch(path: string, journal: WindowsUninstallJournal): void {
     );
     if (launched.exitCode !== 0) {
       const stderr = Buffer.from(launched.stderr).toString("utf-8").trim();
-      throw new Error(`Windows uninstall cleanup launch failed${stderr ? `: ${stderr}` : ""}`);
+      throw new Error(
+        `Windows uninstall cleanup launch failed${stderr ? `: ${stderr}` : ""}`,
+      );
     }
   } catch (error) {
     writeFileSync(
@@ -302,27 +304,39 @@ export function scheduleWindowsUninstall(
     preserved: purge ? [] : preserved.map((path) => resolve(path)),
   };
   try {
-    writeFileSync(cleanupPath, cleanupScript(journal), { flag: "wx", mode: 0o600 });
+    writeFileSync(cleanupPath, cleanupScript(journal), {
+      flag: "wx",
+      mode: 0o600,
+    });
     writeFileSync(journalPath, `${JSON.stringify(journal, null, 2)}\n`, {
       flag: "wx",
       mode: 0o600,
     });
-    executePlan({
-      schemaVersion: 1,
-      root: machineTransactionRoot(),
-      operations: [writeOperation(
-        relative(machineTransactionRoot(), journal.fencePath),
-        `${JSON.stringify({
-          schemaVersion: 1,
-          operation: journal.operation,
-          journalPath,
-        }, null, 2)}\n`,
-        "absent",
-        0o600,
-      )],
-    }, {
-      allowPendingWindowsUninstall: true,
-    });
+    executePlan(
+      {
+        schemaVersion: 1,
+        root: machineTransactionRoot(),
+        operations: [
+          writeOperation(
+            relative(machineTransactionRoot(), journal.fencePath),
+            `${JSON.stringify(
+              {
+                schemaVersion: 1,
+                operation: journal.operation,
+                journalPath,
+              },
+              null,
+              2,
+            )}\n`,
+            "absent",
+            0o600,
+          ),
+        ],
+      },
+      {
+        allowPendingWindowsUninstall: true,
+      },
+    );
     launch(journalPath, journal);
   } catch (error) {
     if (!existsSync(journal.fencePath)) {
@@ -333,16 +347,19 @@ export function scheduleWindowsUninstall(
   }
 }
 
-export function recoverWindowsUninstallContinuations(requestedPurge?: boolean): number {
+export function recoverWindowsUninstallContinuations(
+  requestedPurge?: boolean,
+): number {
   const scan = scanWindowsUninstallJournals();
   if (scan.invalid.length > 0) {
     throw new Error(
       `invalid Windows uninstall journal(s): ${scan.invalid.join(", ")}`,
     );
   }
-  const mismatched = requestedPurge === undefined
-    ? []
-    : scan.pending.filter(({ journal }) => journal.purge !== requestedPurge);
+  const mismatched =
+    requestedPurge === undefined
+      ? []
+      : scan.pending.filter(({ journal }) => journal.purge !== requestedPurge);
   if (mismatched.length > 0) {
     const pendingMode = mismatched[0].journal.purge ? "--purge" : "non-purge";
     const requestedMode = requestedPurge ? "--purge" : "non-purge";

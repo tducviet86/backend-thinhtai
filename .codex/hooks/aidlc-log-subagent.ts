@@ -80,7 +80,10 @@ export async function run(input: string): Promise<number> {
 
   const agentType = parsed.agent_type ?? "unknown";
   const agentId: string = parsed.agent_id ?? "";
-  const agentMessage: string = (parsed.last_assistant_message ?? "").slice(0, 200);
+  const agentMessage: string = (parsed.last_assistant_message ?? "").slice(
+    0,
+    200,
+  );
 
   const fields: Record<string, string> = {
     "Agent Type": agentType,

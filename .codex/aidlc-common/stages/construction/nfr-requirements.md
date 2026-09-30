@@ -88,6 +88,7 @@ Read functional design artifacts from `<record>/construction/{unit-name}/functio
 ### Step 2: Assess NFR Categories
 
 Analyze the unit across NFR categories:
+
 - **Performance**: Response times, throughput, latency targets, resource utilization
 - **Security**: Authentication, authorization, data protection, compliance requirements
 - **Scalability**: Load handling, growth projections, scaling strategies
@@ -101,6 +102,7 @@ Create a questions file at `<record>/construction/{unit-name}/nfr-requirements/n
 ### Step 4: Collect and Analyze Answers
 
 Collect answers following stage-protocol.md §3 question flow (offer interaction mode choice, collect answers, write back to file). Perform MANDATORY ambiguity analysis:
+
 - Identify vague answers ("fast enough", "highly available", "secure")
 - Check for contradictions between NFR targets
 - Flag missing quantitative targets
@@ -134,7 +136,11 @@ derived `NFRx.y` IDs. `N/A` requires a justification:
   "upstream_ids": ["NFR1", "NFR4"],
   "coverage": [
     { "id": "NFR1", "status": "OK", "target": "NFR1.1, NFR1.2" },
-    { "id": "NFR4", "status": "N/A", "target": "no persistent data in this Unit" }
+    {
+      "id": "NFR4",
+      "status": "N/A",
+      "target": "no persistent data in this Unit"
+    }
   ]
 }
 ```

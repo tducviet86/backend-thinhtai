@@ -7,6 +7,7 @@ Patterns for releasing software safely with minimal risk to users and the abilit
 **How it works**: Maintain two identical environments (blue = current, green = new). Deploy the new version to green. Switch traffic from blue to green at the load balancer or DNS level. Keep blue running as an instant rollback target.
 
 **AWS Implementation**:
+
 - ECS: Use CodeDeploy with `ECS` deployment type. Two target groups on an ALB; CodeDeploy shifts traffic.
 - Lambda: Use aliases with weighted traffic shifting (`AWS::Lambda::Alias` with `RoutingConfig`).
 - Elastic Beanstalk: Swap environment URLs.
@@ -19,6 +20,7 @@ Patterns for releasing software safely with minimal risk to users and the abilit
 **How it works**: Route a small percentage of traffic (1-5%) to the new version. Monitor error rates, latency, and business metrics. Gradually increase traffic if healthy; roll back if anomalies are detected.
 
 **AWS Implementation**:
+
 - CodeDeploy with Lambda or ECS: Built-in canary configurations (`Canary10Percent5Minutes`, `Linear10PercentEvery1Minute`).
 - API Gateway: Canary release on stage with percentage-based traffic split.
 - CloudWatch alarms trigger automatic rollback on metric breaches.
@@ -31,6 +33,7 @@ Patterns for releasing software safely with minimal risk to users and the abilit
 **How it works**: Replace instances/tasks in batches. New version replaces a subset while the rest continue serving. Repeat until all instances run the new version.
 
 **AWS Implementation**:
+
 - ECS: Default deployment strategy. Configure `minimumHealthyPercent` and `maximumPercent`.
 - EC2 Auto Scaling: Rolling update policy with `MinInstancesInService`.
 
@@ -50,10 +53,12 @@ Patterns for releasing software safely with minimal risk to users and the abilit
 **How it works**: Deploy code with features wrapped in conditional flags. Toggle features on/off without redeployment.
 
 **AWS Implementation**:
+
 - **AppConfig**: Feature flags with validation, gradual rollout, and automatic rollback.
 - **CloudWatch Evidently**: Feature flags with built-in A/B testing and metric tracking.
 
 **Best Practices**:
+
 - Use feature flags for incomplete features merged to main (trunk-based development enabler).
 - Clean up flags after full rollout; stale flags become technical debt.
 - Categorize flags: release flags (temporary), ops flags (kill switches), experiment flags (A/B tests).
@@ -62,12 +67,14 @@ Patterns for releasing software safely with minimal risk to users and the abilit
 ## Rollback Strategies
 
 ### Automated Rollback
+
 - Configure CloudWatch alarms on error rate, latency p99, and 5xx count.
 - CodeDeploy automatically rolls back when alarms trigger during deployment.
 - Lambda: Revert alias to the previous version instantly.
 - ECS: CodeDeploy reroutes traffic back to the original target group.
 
 ### Manual Rollback
+
 - Keep the previous artifact (Docker image, Lambda ZIP) tagged and deployable.
 - Document the rollback procedure as a runbook: which commands, in what order, who approves.
 - Practice rollbacks regularly; an untested rollback is not a rollback plan.

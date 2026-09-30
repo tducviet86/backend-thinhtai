@@ -18,13 +18,13 @@ Each agent carries context across stages because they are present throughout. Th
 
 ## Five-Phase Structure
 
-| Phase | Purpose | Key Outcome |
-|-------|---------|-------------|
-| **INITIALIZATION** | Bootstrap — state files, directory scaffold, workspace scan, routing | Configured workspace ready for workflow |
-| **IDEATION** | Validate the initiative — intent, market, feasibility, scope, team | Approved initiative brief |
-| **INCEPTION** | Elaborate — requirements, stories, design, architecture, units, delivery plan | Detailed execution plan |
-| **CONSTRUCTION** | Build — functional design, NFRs, infrastructure, code, tests, CI | Working tested code |
-| **OPERATION** | Deploy & operate — pipelines, environments, observability, incidents, feedback | Production system with monitoring |
+| Phase              | Purpose                                                                        | Key Outcome                             |
+| ------------------ | ------------------------------------------------------------------------------ | --------------------------------------- |
+| **INITIALIZATION** | Bootstrap — state files, directory scaffold, workspace scan, routing           | Configured workspace ready for workflow |
+| **IDEATION**       | Validate the initiative — intent, market, feasibility, scope, team             | Approved initiative brief               |
+| **INCEPTION**      | Elaborate — requirements, stories, design, architecture, units, delivery plan  | Detailed execution plan                 |
+| **CONSTRUCTION**   | Build — functional design, NFRs, infrastructure, code, tests, CI               | Working tested code                     |
+| **OPERATION**      | Deploy & operate — pipelines, environments, observability, incidents, feedback | Production system with monitoring       |
 
 ## Scope System
 

@@ -47,78 +47,78 @@ import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 interface ESLintMessage {
-	ruleId: string | null;
-	severity: number; // 1 = warning, 2 = error
-	message: string;
-	line?: number;
-	column?: number;
+  ruleId: string | null;
+  severity: number; // 1 = warning, 2 = error
+  message: string;
+  line?: number;
+  column?: number;
 }
 
 interface ESLintResult {
-	filePath: string;
-	messages: ESLintMessage[];
-	errorCount: number;
-	warningCount: number;
+  filePath: string;
+  messages: ESLintMessage[];
+  errorCount: number;
+  warningCount: number;
 }
 
 interface Violation {
-	file: string;
-	line: number;
-	column: number;
-	rule: string;
-	severity: "warning" | "error";
-	message: string;
+  file: string;
+  line: number;
+  column: number;
+  rule: string;
+  severity: "warning" | "error";
+  message: string;
 }
 
 interface SensorOutput {
-	pass: boolean;
-	errorCount: number;
-	warningCount: number;
-	violations: Violation[];
-	findings_count: number;
+  pass: boolean;
+  errorCount: number;
+  warningCount: number;
+  violations: Violation[];
+  findings_count: number;
 }
 
 // --- argv parsing -----------------------------------------------------------
 
 interface Args {
-	stage: string;
-	filePath: string;
+  stage: string;
+  filePath: string;
 }
 
 function parseArgs(argv: string[]): Args {
-	let stage = "";
-	let filePath = "";
-	for (let i = 0; i < argv.length; i++) {
-		const a = argv[i];
-		if (a === "--stage") {
-			stage = argv[++i] ?? "";
-		} else if (a === "--file-path") {
-			filePath = argv[++i] ?? "";
-		} else if (a === "--help" || a === "-h") {
-			printHelp();
-			process.exit(0);
-		} else {
-			process.stderr.write(`unknown flag: ${a}\n`);
-			process.exit(1);
-		}
-	}
-	if (!stage) {
-		process.stderr.write("missing required flag: --stage\n");
-		process.exit(1);
-	}
-	if (!filePath) {
-		process.stderr.write("missing required flag: --file-path\n");
-		process.exit(1);
-	}
-	return { stage, filePath };
+  let stage = "";
+  let filePath = "";
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--stage") {
+      stage = argv[++i] ?? "";
+    } else if (a === "--file-path") {
+      filePath = argv[++i] ?? "";
+    } else if (a === "--help" || a === "-h") {
+      printHelp();
+      process.exit(0);
+    } else {
+      process.stderr.write(`unknown flag: ${a}\n`);
+      process.exit(1);
+    }
+  }
+  if (!stage) {
+    process.stderr.write("missing required flag: --stage\n");
+    process.exit(1);
+  }
+  if (!filePath) {
+    process.stderr.write("missing required flag: --file-path\n");
+    process.exit(1);
+  }
+  return { stage, filePath };
 }
 
 function printHelp(): void {
-	process.stdout.write(
-		`Usage: aidlc-sensor-linter --stage <slug> --file-path <path>\n\n` +
-			`Wraps \`bunx eslint --format json --max-warnings -1 <path>\` and\n` +
-			`prints {pass, errorCount, warningCount, violations[]} JSON to stdout.\n`,
-	);
+  process.stdout.write(
+    `Usage: aidlc-sensor-linter --stage <slug> --file-path <path>\n\n` +
+      `Wraps \`bunx eslint --format json --max-warnings -1 <path>\` and\n` +
+      `prints {pass, errorCount, warningCount, violations[]} JSON to stdout.\n`,
+  );
 }
 
 // --- project root resolution ------------------------------------------------
@@ -126,15 +126,15 @@ function printHelp(): void {
 // Walk up from --file-path to the nearest package.json. eslint's own
 // config discovery handles config resolution from there.
 function findProjectRoot(filePath: string): string | null {
-	const abs = resolve(filePath);
-	let dir = dirname(abs);
-	// dirname() on "/" returns "/"; loop terminates when we stop ascending.
-	while (true) {
-		if (existsSync(`${dir}/package.json`)) return dir;
-		const parent = dirname(dir);
-		if (parent === dir) return null;
-		dir = parent;
-	}
+  const abs = resolve(filePath);
+  let dir = dirname(abs);
+  // dirname() on "/" returns "/"; loop terminates when we stop ascending.
+  while (true) {
+    if (existsSync(`${dir}/package.json`)) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
 }
 
 // --- eslint subprocess wrappers ---------------------------------------------
@@ -160,15 +160,15 @@ const ESLINT_SPEC = "eslint@10";
 // (status === 127) won't catch those — so we propagate by exiting 127
 // ourselves on any non-zero exit from this probe.
 function probeEslintAvailable(cwd: string): void {
-	const result = spawnSync("bunx", [ESLINT_SPEC, "--version"], {
-		encoding: "utf-8",
-		timeout: 30_000,
-		cwd,
-	});
-	if (result.status !== 0) {
-		process.stderr.write("eslint-unavailable\n");
-		process.exit(127);
-	}
+  const result = spawnSync("bunx", [ESLINT_SPEC, "--version"], {
+    encoding: "utf-8",
+    timeout: 30_000,
+    cwd,
+  });
+  if (result.status !== 0) {
+    process.stderr.write("eslint-unavailable\n");
+    process.exit(127);
+  }
 }
 
 // Probe `bunx eslint --print-config <path>` to detect "no eslint config".
@@ -186,49 +186,49 @@ function probeEslintAvailable(cwd: string): void {
 // branch e then emits SENSOR_PASSED with Note=script-error: exit-2,
 // keeping the audit pair closed while flagging the breakage in stderr.
 function probeEslintConfig(filePath: string, cwd: string): void {
-	const result = spawnSync("bunx", [ESLINT_SPEC, "--print-config", filePath], {
-		encoding: "utf-8",
-		timeout: 30_000,
-		cwd,
-	});
-	if (result.status === 0) return; // config resolved
-	const stderr = result.stderr ?? "";
-	// Cover both legacy (.eslintrc.*) and flat-config (eslint.config.js)
-	// diagnostics. eslint v8 says "No ESLint configuration found";
-	// eslint v9+ flat-config says "ESLint couldn't find an
-	// eslint.config.(js|mjs|cjs) file." or "Could not find config file".
-	// The unicode-apostrophe (U+2019) variant is what v10 ships verbatim;
-	// straight-quote ASCII fallback covers older builds.
-	if (
-		/no eslint configuration found/i.test(stderr) ||
-		/could not find config file/i.test(stderr) ||
-		/eslint couldn[\u2019']t find an? eslint\.config/i.test(stderr) ||
-		/eslint couldn[\u2019']t find a configuration/i.test(stderr)
-	) {
-		process.stderr.write("no-eslint-config\n");
-		process.exit(127);
-	}
-	// Parse-error patterns. These fire when a config file IS present but
-	// fails to load — distinct from the no-config-found case above. Order
-	// matters: "unable to load" is gated by config-file presence so it
-	// can't double-fire as a no-config case (network plugin fetch, etc.).
-	const hasConfigFile = configFilePresent(cwd);
-	if (
-		/parse error/i.test(stderr) ||
-		/syntaxerror/i.test(stderr) ||
-		/unexpected token/i.test(stderr) ||
-		/configuration .* is invalid/i.test(stderr) ||
-		(hasConfigFile && /unable to load/i.test(stderr)) ||
-		(hasConfigFile && /failed to load config/i.test(stderr))
-	) {
-		const reason = firstNonEmptyLine(stderr) || "unknown";
-		process.stderr.write(`config-parse-error: ${reason}\n`);
-		process.exit(2);
-	}
-	// Any other non-zero from --print-config (permission denied, bunx
-	// itself glitching, etc.) — conservative tool-unavailable PASS.
-	process.stderr.write("eslint-unavailable\n");
-	process.exit(127);
+  const result = spawnSync("bunx", [ESLINT_SPEC, "--print-config", filePath], {
+    encoding: "utf-8",
+    timeout: 30_000,
+    cwd,
+  });
+  if (result.status === 0) return; // config resolved
+  const stderr = result.stderr ?? "";
+  // Cover both legacy (.eslintrc.*) and flat-config (eslint.config.js)
+  // diagnostics. eslint v8 says "No ESLint configuration found";
+  // eslint v9+ flat-config says "ESLint couldn't find an
+  // eslint.config.(js|mjs|cjs) file." or "Could not find config file".
+  // The unicode-apostrophe (U+2019) variant is what v10 ships verbatim;
+  // straight-quote ASCII fallback covers older builds.
+  if (
+    /no eslint configuration found/i.test(stderr) ||
+    /could not find config file/i.test(stderr) ||
+    /eslint couldn[\u2019']t find an? eslint\.config/i.test(stderr) ||
+    /eslint couldn[\u2019']t find a configuration/i.test(stderr)
+  ) {
+    process.stderr.write("no-eslint-config\n");
+    process.exit(127);
+  }
+  // Parse-error patterns. These fire when a config file IS present but
+  // fails to load — distinct from the no-config-found case above. Order
+  // matters: "unable to load" is gated by config-file presence so it
+  // can't double-fire as a no-config case (network plugin fetch, etc.).
+  const hasConfigFile = configFilePresent(cwd);
+  if (
+    /parse error/i.test(stderr) ||
+    /syntaxerror/i.test(stderr) ||
+    /unexpected token/i.test(stderr) ||
+    /configuration .* is invalid/i.test(stderr) ||
+    (hasConfigFile && /unable to load/i.test(stderr)) ||
+    (hasConfigFile && /failed to load config/i.test(stderr))
+  ) {
+    const reason = firstNonEmptyLine(stderr) || "unknown";
+    process.stderr.write(`config-parse-error: ${reason}\n`);
+    process.exit(2);
+  }
+  // Any other non-zero from --print-config (permission denied, bunx
+  // itself glitching, etc.) — conservative tool-unavailable PASS.
+  process.stderr.write("eslint-unavailable\n");
+  process.exit(127);
 }
 
 // Detect whether any eslint config file lives in cwd (the project root
@@ -237,19 +237,19 @@ function probeEslintConfig(filePath: string, cwd: string): void {
 // failure with no config at all. cwd is already the nearest package.json
 // ancestor by construction (see findProjectRoot).
 function configFilePresent(cwd: string): boolean {
-	const candidates = [
-		"eslint.config.js",
-		"eslint.config.mjs",
-		"eslint.config.cjs",
-		"eslint.config.ts",
-		".eslintrc.js",
-		".eslintrc.cjs",
-		".eslintrc.json",
-		".eslintrc.yaml",
-		".eslintrc.yml",
-		".eslintrc",
-	];
-	return candidates.some((name) => existsSync(`${cwd}/${name}`));
+  const candidates = [
+    "eslint.config.js",
+    "eslint.config.mjs",
+    "eslint.config.cjs",
+    "eslint.config.ts",
+    ".eslintrc.js",
+    ".eslintrc.cjs",
+    ".eslintrc.json",
+    ".eslintrc.yaml",
+    ".eslintrc.yml",
+    ".eslintrc",
+  ];
+  return candidates.some((name) => existsSync(`${cwd}/${name}`));
 }
 
 // Pick the most diagnostic stderr line for the parse-error reason.
@@ -258,36 +258,36 @@ function configFilePresent(cwd: string): boolean {
 // what's actionable. Prefer lines containing "Error" (case-insensitive),
 // skip stack frames ("    at …"), fall back to the first non-empty line.
 function firstNonEmptyLine(s: string): string {
-	const lines = s.split(/\r?\n/).map((l) => l.trim());
-	for (const t of lines) {
-		if (!t) continue;
-		if (t.startsWith("at ")) continue; // stack frame after trim
-		if (/error/i.test(t)) return t;
-	}
-	for (const t of lines) {
-		if (t && !t.startsWith("at ")) return t;
-	}
-	return "";
+  const lines = s.split(/\r?\n/).map((l) => l.trim());
+  for (const t of lines) {
+    if (!t) continue;
+    if (t.startsWith("at ")) continue; // stack frame after trim
+    if (/error/i.test(t)) return t;
+  }
+  for (const t of lines) {
+    if (t && !t.startsWith("at ")) return t;
+  }
+  return "";
 }
 
 function runEslint(
-	filePath: string,
-	cwd: string,
+  filePath: string,
+  cwd: string,
 ): {
-	stdout: string;
-	status: number | null;
+  stdout: string;
+  status: number | null;
 } {
-	// `--max-warnings=-1` (= form, not space-separated). eslint v10's CLI
-	// parser rejects bare `-1` as a positional value because it starts
-	// with `-` ("No -NUM option defined."). The plan-mandated
-	// "--max-warnings -1" requires the equals form to actually reach
-	// eslint as a numeric value.
-	const result = spawnSync(
-		"bunx",
-		[ESLINT_SPEC, "--format", "json", "--max-warnings=-1", filePath],
-		{ encoding: "utf-8", timeout: 30_000, cwd },
-	);
-	return { stdout: result.stdout ?? "", status: result.status };
+  // `--max-warnings=-1` (= form, not space-separated). eslint v10's CLI
+  // parser rejects bare `-1` as a positional value because it starts
+  // with `-` ("No -NUM option defined."). The plan-mandated
+  // "--max-warnings -1" requires the equals form to actually reach
+  // eslint as a numeric value.
+  const result = spawnSync(
+    "bunx",
+    [ESLINT_SPEC, "--format", "json", "--max-warnings=-1", filePath],
+    { encoding: "utf-8", timeout: 30_000, cwd },
+  );
+  return { stdout: result.stdout ?? "", status: result.status };
 }
 
 // --- result parsing ---------------------------------------------------------
@@ -300,84 +300,84 @@ function runEslint(
 // absent the string is returned unchanged so the caller's JSON.parse still
 // throws and the graceful eslint-bad-output degradation holds.
 export function stripStdoutNoise(stdout: string, startChar: string): string {
-	const idx = stdout.indexOf(startChar);
-	return idx >= 0 ? stdout.slice(idx) : stdout;
+  const idx = stdout.indexOf(startChar);
+  return idx >= 0 ? stdout.slice(idx) : stdout;
 }
 
 function buildViolations(results: ESLintResult[]): Violation[] {
-	const out: Violation[] = [];
-	for (const r of results) {
-		for (const m of r.messages) {
-			out.push({
-				file: r.filePath,
-				line: m.line ?? 0,
-				column: m.column ?? 0,
-				rule: m.ruleId ?? "",
-				severity: m.severity === 2 ? "error" : "warning",
-				message: m.message,
-			});
-		}
-	}
-	return out;
+  const out: Violation[] = [];
+  for (const r of results) {
+    for (const m of r.messages) {
+      out.push({
+        file: r.filePath,
+        line: m.line ?? 0,
+        column: m.column ?? 0,
+        rule: m.ruleId ?? "",
+        severity: m.severity === 2 ? "error" : "warning",
+        message: m.message,
+      });
+    }
+  }
+  return out;
 }
 
 // --- main -------------------------------------------------------------------
 
 export function main(argv: string[]): void {
-	const args = parseArgs(argv);
+  const args = parseArgs(argv);
 
-	if (!existsSync(args.filePath)) {
-		process.stderr.write(`file-path not found: ${args.filePath}\n`);
-		process.exit(1);
-	}
+  if (!existsSync(args.filePath)) {
+    process.stderr.write(`file-path not found: ${args.filePath}\n`);
+    process.exit(1);
+  }
 
-	const projectRoot =
-		findProjectRoot(args.filePath) ?? dirname(resolve(args.filePath));
+  const projectRoot =
+    findProjectRoot(args.filePath) ?? dirname(resolve(args.filePath));
 
-	// Probe order: tool first (cheap, ~1s for cached bunx), then config
-	// (~1s for --print-config). Both gates feed dispatcher branch b
-	// (PASSED Note=tool-unavailable) on non-zero.
-	probeEslintAvailable(projectRoot);
-	probeEslintConfig(args.filePath, projectRoot);
+  // Probe order: tool first (cheap, ~1s for cached bunx), then config
+  // (~1s for --print-config). Both gates feed dispatcher branch b
+  // (PASSED Note=tool-unavailable) on non-zero.
+  probeEslintAvailable(projectRoot);
+  probeEslintConfig(args.filePath, projectRoot);
 
-	const { stdout } = runEslint(args.filePath, projectRoot);
+  const { stdout } = runEslint(args.filePath, projectRoot);
 
-	// eslint exits 1 when violations exist and 0 when clean. With
-	// --max-warnings -1 the warning-exit override is disabled so we never
-	// see warning-only failure exits. We don't gate parse on result.status
-	// — eslint always writes JSON to stdout on either path.
-	let parsed: ESLintResult[];
-	try {
-		parsed = JSON.parse(stripStdoutNoise(stdout, "["));
-	} catch {
-		process.stderr.write("eslint-bad-output\n");
-		process.exit(1);
-	}
-	if (!Array.isArray(parsed)) {
-		process.stderr.write("eslint-bad-output\n");
-		process.exit(1);
-	}
+  // eslint exits 1 when violations exist and 0 when clean. With
+  // --max-warnings -1 the warning-exit override is disabled so we never
+  // see warning-only failure exits. We don't gate parse on result.status
+  // — eslint always writes JSON to stdout on either path.
+  let parsed: ESLintResult[];
+  try {
+    parsed = JSON.parse(stripStdoutNoise(stdout, "["));
+  } catch {
+    process.stderr.write("eslint-bad-output\n");
+    process.exit(1);
+  }
+  if (!Array.isArray(parsed)) {
+    process.stderr.write("eslint-bad-output\n");
+    process.exit(1);
+  }
 
-	let errorCount = 0;
-	let warningCount = 0;
-	for (const r of parsed) {
-		errorCount += r.errorCount ?? 0;
-		warningCount += r.warningCount ?? 0;
-	}
+  let errorCount = 0;
+  let warningCount = 0;
+  for (const r of parsed) {
+    errorCount += r.errorCount ?? 0;
+    warningCount += r.warningCount ?? 0;
+  }
 
-	const out: SensorOutput = {
-		// Per locked decision: warnings tracked but do NOT fail. Real
-		// configs ship no-unused-vars: warn; warning-as-failure spams
-		// SENSOR_FAILED on every Write under the PostToolUse hook.
-		pass: errorCount === 0,
-		errorCount,
-		warningCount,
-		violations: buildViolations(parsed),
-		// findings_count emitted by the script (sensor-id-agnostic dispatcher).
-		findings_count: errorCount,
-	};
-	process.stdout.write(`${JSON.stringify(out)}\n`);
-	process.exit(0);
+  const out: SensorOutput = {
+    // Per locked decision: warnings tracked but do NOT fail. Real
+    // configs ship no-unused-vars: warn; warning-as-failure spams
+    // SENSOR_FAILED on every Write under the PostToolUse hook.
+    pass: errorCount === 0,
+    errorCount,
+    warningCount,
+    violations: buildViolations(parsed),
+    // findings_count emitted by the script (sensor-id-agnostic dispatcher).
+    findings_count: errorCount,
+  };
+  process.stdout.write(`${JSON.stringify(out)}\n`);
+  process.exit(0);
 }
 
 if (import.meta.main) main(process.argv.slice(2));

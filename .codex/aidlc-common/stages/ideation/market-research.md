@@ -39,6 +39,7 @@ outputs: competitive-analysis.md, market-trends.md, build-vs-buy.md, market-rese
 ### Step 2: Generate Clarifying Questions
 
 Create `<record>/ideation/market-research/market-research-questions.md` with questions:
+
 - What competing products or solutions exist in the market?
 - What are their strengths, weaknesses, and pricing models?
 - What industry trends or regulatory shifts are relevant?

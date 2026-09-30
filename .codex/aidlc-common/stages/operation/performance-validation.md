@@ -51,6 +51,7 @@ outputs: load-test-plan.md, test-results.md, nfr-validation-matrix.md, performan
 ### Step 2: Generate Clarifying Questions
 
 Create questions file covering:
+
 - What are the expected traffic patterns (steady state, peak, burst)?
 - What are the target latency percentiles (p50, p95, p99)?
 - What throughput must the system sustain?

@@ -347,7 +347,8 @@ function handleWrite(): string[] {
       stageRunnerSlugFromBody,
       legacyBareSlugs,
     );
-    if (slug && !compiledSet.has(slug)) rmSync(dir, { recursive: true, force: true });
+    if (slug && !compiledSet.has(slug))
+      rmSync(dir, { recursive: true, force: true });
   }
   return slugs;
 }
@@ -364,7 +365,10 @@ function leadingFrontmatter(body: string): string | null {
 function hasRunnerGenMarker(body: string): boolean {
   const frontmatter = leadingFrontmatter(body);
   if (!frontmatter) return false;
-  return new RegExp(`^${RUNNER_GEN_MARKER_KEY}:\\s*${RUNNER_GEN_MARKER_VALUE}\\s*$`, "m").test(frontmatter);
+  return new RegExp(
+    `^${RUNNER_GEN_MARKER_KEY}:\\s*${RUNNER_GEN_MARKER_VALUE}\\s*$`,
+    "m",
+  ).test(frontmatter);
 }
 
 function isLegacyGeneratedRunnerDirName(
@@ -375,7 +379,10 @@ function isLegacyGeneratedRunnerDirName(
   // One-release transition for markerless runners generated before the
   // provenance marker existed: core-owned generated runners used aidlc-<slug>,
   // while plugin-owned generated runners used the bare plugin-prefixed slug.
-  return dirName === `aidlc-${slug}` || (legacyBareSlugs.has(slug) && dirName === slug);
+  return (
+    dirName === `aidlc-${slug}` ||
+    (legacyBareSlugs.has(slug) && dirName === slug)
+  );
 }
 
 function generatedRunnerSlugForPrune(
@@ -388,7 +395,10 @@ function generatedRunnerSlugForPrune(
   const body = readFileSync(skillMdPath, "utf-8");
   const slug = parseSlug(body);
   if (!slug) return null;
-  if (hasRunnerGenMarker(body) || isLegacyGeneratedRunnerDirName(dirName, slug, legacyBareSlugs)) {
+  if (
+    hasRunnerGenMarker(body) ||
+    isLegacyGeneratedRunnerDirName(dirName, slug, legacyBareSlugs)
+  ) {
     return slug;
   }
   console.error(`unmanaged skill, not pruned: ${dirName}`);
@@ -396,12 +406,20 @@ function generatedRunnerSlugForPrune(
 }
 
 function pluginOwnedStageSlugsForLegacy(): ReadonlySet<string> {
-  return new Set(loadStageGraphAll().filter((s) => s.plugin).map((s) => s.slug));
+  return new Set(
+    loadStageGraphAll()
+      .filter((s) => s.plugin)
+      .map((s) => s.slug),
+  );
 }
 
 function pluginOwnedScopeSlugsForLegacy(): ReadonlySet<string> {
   const all = loadScopeMetadataAll() as Record<string, { plugin?: string }>;
-  return new Set(Object.entries(all).filter(([, front]) => front.plugin).map(([scope]) => scope));
+  return new Set(
+    Object.entries(all)
+      .filter(([, front]) => front.plugin)
+      .map(([scope]) => scope),
+  );
 }
 
 // The on-disk runner SIGNATURE: a stage-runner's SKILL.md drives
@@ -414,7 +432,8 @@ function pluginOwnedScopeSlugsForLegacy(): ReadonlySet<string> {
 // never mistaken for stage-runners and never flagged.
 const SINGLE_RUNNER_MARKER = "--stage";
 function stageRunnerSlugFromBody(body: string): string | null {
-  if (!body.includes(SINGLE_RUNNER_MARKER) || !body.includes("--single")) return null;
+  if (!body.includes(SINGLE_RUNNER_MARKER) || !body.includes("--single"))
+    return null;
   const m = body.match(/--stage\s+([a-z][a-z0-9-]*)\s+--single/);
   return m?.[1] ?? null;
 }
@@ -476,12 +495,18 @@ function handleCheck(): void {
     return;
   }
   if (missing.length > 0) {
-    console.log(`MISSING runners (stage in graph, no matching skill dir): ${missing.map((s) => `${s.slug} (${runnerDirName(s)})`).join(", ")}`);
+    console.log(
+      `MISSING runners (stage in graph, no matching skill dir): ${missing.map((s) => `${s.slug} (${runnerDirName(s)})`).join(", ")}`,
+    );
   }
   if (orphans.length > 0) {
-    console.log(`ORPHAN runners (skill drives --single stage with no matching stage): ${orphans.join(", ")}`);
+    console.log(
+      `ORPHAN runners (skill drives --single stage with no matching stage): ${orphans.join(", ")}`,
+    );
   }
-  console.log(`Run \`${aidlcDispatcherInvocation("gen runners")}\` to regenerate.`);
+  console.log(
+    `Run \`${aidlcDispatcherInvocation("gen runners")}\` to regenerate.`,
+  );
   process.exit(1);
 }
 
@@ -500,7 +525,8 @@ function defaultSkillsDir(mutable = false): string {
 function scopeNamesInWrittenGrid(): ReadonlySet<string> {
   try {
     const parsed = JSON.parse(readFileSync(scopeGridPath(), "utf-8"));
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return new Set();
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+      return new Set();
     return new Set(Object.keys(parsed as Record<string, unknown>));
   } catch {
     return new Set();
@@ -530,22 +556,32 @@ function readScopeFront(path: string): ScopeFront {
   const fm = frontmatterBlock(body);
   if (fm === null) throw new Error(`Scope file missing frontmatter: ${path}`);
   const name = scalarField(fm, "name");
-  if (!name) throw new Error(`Scope file ${path} missing required frontmatter: name`);
+  if (!name)
+    throw new Error(`Scope file ${path} missing required frontmatter: name`);
   const plugin = scalarField(fm, "plugin");
   const runnerRaw = scalarField(fm, "runner");
   let runner: boolean | undefined;
-  if (runnerRaw === "true" || runnerRaw === "false") runner = runnerRaw === "true";
+  if (runnerRaw === "true" || runnerRaw === "false")
+    runner = runnerRaw === "true";
   let description = scalarField(fm, "description");
   // Tolerate a folded/block description ('>' or '|') by stitching the first
   // non-empty continuation line — the runner description is one line anyway.
-  if (description === ">" || description === "|" || description === ">-" || description === "|-") {
+  if (
+    description === ">" ||
+    description === "|" ||
+    description === ">-" ||
+    description === "|-"
+  ) {
     const lines = fm.split(/\r?\n/);
     const idx = lines.findIndex((l) => /^description:/.test(l));
     description = "";
     for (let j = idx + 1; j < lines.length; j++) {
       if (/^\S/.test(lines[j])) break; // next top-level key
       const t = lines[j].trim();
-      if (t.length > 0) { description = t; break; }
+      if (t.length > 0) {
+        description = t;
+        break;
+      }
     }
   }
   const front: ScopeFront = { name, description };
@@ -563,26 +599,36 @@ export function discoverScopes(): Record<string, ScopeFront> {
   const gridNames = scopeNamesInWrittenGrid();
   let files: string[];
   try {
-    files = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    files = readdirSync(dir)
+      .filter((f) => f.endsWith(".md"))
+      .sort();
   } catch (err) {
-    console.error(`Warning: scope directory not readable at ${dir}: ${errorMessage(err)}`);
+    console.error(
+      `Warning: scope directory not readable at ${dir}: ${errorMessage(err)}`,
+    );
     files = [];
   }
   for (const f of files) {
     const front = readScopeFront(join(dir, f));
-    if (!isPluginEnabled(front.plugin ?? "aidlc") && !gridNames.has(front.name)) continue;
+    if (!isPluginEnabled(front.plugin ?? "aidlc") && !gridNames.has(front.name))
+      continue;
     out[front.name] = front;
   }
   return out;
 }
 
-export function defaultScopeBatch(discovered: Record<string, ScopeFront> = discoverScopes()): string[] {
+export function defaultScopeBatch(
+  discovered: Record<string, ScopeFront> = discoverScopes(),
+): string[] {
   return Object.keys(discovered)
     .filter((scope) => discovered[scope].runner === true)
     .sort();
 }
 
-function scopeRunnerDirName(scope: string, front: Pick<ScopeFront, "plugin">): string {
+function scopeRunnerDirName(
+  scope: string,
+  front: Pick<ScopeFront, "plugin">,
+): string {
   return front.plugin ? scope : `aidlc-${scope}`;
 }
 
@@ -597,11 +643,15 @@ export function renderRunner(scope: string, description: string): string {
   const harnessName = process.env.AIDLC_HARNESS_NAME?.trim();
   const entrySkill = activeHarnessDir === ".codex" ? "$aidlc" : "/aidlc";
   const freshSessionFlow = (() => {
-    if (harnessName === "claude") return "use `/clear` (or restart Claude Code)";
-    if (harnessName === "codex") return "exit or restart Codex CLI and start a new session";
-    if (harnessName === "kiro") return "exit or restart Kiro CLI and start a new session";
+    if (harnessName === "claude")
+      return "use `/clear` (or restart Claude Code)";
+    if (harnessName === "codex")
+      return "exit or restart Codex CLI and start a new session";
+    if (harnessName === "kiro")
+      return "exit or restart Kiro CLI and start a new session";
     if (harnessName === "kiro-ide") return "open a new Kiro IDE chat";
-    if (harnessName === "opencode") return "exit or restart OpenCode and start a new session";
+    if (harnessName === "opencode")
+      return "exit or restart OpenCode and start a new session";
     if (harnessName === "cursor") {
       return "start a new Cursor chat (IDE) or restart agent (CLI)";
     }
@@ -609,8 +659,10 @@ export function renderRunner(scope: string, description: string): string {
       return "start a new Copilot CLI session or open a new VS Code agent chat";
     }
     if (harnessName === "cursor") return "start a new Cursor chat session";
-    if (activeHarnessDir === ".claude") return "use `/clear` (or restart Claude Code)";
-    if (activeHarnessDir === ".codex") return "exit or restart Codex CLI and start a new session";
+    if (activeHarnessDir === ".claude")
+      return "use `/clear` (or restart Claude Code)";
+    if (activeHarnessDir === ".codex")
+      return "exit or restart Codex CLI and start a new session";
     if (activeHarnessDir === ".kiro") {
       return "start a new Kiro CLI session or open a new Kiro IDE chat";
     }
@@ -618,7 +670,9 @@ export function renderRunner(scope: string, description: string): string {
   })();
   // Normalise the scope's one-line description into a sentence (trailing period)
   // so it reads cleanly when stitched between the lead-in and the packaging note.
-  const raw = (description || `Run the AI-DLC workflow with the ${scope} scope`).trim();
+  const raw = (
+    description || `Run the AI-DLC workflow with the ${scope} scope`
+  ).trim();
   const desc = /[.!?]$/.test(raw) ? raw : `${raw}.`;
   return `---
 name: ${dir}
@@ -707,12 +761,19 @@ function scopeRunnerPath(skillsDir: string, scope: string): string {
 
 // Resolve the batch of scopes to generate: --all → every shipped scope;
 // otherwise scopes whose frontmatter declares `runner: true`.
-function resolveBatch(all: boolean, discovered: Record<string, ScopeFront>): string[] {
+function resolveBatch(
+  all: boolean,
+  discovered: Record<string, ScopeFront>,
+): string[] {
   if (all) return Object.keys(discovered).sort();
   return defaultScopeBatch(discovered);
 }
 
-function parseScopeArgs(argv: string[]): { check: boolean; all: boolean; out: string | null } {
+function parseScopeArgs(argv: string[]): {
+  check: boolean;
+  all: boolean;
+  out: string | null;
+} {
   let check = false;
   let all = false;
   let out: string | null = null;
@@ -720,7 +781,9 @@ function parseScopeArgs(argv: string[]): { check: boolean; all: boolean; out: st
     const a = argv[i];
     if (a === "--check") check = true;
     else if (a === "--all") all = true;
-    else if (a === "--out" && i + 1 < argv.length) { out = argv[++i]; }
+    else if (a === "--out" && i + 1 < argv.length) {
+      out = argv[++i];
+    }
   }
   return { check, all, out };
 }
@@ -738,7 +801,9 @@ function handleScopes(rest: string[]): void {
           "No pruning performed. Likely causes: no scope files with runner:true found, " +
           "or the scope directory is missing or mispointed.",
       );
-      console.log("No scope files with runner:true found; nothing to generate.");
+      console.log(
+        "No scope files with runner:true found; nothing to generate.",
+      );
       return;
     }
     if (!check) pruneScopeRunners(skillsDir, new Set());
@@ -770,14 +835,20 @@ function handleScopes(rest: string[]): void {
       );
       process.exit(1);
     }
-    console.log(`OK — ${batch.length} scope-runner(s) in sync: ${batch.join(", ")}`);
+    console.log(
+      `OK — ${batch.length} scope-runner(s) in sync: ${batch.join(", ")}`,
+    );
     return;
   }
 
   for (const scope of batch) {
     const path = scopeRunnerPath(skillsDir, scope);
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, renderRunner(scope, discovered[scope].description), "utf-8");
+    writeFileSync(
+      path,
+      renderRunner(scope, discovered[scope].description),
+      "utf-8",
+    );
     console.log(`wrote ${path}`);
   }
   pruneScopeRunners(skillsDir, new Set(batch));

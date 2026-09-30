@@ -83,13 +83,16 @@ function resolveTeamUnitSlug(
   }
   if (explicitSlug) {
     if (!dag.units.includes(explicitSlug)) {
-      error(`Unit slug "${explicitSlug}" is not in the authoritative Unit DAG.`);
+      error(
+        `Unit slug "${explicitSlug}" is not in the authoritative Unit DAG.`,
+      );
     }
     return explicitSlug;
   }
   const normalized = slugify(name);
   const matches = dag.units.filter(
-    (unit) => unit === name || unit === normalized || slugify(unit) === normalized,
+    (unit) =>
+      unit === name || unit === normalized || slugify(unit) === normalized,
   );
   if (matches.length !== 1) {
     error(
@@ -104,7 +107,7 @@ function emitAudit(
   eventType: string,
   fields: Record<string, string>,
   intent?: string,
-  space?: string
+  space?: string,
 ): void {
   if (holdsAuditLock(pd, intent, space)) {
     appendAuditEntryUnlocked(eventType, fields, pd, intent, space);
@@ -135,7 +138,10 @@ function selectorArgs(flags: Record<string, string>): string[] {
 // / --discard flags drive the per-Bolt lifecycle integration.
 const BOOLEAN_FLAGS = new Set(["--worktree", "--merge", "--discard"]);
 
-function splitBooleanFlags(args: string[]): { booleans: Set<string>; rest: string[] } {
+function splitBooleanFlags(args: string[]): {
+  booleans: Set<string>;
+  rest: string[];
+} {
   const booleans = new Set<string>();
   const rest: string[] = [];
   for (const a of args) {
@@ -160,18 +166,35 @@ function spawnSibling(
     | "aidlc-audit.ts"
     | "aidlc-worktree.ts"
     | "aidlc-runtime.ts",
-  subargs: string[]
-): { ok: boolean; stdout: string; stderr: string; signal: string | null; status: number | null } {
+  subargs: string[],
+): {
+  ok: boolean;
+  stdout: string;
+  stderr: string;
+  signal: string | null;
+  status: number | null;
+} {
   const executable = compiledExecutable();
   let command: string[];
   if (executable) {
     const noun = toolName.replace(/^aidlc-/, "").replace(/\.ts$/, "");
     if (noun === "audit") {
       const [verb, ...rest] = subargs;
-      const publicVerb = verb === "audit-fork"
-        ? "fork"
-        : verb === "audit-merge" ? "merge" : verb;
-      command = [executable, "engine", "audit", publicVerb, ...rest, "--project-dir", pd];
+      const publicVerb =
+        verb === "audit-fork"
+          ? "fork"
+          : verb === "audit-merge"
+            ? "merge"
+            : verb;
+      command = [
+        executable,
+        "engine",
+        "audit",
+        publicVerb,
+        ...rest,
+        "--project-dir",
+        pd,
+      ];
     } else {
       command = [executable, "engine", noun, ...subargs, "--project-dir", pd];
     }
@@ -208,7 +231,9 @@ function parseFlags(args: string[]): Record<string, string> {
     }
     const val = args[i + 1];
     if (val.startsWith("--")) {
-      error(`${a} expects a value, got another flag: "${val}". Did you forget the value?`);
+      error(
+        `${a} expects a value, got another flag: "${val}". Did you forget the value?`,
+      );
     }
     flags[a.slice(2)] = val;
     i++;
@@ -219,23 +244,26 @@ function parseFlags(args: string[]): Record<string, string> {
 function latestWorktreeCreationFields(
   projectDir: string,
   slug: string,
-): { modern: boolean; baseCommit: string | null; baseSourceListing: string | null } | null {
+): {
+  modern: boolean;
+  baseCommit: string | null;
+  baseSourceListing: string | null;
+} | null {
   const currentWorktreePath = worktreePath(projectDir, slug);
   const rows = readAuditShardEvents(projectDir)
     .filter(
       (row) =>
         row.event === "WORKTREE_CREATED" &&
         auditBlockField(row.block, "Bolt slug") === slug &&
-        (
-          auditBlockField(row.block, "Worktree path") !== null &&
-          resolveAuditWorktreePath(
-            projectDir,
-            auditBlockField(row.block, "Worktree path") as string,
-          ) === currentWorktreePath
-        ),
+        auditBlockField(row.block, "Worktree path") !== null &&
+        resolveAuditWorktreePath(
+          projectDir,
+          auditBlockField(row.block, "Worktree path") as string,
+        ) === currentWorktreePath,
     )
     .sort((a, b) => {
-      if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+      if (a.timestamp !== b.timestamp)
+        return a.timestamp < b.timestamp ? -1 : 1;
       if (a.shard === b.shard) return a.pos - b.pos;
       return a.shard < b.shard ? -1 : 1;
     });
@@ -255,10 +283,16 @@ function worktreeBaseFields(
   slug: string,
 ): { baseCommit: string; baseSourceListing: string } | null {
   const creation = latestWorktreeCreationFields(projectDir, slug);
-  const metaPath = join(worktreePath(projectDir, slug), ".aidlc", "worktree-meta.json");
+  const metaPath = join(
+    worktreePath(projectDir, slug),
+    ".aidlc",
+    "worktree-meta.json",
+  );
   if (!existsSync(metaPath)) {
     if (creation?.modern) {
-      throw new Error(`modern WORKTREE_CREATED for "${slug}" requires worktree metadata at ${metaPath}`);
+      throw new Error(
+        `modern WORKTREE_CREATED for "${slug}" requires worktree metadata at ${metaPath}`,
+      );
     }
     return null;
   }
@@ -267,10 +301,14 @@ function worktreeBaseFields(
   try {
     value = JSON.parse(readFileSync(metaPath, "utf-8")) as unknown;
   } catch (e) {
-    throw new Error(`invalid worktree metadata at ${metaPath}: ${errorMessage(e)}`);
+    throw new Error(
+      `invalid worktree metadata at ${metaPath}: ${errorMessage(e)}`,
+    );
   }
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`invalid worktree metadata at ${metaPath}: expected an object`);
+    throw new Error(
+      `invalid worktree metadata at ${metaPath}: expected an object`,
+    );
   }
   const meta = value as Record<string, unknown>;
   const allowed = new Set([
@@ -295,7 +333,9 @@ function worktreeBaseFields(
     );
   }
   if (meta.version !== 1) {
-    throw new Error(`invalid worktree metadata at ${metaPath}: version must equal 1`);
+    throw new Error(
+      `invalid worktree metadata at ${metaPath}: version must equal 1`,
+    );
   }
   if (meta.boltSlug !== slug) {
     throw new Error(
@@ -303,16 +343,25 @@ function worktreeBaseFields(
     );
   }
   if (typeof meta.baseBranch !== "string" || meta.baseBranch.length === 0) {
-    throw new Error(`invalid worktree metadata at ${metaPath}: baseBranch must be non-empty`);
+    throw new Error(
+      `invalid worktree metadata at ${metaPath}: baseBranch must be non-empty`,
+    );
   }
-  if (typeof meta.baseCommit !== "string" || !/^[0-9a-f]{40,64}$/.test(meta.baseCommit)) {
-    throw new Error(`invalid worktree metadata at ${metaPath}: baseCommit must be a Git object id`);
+  if (
+    typeof meta.baseCommit !== "string" ||
+    !/^[0-9a-f]{40,64}$/.test(meta.baseCommit)
+  ) {
+    throw new Error(
+      `invalid worktree metadata at ${metaPath}: baseCommit must be a Git object id`,
+    );
   }
   if (
     typeof meta.baseSourceListing !== "string" ||
     !/^sha256:[0-9a-f]{64}$/.test(meta.baseSourceListing)
   ) {
-    throw new Error(`invalid worktree metadata at ${metaPath}: baseSourceListing must be a sha256 fingerprint`);
+    throw new Error(
+      `invalid worktree metadata at ${metaPath}: baseSourceListing must be a sha256 fingerprint`,
+    );
   }
   if (
     creation?.modern &&
@@ -400,7 +449,12 @@ function handleStart(args: string[]): void {
     stateContent = readStateFile(pd);
   } catch (e) {
     if (useWorktree) {
-      failJson("start-worktree", flags.slug, "state-read-failed", errorMessage(e));
+      failJson(
+        "start-worktree",
+        flags.slug,
+        "state-read-failed",
+        errorMessage(e),
+      );
     }
   }
   if (stateContent && getField(stateContent, "Status") === "Archived") {
@@ -410,9 +464,10 @@ function handleStart(args: string[]): void {
     );
   }
   const teamOwnership = isTeamUnitOwnership(stateContent);
-  const unitSlug = teamOwnership && !flags.name.includes(",")
-    ? resolveTeamUnitSlug(pd, flags.name, flags.slug)
-    : flags.slug ?? (!flags.name.includes(",") ? flags.name : undefined);
+  const unitSlug =
+    teamOwnership && !flags.name.includes(",")
+      ? resolveTeamUnitSlug(pd, flags.name, flags.slug)
+      : (flags.slug ?? (!flags.name.includes(",") ? flags.name : undefined));
 
   if (useWorktree) {
     if (!flags.slug) {
@@ -420,7 +475,7 @@ function handleStart(args: string[]): void {
     }
     if (flags.name.includes(",")) {
       error(
-        `--worktree requires a single bolt name; got csv: "${flags.name}". Issue one start --worktree per bolt.`
+        `--worktree requires a single bolt name; got csv: "${flags.name}". Issue one start --worktree per bolt.`,
       );
     }
   }
@@ -440,13 +495,19 @@ function handleStart(args: string[]): void {
   }
 
   // Validate state and immutable worktree provenance before the audit emit.
-  let baseFields: { baseCommit: string; baseSourceListing: string } | null = null;
+  let baseFields: { baseCommit: string; baseSourceListing: string } | null =
+    null;
   if (useWorktree) {
     try {
       readStateFile(pd);
       baseFields = worktreeBaseFields(pd, flags.slug);
     } catch (e) {
-      failJson("start-worktree", flags.slug, "state-or-worktree-meta-read-failed", errorMessage(e));
+      failJson(
+        "start-worktree",
+        flags.slug,
+        "state-or-worktree-meta-read-failed",
+        errorMessage(e),
+      );
     }
   }
 
@@ -473,7 +534,12 @@ function handleStart(args: string[]): void {
     emitAudit(pd, "BOLT_STARTED", fields, flags.intent, flags.space);
   } catch (e) {
     if (useWorktree) {
-      failJson("start-worktree", flags.slug, "audit-emit-failed", errorMessage(e));
+      failJson(
+        "start-worktree",
+        flags.slug,
+        "audit-emit-failed",
+        errorMessage(e),
+      );
     }
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
@@ -485,7 +551,7 @@ function handleStart(args: string[]): void {
         bolt_names: flags.name,
         batch: flags.batch,
         walking_skeleton: walkingSkeleton,
-      })
+      }),
     );
     return;
   }
@@ -504,13 +570,21 @@ function handleStart(args: string[]): void {
   ]);
   if (!stateForkResult.ok) {
     const reason =
-      stateForkResult.signal === "SIGTERM" ? "state-fork-timeout" : "state-fork-failed";
-    failBolt(pd, flags.name, flags.slug, reason, stateForkResult.stderr || stateForkResult.stdout);
+      stateForkResult.signal === "SIGTERM"
+        ? "state-fork-timeout"
+        : "state-fork-failed";
+    failBolt(
+      pd,
+      flags.name,
+      flags.slug,
+      reason,
+      stateForkResult.stderr || stateForkResult.stdout,
+    );
     failJson(
       "start-worktree",
       flags.slug,
       reason,
-      `aidlc-state fork --slug ${flags.slug} exited ${stateForkResult.status}: ${stateForkResult.stderr || stateForkResult.stdout || "(no output)"}`
+      `aidlc-state fork --slug ${flags.slug} exited ${stateForkResult.status}: ${stateForkResult.stderr || stateForkResult.stdout || "(no output)"}`,
     );
   }
 
@@ -524,13 +598,21 @@ function handleStart(args: string[]): void {
   ]);
   if (!auditForkResult.ok) {
     const reason =
-      auditForkResult.signal === "SIGTERM" ? "audit-fork-timeout" : "audit-fork-failed";
-    failBolt(pd, flags.name, flags.slug, reason, auditForkResult.stderr || auditForkResult.stdout);
+      auditForkResult.signal === "SIGTERM"
+        ? "audit-fork-timeout"
+        : "audit-fork-failed";
+    failBolt(
+      pd,
+      flags.name,
+      flags.slug,
+      reason,
+      auditForkResult.stderr || auditForkResult.stdout,
+    );
     failJson(
       "start-worktree",
       flags.slug,
       reason,
-      `aidlc-audit audit-fork --slug ${flags.slug} exited ${auditForkResult.status}: ${auditForkResult.stderr || auditForkResult.stdout || "(no output)"}`
+      `aidlc-audit audit-fork --slug ${flags.slug} exited ${auditForkResult.status}: ${auditForkResult.stderr || auditForkResult.stdout || "(no output)"}`,
     );
   }
 
@@ -555,13 +637,13 @@ function handleStart(args: string[]): void {
       flags.name,
       flags.slug,
       reason,
-      fragmentForkResult.stderr || fragmentForkResult.stdout
+      fragmentForkResult.stderr || fragmentForkResult.stdout,
     );
     failJson(
       "start-worktree",
       flags.slug,
       reason,
-      `aidlc-runtime fragment-fork --slug ${flags.slug} exited ${fragmentForkResult.status}: ${fragmentForkResult.stderr || fragmentForkResult.stdout || "(no output)"}`
+      `aidlc-runtime fragment-fork --slug ${flags.slug} exited ${fragmentForkResult.status}: ${fragmentForkResult.stderr || fragmentForkResult.stdout || "(no output)"}`,
     );
   }
 
@@ -573,7 +655,7 @@ function handleStart(args: string[]): void {
       walking_skeleton: walkingSkeleton,
       slug: flags.slug,
       forked: ["STATE_FORKED", "AUDIT_FORKED", "RUNTIME_GRAPH_FORKED"],
-    })
+    }),
   );
 }
 
@@ -610,9 +692,10 @@ function handleComplete(args: string[]): void {
     );
   }
   const teamOwnership = isTeamUnitOwnership(stateContent);
-  const unitSlug = teamOwnership && !flags.name.includes(",")
-    ? resolveTeamUnitSlug(pd, flags.name, flags.slug)
-    : flags.slug ?? (!flags.name.includes(",") ? flags.name : undefined);
+  const unitSlug =
+    teamOwnership && !flags.name.includes(",")
+      ? resolveTeamUnitSlug(pd, flags.name, flags.slug)
+      : (flags.slug ?? (!flags.name.includes(",") ? flags.name : undefined));
   const walkingSkeletonMain =
     teamOwnership && !!unitSlug && isWalkingSkeletonUnitOnMain(pd, unitSlug);
 
@@ -622,7 +705,7 @@ function handleComplete(args: string[]): void {
     }
     if (flags.name.includes(",")) {
       error(
-        `--merge requires a single bolt name; got csv: "${flags.name}". Issue one complete --merge per bolt.`
+        `--merge requires a single bolt name; got csv: "${flags.name}". Issue one complete --merge per bolt.`,
       );
     }
     requireLiveClaimForTeamUnit(pd, unitSlug!, {
@@ -643,7 +726,7 @@ function handleComplete(args: string[]): void {
         "complete-merge",
         flags.slug,
         "merge-held",
-        `Merge held by HOLD-MERGE invariant; resolve the failed-sibling halt-and-ask sequence and run \`aidlc-bolt release-merge --slug ${flags.slug}\` before retrying.`
+        `Merge held by HOLD-MERGE invariant; resolve the failed-sibling halt-and-ask sequence and run \`aidlc-bolt release-merge --slug ${flags.slug}\` before retrying.`,
       );
     }
   }
@@ -660,14 +743,23 @@ function handleComplete(args: string[]): void {
     emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
   } catch (e) {
     if (useMerge) {
-      failJson("complete-merge", flags.slug, "audit-emit-failed", errorMessage(e));
+      failJson(
+        "complete-merge",
+        flags.slug,
+        "audit-emit-failed",
+        errorMessage(e),
+      );
     }
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
   if (!useMerge) {
     console.log(
-      JSON.stringify({ emitted: "BOLT_COMPLETED", bolt_names: flags.name, batch: flags.batch })
+      JSON.stringify({
+        emitted: "BOLT_COMPLETED",
+        bolt_names: flags.name,
+        batch: flags.batch,
+      }),
     );
     return;
   }
@@ -683,13 +775,21 @@ function handleComplete(args: string[]): void {
   ]);
   if (!stateMergeResult.ok) {
     const reason =
-      stateMergeResult.signal === "SIGTERM" ? "state-merge-timeout" : "state-merge-failed";
-    failBolt(pd, flags.name, flags.slug, reason, stateMergeResult.stderr || stateMergeResult.stdout);
+      stateMergeResult.signal === "SIGTERM"
+        ? "state-merge-timeout"
+        : "state-merge-failed";
+    failBolt(
+      pd,
+      flags.name,
+      flags.slug,
+      reason,
+      stateMergeResult.stderr || stateMergeResult.stdout,
+    );
     failJson(
       "complete-merge",
       flags.slug,
       reason,
-      `aidlc-state merge --slug ${flags.slug} exited ${stateMergeResult.status}: ${stateMergeResult.stderr || stateMergeResult.stdout || "(no output)"}`
+      `aidlc-state merge --slug ${flags.slug} exited ${stateMergeResult.status}: ${stateMergeResult.stderr || stateMergeResult.stdout || "(no output)"}`,
     );
   }
 
@@ -704,13 +804,21 @@ function handleComplete(args: string[]): void {
   ]);
   if (!auditMergeResult.ok) {
     const reason =
-      auditMergeResult.signal === "SIGTERM" ? "audit-merge-timeout" : "audit-merge-failed";
-    failBolt(pd, flags.name, flags.slug, reason, auditMergeResult.stderr || auditMergeResult.stdout);
+      auditMergeResult.signal === "SIGTERM"
+        ? "audit-merge-timeout"
+        : "audit-merge-failed";
+    failBolt(
+      pd,
+      flags.name,
+      flags.slug,
+      reason,
+      auditMergeResult.stderr || auditMergeResult.stdout,
+    );
     failJson(
       "complete-merge",
       flags.slug,
       reason,
-      `aidlc-audit audit-merge --slug ${flags.slug} exited ${auditMergeResult.status}: ${auditMergeResult.stderr || auditMergeResult.stdout || "(no output)"}`
+      `aidlc-audit audit-merge --slug ${flags.slug} exited ${auditMergeResult.status}: ${auditMergeResult.stderr || auditMergeResult.stdout || "(no output)"}`,
     );
   }
 
@@ -736,13 +844,13 @@ function handleComplete(args: string[]): void {
       flags.name,
       flags.slug,
       reason,
-      fragmentMergeResult.stderr || fragmentMergeResult.stdout
+      fragmentMergeResult.stderr || fragmentMergeResult.stdout,
     );
     failJson(
       "complete-merge",
       flags.slug,
       reason,
-      `aidlc-runtime fragment-merge --slug ${flags.slug} exited ${fragmentMergeResult.status}: ${fragmentMergeResult.stderr || fragmentMergeResult.stdout || "(no output)"}`
+      `aidlc-runtime fragment-merge --slug ${flags.slug} exited ${fragmentMergeResult.status}: ${fragmentMergeResult.stderr || fragmentMergeResult.stdout || "(no output)"}`,
     );
   }
 
@@ -753,7 +861,7 @@ function handleComplete(args: string[]): void {
       batch: flags.batch,
       slug: flags.slug,
       merged: ["STATE_MERGED", "AUDIT_MERGED", "RUNTIME_GRAPH_MERGED"],
-    })
+    }),
   );
 }
 
@@ -791,7 +899,11 @@ function handleFail(args: string[]): void {
   }
 
   console.log(
-    JSON.stringify({ emitted: "BOLT_FAILED", failed_bolt: flags.name, error: flags.error })
+    JSON.stringify({
+      emitted: "BOLT_FAILED",
+      failed_bolt: flags.name,
+      error: flags.error,
+    }),
   );
 }
 
@@ -834,12 +946,13 @@ function handleAbort(args: string[]): void {
       ...selectorArgs(flags),
     ]);
     if (!result.ok) {
-      const reason = result.signal === "SIGTERM" ? "discard-timeout" : "discard-failed";
+      const reason =
+        result.signal === "SIGTERM" ? "discard-timeout" : "discard-failed";
       failJson(
         "abort-discard",
         flags.slug,
         reason,
-        `aidlc-worktree discard --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`
+        `aidlc-worktree discard --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`,
       );
     }
   }
@@ -850,13 +963,19 @@ function handleAbort(args: string[]): void {
   // recoverable drift that doctor reconciles via the worktree's local
   // audit if it survived, or by orphan-worktree detection if not.
   try {
-    emitAudit(pd, "BOLT_FAILED", {
-      "Failed Bolt": flags.name,
-      "Bolt slug": flags.slug,
-      "Error summary": `aborted: ${flags.reason}`,
-      Reason: "aborted",
-      ...claimAttemptFields(pd, flags.slug),
-    }, flags.intent, flags.space);
+    emitAudit(
+      pd,
+      "BOLT_FAILED",
+      {
+        "Failed Bolt": flags.name,
+        "Bolt slug": flags.slug,
+        "Error summary": `aborted: ${flags.reason}`,
+        Reason: "aborted",
+        ...claimAttemptFields(pd, flags.slug),
+      },
+      flags.intent,
+      flags.space,
+    );
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
@@ -868,7 +987,7 @@ function handleAbort(args: string[]): void {
       failed_bolt: flags.name,
       slug: flags.slug,
       discarded: useDiscard,
-    })
+    }),
   );
 }
 
@@ -933,7 +1052,12 @@ function forkedStateFilePath(
   return wtStatePath;
 }
 
-function isMergeHeld(pd: string, slug: string, intent?: string, space?: string): boolean {
+function isMergeHeld(
+  pd: string,
+  slug: string,
+  intent?: string,
+  space?: string,
+): boolean {
   const path = forkedStateFilePath(pd, slug, intent, space);
   if (!path) return false;
   const content = readFileSync(path, "utf-8");
@@ -941,11 +1065,17 @@ function isMergeHeld(pd: string, slug: string, intent?: string, space?: string):
   return value === "true";
 }
 
-function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, space?: string): void {
+function setMergeHeld(
+  pd: string,
+  slug: string,
+  held: boolean,
+  intent?: string,
+  space?: string,
+): void {
   const path = forkedStateFilePath(pd, slug, intent, space);
   if (!path) {
     error(
-      `No per-Bolt forked state file for slug "${slug}" — was \`aidlc-bolt start --worktree --slug ${slug}\` run?`
+      `No per-Bolt forked state file for slug "${slug}" — was \`aidlc-bolt start --worktree --slug ${slug}\` run?`,
     );
   }
   const content = readFileSync(path, "utf-8");
@@ -991,7 +1121,10 @@ function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, 
 // emit calls.
 function handleDispatchEvent(args: string[]): void {
   const flags = parseFlags(args);
-  if (!flags.event) error("Missing --event <MERGE_DISPATCH_INVOKED|MERGE_DISPATCH_RETURNED|MERGE_DISPATCH_FALLBACK>");
+  if (!flags.event)
+    error(
+      "Missing --event <MERGE_DISPATCH_INVOKED|MERGE_DISPATCH_RETURNED|MERGE_DISPATCH_FALLBACK>",
+    );
   if (!flags.slug) error("Missing --slug <kebab-slug>");
 
   const pd = resolveProjectDir(projectDir);
@@ -1002,10 +1135,8 @@ function handleDispatchEvent(args: string[]): void {
     (pinnedOid === undefined) !== (attemptGeneration === undefined) ||
     (pinnedOid === undefined) !== (pinId === undefined) ||
     (pinnedOid !== undefined && !/^[0-9a-f]{40}$/.test(pinnedOid)) ||
-    (
-      attemptGeneration !== undefined &&
-      !/^[1-9][0-9]*$/.test(attemptGeneration)
-    ) ||
+    (attemptGeneration !== undefined &&
+      !/^[1-9][0-9]*$/.test(attemptGeneration)) ||
     (pinId !== undefined && !/^[0-9a-f-]{36}$/.test(pinId))
   ) {
     error(
@@ -1036,21 +1167,33 @@ function handleDispatchEvent(args: string[]): void {
       } catch (e) {
         error(`Audit emission failed: ${errorMessage(e)}`);
       }
-      console.log(JSON.stringify({ emitted: "MERGE_DISPATCH_INVOKED", slug: flags.slug }));
+      console.log(
+        JSON.stringify({ emitted: "MERGE_DISPATCH_INVOKED", slug: flags.slug }),
+      );
       return;
     }
     case "MERGE_DISPATCH_RETURNED": {
-      if (!flags.strategy) error("MERGE_DISPATCH_RETURNED requires --strategy <squash|merge|rebase>");
+      if (!flags.strategy)
+        error(
+          "MERGE_DISPATCH_RETURNED requires --strategy <squash|merge|rebase>",
+        );
       if (!["squash", "merge", "rebase"].includes(flags.strategy)) {
-        error(`Invalid --strategy: ${flags.strategy}. Must be squash, merge, or rebase.`);
+        error(
+          `Invalid --strategy: ${flags.strategy}. Must be squash, merge, or rebase.`,
+        );
       }
-      if (!flags.target) error("MERGE_DISPATCH_RETURNED requires --target <branch>");
-      if (!flags.confidence) error("MERGE_DISPATCH_RETURNED requires --confidence <0-1>");
+      if (!flags.target)
+        error("MERGE_DISPATCH_RETURNED requires --target <branch>");
+      if (!flags.confidence)
+        error("MERGE_DISPATCH_RETURNED requires --confidence <0-1>");
       const conf = parseFloat(flags.confidence);
       if (Number.isNaN(conf) || conf < 0 || conf > 1) {
-        error(`Invalid --confidence: ${flags.confidence}. Must be a number in [0, 1].`);
+        error(
+          `Invalid --confidence: ${flags.confidence}. Must be a number in [0, 1].`,
+        );
       }
-      if (!flags.notes) error("MERGE_DISPATCH_RETURNED requires --notes <text>");
+      if (!flags.notes)
+        error("MERGE_DISPATCH_RETURNED requires --notes <text>");
       const fields: Record<string, string> = {
         "Bolt slug": flags.slug,
         Strategy: flags.strategy,
@@ -1064,12 +1207,19 @@ function handleDispatchEvent(args: string[]): void {
       } catch (e) {
         error(`Audit emission failed: ${errorMessage(e)}`);
       }
-      console.log(JSON.stringify({ emitted: "MERGE_DISPATCH_RETURNED", slug: flags.slug }));
+      console.log(
+        JSON.stringify({
+          emitted: "MERGE_DISPATCH_RETURNED",
+          slug: flags.slug,
+        }),
+      );
       return;
     }
     case "MERGE_DISPATCH_FALLBACK": {
-      if (!flags.reason) error("MERGE_DISPATCH_FALLBACK requires --reason <enum>");
-      if (!flags.defaults) error("MERGE_DISPATCH_FALLBACK requires --defaults <text>");
+      if (!flags.reason)
+        error("MERGE_DISPATCH_FALLBACK requires --reason <enum>");
+      if (!flags.defaults)
+        error("MERGE_DISPATCH_FALLBACK requires --defaults <text>");
       const fields: Record<string, string> = {
         "Bolt slug": flags.slug,
         "Fallback reason": flags.reason,
@@ -1081,12 +1231,17 @@ function handleDispatchEvent(args: string[]): void {
       } catch (e) {
         error(`Audit emission failed: ${errorMessage(e)}`);
       }
-      console.log(JSON.stringify({ emitted: "MERGE_DISPATCH_FALLBACK", slug: flags.slug }));
+      console.log(
+        JSON.stringify({
+          emitted: "MERGE_DISPATCH_FALLBACK",
+          slug: flags.slug,
+        }),
+      );
       return;
     }
     default:
       error(
-        `Invalid --event: ${flags.event}. Must be MERGE_DISPATCH_INVOKED, MERGE_DISPATCH_RETURNED, or MERGE_DISPATCH_FALLBACK.`
+        `Invalid --event: ${flags.event}. Must be MERGE_DISPATCH_INVOKED, MERGE_DISPATCH_RETURNED, or MERGE_DISPATCH_FALLBACK.`,
       );
   }
 }
@@ -1171,7 +1326,7 @@ function handleSetAutonomy(args: string[]): void {
       emitted: "AUTONOMY_MODE_SET",
       mode: flags.mode,
       state_updated: true,
-    })
+    }),
   );
 }
 
@@ -1222,7 +1377,7 @@ export function main(argv: string[]): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, set-autonomy, dispatch-event, hold-merge, release-merge`
+          `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, set-autonomy, dispatch-event, hold-merge, release-merge`,
         );
     }
   } catch (e) {
@@ -1244,7 +1399,7 @@ function failBolt(
   name: string,
   slug: string,
   reasonEnum: string,
-  detail: string
+  detail: string,
 ): void {
   try {
     emitAudit(pd, "BOLT_FAILED", {
@@ -1270,7 +1425,7 @@ function failJson(
     | "release-merge",
   slug: string,
   reasonEnum: string,
-  detail: string
+  detail: string,
 ): never {
   const envelope = {
     ok: false,

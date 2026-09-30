@@ -50,23 +50,27 @@ function effectiveAction(
 function emitAudit(
   pd: string,
   eventType: string,
-  fields: Record<string, string>
+  fields: Record<string, string>,
 ): void {
   appendAuditEntry(eventType, fields, pd);
 }
 
 function stageArtifactPaths(pd: string, stage: StageEntry): string[] {
   const entries = reviewArtifactEntries(pd, stage) ?? [];
-  return [...new Set(entries.map((entry) =>
-    entry.path === null
-      ? entry.logicalPath
-      : toPosix(relative(pd, entry.path))
-  ))].sort();
+  return [
+    ...new Set(
+      entries.map((entry) =>
+        entry.path === null
+          ? entry.logicalPath
+          : toPosix(relative(pd, entry.path)),
+      ),
+    ),
+  ].sort();
 }
 
 function existingStageArtifactPaths(pd: string, stage: StageEntry): string[] {
   return stageArtifactPaths(pd, stage).filter((path) =>
-    existsSync(resolveProjectPath(pd, path))
+    existsSync(resolveProjectPath(pd, path)),
   );
 }
 
@@ -149,9 +153,7 @@ if (import.meta.main) {
 
 // --- Parse named flags ---
 
-function parseFlags(
-  args: string[]
-): Record<string, string> {
+function parseFlags(args: string[]): Record<string, string> {
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i].startsWith("--") && i + 1 < args.length) {
@@ -199,7 +201,7 @@ function handleResolve(args: string[]): void {
     // Check if target is on the EFFECTIVE plan (suffix override wins).
     if (effectiveAction(suffixes, scopeMapping, targetStage.slug) === "SKIP") {
       error(
-        `Stage "${targetStage.slug}" is skipped for scope "${scope}". Choose a different stage or change scope.`
+        `Stage "${targetStage.slug}" is skipped for scope "${scope}". Choose a different stage or change scope.`,
       );
     }
   } else if (flags.phase) {
@@ -223,11 +225,13 @@ function handleResolve(args: string[]): void {
       ) ?? firstInScopeStageOfPhase(canonicalPhase, scope);
     if (!targetStage) {
       error(
-        `Phase "${canonicalPhase}" has no executable stages for scope "${scope}".`
+        `Phase "${canonicalPhase}" has no executable stages for scope "${scope}".`,
       );
     }
   } else {
-    error("Usage: resolve --stage <slug|#> or --phase <name|#> [--scope <scope>]");
+    error(
+      "Usage: resolve --stage <slug|#> or --phase <name|#> [--scope <scope>]",
+    );
   }
 
   // Determine direction
@@ -246,14 +250,18 @@ function handleResolve(args: string[]): void {
   if (direction === "forward") {
     // Stages between current (exclusive) and target (exclusive)
     for (let i = currentIdx + 1; i < targetIdx; i++) {
-      if (effectiveAction(suffixes, scopeMapping, graph[i].slug) === "EXECUTE") {
+      if (
+        effectiveAction(suffixes, scopeMapping, graph[i].slug) === "EXECUTE"
+      ) {
         affectedSlugs.push(graph[i].slug);
       }
     }
   } else if (direction === "backward") {
     // Target and all stages after (on the effective plan)
     for (let i = targetIdx; i < graph.length; i++) {
-      if (effectiveAction(suffixes, scopeMapping, graph[i].slug) === "EXECUTE") {
+      if (
+        effectiveAction(suffixes, scopeMapping, graph[i].slug) === "EXECUTE"
+      ) {
         affectedSlugs.push(graph[i].slug);
       }
     }
@@ -271,7 +279,7 @@ function handleResolve(args: string[]): void {
       direction,
       affected_stages: affectedSlugs,
       valid: true,
-    })
+    }),
   );
 }
 
@@ -283,7 +291,10 @@ function handleExecute(args: string[]): void {
   let content = readStateFile(pd);
 
   const targetSlug = flags.target;
-  if (!targetSlug) error("Usage: execute --target <slug> --direction <forward|backward|redo> [--scope <scope>]");
+  if (!targetSlug)
+    error(
+      "Usage: execute --target <slug> --direction <forward|backward|redo> [--scope <scope>]",
+    );
 
   const direction = flags.direction;
   if (
@@ -291,7 +302,9 @@ function handleExecute(args: string[]): void {
     direction !== "backward" &&
     direction !== "redo"
   ) {
-    error(`Invalid direction: ${flags.direction}. Valid: forward, backward, redo`);
+    error(
+      `Invalid direction: ${flags.direction}. Valid: forward, backward, redo`,
+    );
   }
 
   const scope = flags.scope || getField(content, "Scope") || "feature";
@@ -315,7 +328,7 @@ function handleExecute(args: string[]): void {
   // workflow on a stage the plan says should be skipped.
   if (effectiveAction(suffixes, scopeMapping, targetSlug) === "SKIP") {
     error(
-      `Stage "${targetSlug}" is skipped for scope "${scope}". Choose a different target or change scope.`
+      `Stage "${targetSlug}" is skipped for scope "${scope}". Choose a different target or change scope.`,
     );
   }
 
@@ -413,9 +426,17 @@ function handleExecute(args: string[]): void {
   const nextAfterTarget = nextInScopeStage(targetSlug, scope, content);
   const timestamp = isoTimestamp();
 
-  content = setField(content, "Lifecycle Phase", targetStage.phase.toUpperCase());
+  content = setField(
+    content,
+    "Lifecycle Phase",
+    targetStage.phase.toUpperCase(),
+  );
   content = setField(content, "Current Stage", targetSlug);
-  content = setField(content, "Next Stage", nextAfterTarget ? nextAfterTarget.slug : "none");
+  content = setField(
+    content,
+    "Next Stage",
+    nextAfterTarget ? nextAfterTarget.slug : "none",
+  );
   content = setField(content, "Active Agent", targetStage.lead_agent);
   content = setField(content, "Status", "Running");
   content = setField(content, "Last Updated", timestamp);
@@ -438,7 +459,11 @@ function handleExecute(args: string[]): void {
     const phaseIdx = (p: string): number =>
       (PHASES as readonly string[]).indexOf(p);
     if (direction === "forward") {
-      content = setPhaseProgress(content, currentStageForPhase.phase, "Verified");
+      content = setPhaseProgress(
+        content,
+        currentStageForPhase.phase,
+        "Verified",
+      );
       for (
         let i = phaseIdx(currentStageForPhase.phase) + 1;
         i < phaseIdx(targetStage.phase);
@@ -452,7 +477,7 @@ function handleExecute(args: string[]): void {
         const hasExecute = graph.some(
           (s) =>
             s.phase === p &&
-            effectiveAction(suffixes, scopeMapping, s.slug) === "EXECUTE"
+            effectiveAction(suffixes, scopeMapping, s.slug) === "EXECUTE",
         );
         if (hasExecute) content = setPhaseProgress(content, p, "Pending");
       }
@@ -475,27 +500,27 @@ function handleExecute(args: string[]): void {
   // One content-addressed snapshot is shared by both rows in the jump
   // transition. The companion STAGE_STARTED repeats the SAME authority rather
   // than creating a competing snapshot or clearing the jump boundary.
-  const jumpSourceBaseline = sourceBaselineAuditFields(
-    pd,
-    "code-generation",
-  );
+  const jumpSourceBaseline = sourceBaselineAuditFields(pd, "code-generation");
   const changedUpstreamArtifacts =
     direction === "backward" ? stageArtifactPaths(pd, targetStage) : [];
-  const downstreamStages = direction === "backward"
-    ? stagesReset
-      .filter((slug) => slug !== targetSlug)
-      .map((slug) => findStageBySlug(slug))
-      .filter((stage): stage is StageEntry => stage !== undefined)
-    : [];
+  const downstreamStages =
+    direction === "backward"
+      ? stagesReset
+          .filter((slug) => slug !== targetSlug)
+          .map((slug) => findStageBySlug(slug))
+          .filter((stage): stage is StageEntry => stage !== undefined)
+      : [];
   const invalidatedDownstreamArtifacts = [
     ...new Set(
       downstreamStages.flatMap((stage) =>
-        existingStageArtifactPaths(pd, stage)
+        existingStageArtifactPaths(pd, stage),
       ),
     ),
   ].sort();
   const invalidatedDownstreamReviews = [
-    ...new Set(downstreamStages.flatMap((stage) => stageReviewPaths(pd, stage))),
+    ...new Set(
+      downstreamStages.flatMap((stage) => stageReviewPaths(pd, stage)),
+    ),
   ].sort();
 
   // Atomic audit emissions (audit-first — throws before writeStateFile if any fail)
@@ -537,12 +562,15 @@ function handleExecute(args: string[]): void {
       Details: `${direction.toUpperCase()} jump from ${currentSlug} to ${targetSlug} (${targetStage.number}). Scope: ${scope}.`,
       ...(direction === "backward"
         ? {
-            "Changed Upstream Artifacts":
-              JSON.stringify(changedUpstreamArtifacts),
-            "Invalidated Downstream Artifacts":
-              JSON.stringify(invalidatedDownstreamArtifacts),
-            "Invalidated Downstream Reviews":
-              JSON.stringify(invalidatedDownstreamReviews),
+            "Changed Upstream Artifacts": JSON.stringify(
+              changedUpstreamArtifacts,
+            ),
+            "Invalidated Downstream Artifacts": JSON.stringify(
+              invalidatedDownstreamArtifacts,
+            ),
+            "Invalidated Downstream Reviews": JSON.stringify(
+              invalidatedDownstreamReviews,
+            ),
           }
         : {}),
       ...jumpSourceBaseline,
@@ -573,7 +601,7 @@ function handleExecute(args: string[]): void {
       completed_count: completedCount,
       workflow_stopped: false,
       timestamp,
-    })
+    }),
   );
 }
 

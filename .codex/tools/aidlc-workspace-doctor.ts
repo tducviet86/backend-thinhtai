@@ -72,14 +72,20 @@ export function workspaceManifestChecks(projectDir: string): DoctorCheck[] {
       stderr: "pipe",
     });
     if (proc.exitCode !== 0) {
-      results.push({ pass: true, label: "Workspace records: not a git repo - nothing to commit" });
+      results.push({
+        pass: true,
+        label: "Workspace records: not a git repo - nothing to commit",
+      });
     } else {
       const dirty = new TextDecoder()
         .decode(proc.stdout)
         .split("\n")
         .filter((l) => l.trim().length > 0);
       if (dirty.length === 0) {
-        results.push({ pass: true, label: "Workspace records: no uncommitted changes under aidlc/" });
+        results.push({
+          pass: true,
+          label: "Workspace records: no uncommitted changes under aidlc/",
+        });
       } else {
         results.push({
           pass: false,
@@ -91,7 +97,10 @@ export function workspaceManifestChecks(projectDir: string): DoctorCheck[] {
       }
     }
   } catch (e) {
-    results.push({ pass: true, label: `Workspace records: check skipped (advisory) - ${errorMessage(e)}` });
+    results.push({
+      pass: true,
+      label: `Workspace records: check skipped (advisory) - ${errorMessage(e)}`,
+    });
   }
 
   // W2/W3 - only when a repos.json manifest is present (the declared multi-repo signal).
@@ -128,7 +137,9 @@ export function workspaceManifestChecks(projectDir: string): DoctorCheck[] {
       } else {
         const parts: string[] = [];
         if (notCloned.length > 0) {
-          parts.push(`declared but not cloned [${notCloned.join(", ")}] - run \`${syncCmd}\``);
+          parts.push(
+            `declared but not cloned [${notCloned.join(", ")}] - run \`${syncCmd}\``,
+          );
         }
         if (notDeclared.length > 0) {
           parts.push(
@@ -146,7 +157,9 @@ export function workspaceManifestChecks(projectDir: string): DoctorCheck[] {
       // markers is regenerated from repos.json by aidlc-workspace-sync; if it
       // doesn't match the manifest, sync hasn't been run since the last edit.
       const gitignorePath = join(projectDir, ".gitignore");
-      const gi = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf-8") : "";
+      const gi = existsSync(gitignorePath)
+        ? readFileSync(gitignorePath, "utf-8")
+        : "";
       const b = gi.indexOf(GATE_BEGIN);
       const e = gi.indexOf(GATE_END);
       const expected = [
@@ -169,7 +182,8 @@ export function workspaceManifestChecks(projectDir: string): DoctorCheck[] {
           .filter((l) => l.length > 0)
           .sort();
         const inSync =
-          actual.length === expected.length && actual.every((v, i) => v === expected[i]);
+          actual.length === expected.length &&
+          actual.every((v, i) => v === expected[i]);
         results.push({
           pass: true,
           label: inSync

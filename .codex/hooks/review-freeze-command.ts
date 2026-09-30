@@ -170,7 +170,8 @@ function consumeWrapperOptions(
   while (index < words.length) {
     const option = words[index];
     if (option === "--") return { index: index + 1, ambiguous: false };
-    if (option === "-" || !option.startsWith("-")) return { index, ambiguous: false };
+    if (option === "-" || !option.startsWith("-"))
+      return { index, ambiguous: false };
     if (option.startsWith("--")) {
       const equals = option.indexOf("=");
       const name = equals === -1 ? option : option.slice(0, equals);
@@ -366,12 +367,15 @@ function shellInvocation(
           option === "--list-signal-handling" ||
           option === "--help" ||
           option === "--version" ||
-          /^(?:--default-signal|--ignore-signal|--block-signal)(?:=.*)?$/.test(option)
+          /^(?:--default-signal|--ignore-signal|--block-signal)(?:=.*)?$/.test(
+            option,
+          )
         ) {
           index++;
           continue;
         }
-        if (option.startsWith("-")) return { name: "", args: [], ambiguous: true };
+        if (option.startsWith("-"))
+          return { name: "", args: [], ambiguous: true };
         break;
       }
       skipAssignments();
@@ -434,7 +438,21 @@ function shellInvocation(
         ],
         shortOptionalValues: ["-E"],
         longOptionalValues: ["--preserve-env"],
-        shortFlags: ["-A", "-b", "-e", "-H", "-K", "-k", "-l", "-n", "-P", "-S", "-s", "-V", "-v"],
+        shortFlags: [
+          "-A",
+          "-b",
+          "-e",
+          "-H",
+          "-K",
+          "-k",
+          "-l",
+          "-n",
+          "-P",
+          "-S",
+          "-s",
+          "-V",
+          "-v",
+        ],
         longFlags: [
           "--askpass",
           "--background",
@@ -484,7 +502,13 @@ function shellInvocation(
         shortValues: ["-f", "-o"],
         longValues: ["--format", "--output"],
         shortFlags: ["-a", "-p", "-v"],
-        longFlags: ["--append", "--portability", "--verbose", "--help", "--version"],
+        longFlags: [
+          "--append",
+          "--portability",
+          "--verbose",
+          "--help",
+          "--version",
+        ],
       },
       unbuffer: { shortFlags: ["-p"] },
     };
@@ -552,7 +576,9 @@ export function shellCommandInvocationDetails(
   return invocations;
 }
 
-export function shellCommandAltersExecutableResolution(command: string): boolean {
+export function shellCommandAltersExecutableResolution(
+  command: string,
+): boolean {
   for (const segment of shellCommandSegments(command)) {
     const state: ShellInvocationParseState = {
       executableResolutionChanged: false,
@@ -576,7 +602,10 @@ export function shellCommandInvocations(command: string): ShellInvocation[] {
   );
 }
 
-function shellWordAt(command: string, start: number): { word: string; end: number } | null {
+function shellWordAt(
+  command: string,
+  start: number,
+): { word: string; end: number } | null {
   let word = "";
   let quote: "'" | '"' | null = null;
   let escaped = false;
@@ -794,13 +823,16 @@ function invocationMayMutate(commandName: string, args: string[]): boolean {
   return (
     commandName === "find" &&
     args.some((arg) =>
-      ["-delete", "-fprint", "-fprint0", "-fprintf", "-fls"].includes(arg)
+      ["-delete", "-fprint", "-fprint0", "-fprintf", "-fls"].includes(arg),
     )
   );
 }
 
 /** Concrete filesystem targets of a mutation-capable shell command. */
-export function shellWriteTargets(command: string, cwd = process.cwd()): string[] {
+export function shellWriteTargets(
+  command: string,
+  cwd = process.cwd(),
+): string[] {
   const out: string[] = [];
   const add = (raw: string | undefined) => {
     if (!raw) return;
@@ -860,7 +892,8 @@ export function shellWriteTargets(command: string, cwd = process.cwd()): string[
     if (ch !== ">") continue;
 
     let targetStart = i + 1;
-    if (command[targetStart] === ">" || command[targetStart] === "|") targetStart++;
+    if (command[targetStart] === ">" || command[targetStart] === "|")
+      targetStart++;
     while (/\s/.test(command[targetStart] ?? "")) targetStart++;
     // `2>&1` and `2>&-` duplicate/close descriptors; `>&file` writes a file.
     if (command[targetStart] === "&") {
@@ -918,7 +951,9 @@ export function shellWriteTargets(command: string, cwd = process.cwd()): string[
       ].at(-1);
       const destination = targetDirectory ?? parsed.operands.at(-1);
       const hasTargetDirectory = targetDirectory !== undefined;
-      const sources = hasTargetDirectory ? parsed.operands : parsed.operands.slice(0, -1);
+      const sources = hasTargetDirectory
+        ? parsed.operands
+        : parsed.operands.slice(0, -1);
       addDestination(
         destination,
         sources,
@@ -928,7 +963,13 @@ export function shellWriteTargets(command: string, cwd = process.cwd()): string[
       const parsed = parseShellArgs(
         args,
         new Set(["-g", "-m", "-o", "-S", "-t"]),
-        new Set(["--group", "--mode", "--owner", "--suffix", "--target-directory"]),
+        new Set([
+          "--group",
+          "--mode",
+          "--owner",
+          "--suffix",
+          "--target-directory",
+        ]),
       );
       const targetDirectory = [
         ...(parsed.optionValues.get("-t") ?? []),
@@ -939,7 +980,9 @@ export function shellWriteTargets(command: string, cwd = process.cwd()): string[
       } else {
         const destination = targetDirectory ?? parsed.operands.at(-1);
         const hasTargetDirectory = targetDirectory !== undefined;
-        const sources = hasTargetDirectory ? parsed.operands : parsed.operands.slice(0, -1);
+        const sources = hasTargetDirectory
+          ? parsed.operands
+          : parsed.operands.slice(0, -1);
         addDestination(
           destination,
           sources,
@@ -958,14 +1001,18 @@ export function shellWriteTargets(command: string, cwd = process.cwd()): string[
       ].at(-1);
       const destination = targetDirectory ?? parsed.operands.at(-1);
       const hasTargetDirectory = targetDirectory !== undefined;
-      const sources = hasTargetDirectory ? parsed.operands : parsed.operands.slice(0, -1);
+      const sources = hasTargetDirectory
+        ? parsed.operands
+        : parsed.operands.slice(0, -1);
       for (const source of sources) add(source);
       addDestination(
         destination,
         sources,
         hasTargetDirectory || sources.length > 1 || isDirectory(destination),
       );
-    } else if (["rm", "tee", "touch", "truncate", "unlink"].includes(commandName)) {
+    } else if (
+      ["rm", "tee", "touch", "truncate", "unlink"].includes(commandName)
+    ) {
       const parsed =
         commandName === "touch"
           ? parseShellArgs(
@@ -987,21 +1034,26 @@ export function shellWriteTargets(command: string, cwd = process.cwd()): string[
         new Set(["-e", "-f", "-l"]),
         new Set(["--expression", "--file", "--line-length"]),
       );
-      if (!parsed.options.has("-i") && !parsed.options.has("--in-place")) continue;
+      if (!parsed.options.has("-i") && !parsed.options.has("--in-place"))
+        continue;
       const programFromOption =
         parsed.optionValues.has("-e") ||
         parsed.optionValues.has("-f") ||
         parsed.optionValues.has("--expression") ||
         parsed.optionValues.has("--file");
-      for (const operand of parsed.operands.slice(programFromOption ? 0 : 1)) add(operand);
+      for (const operand of parsed.operands.slice(programFromOption ? 0 : 1))
+        add(operand);
     } else if (commandName === "perl") {
       const parsed = parseShellArgs(
         args,
         new Set(["-E", "-F", "-I", "-M", "-e", "-m"]),
       );
-      if (!parsed.options.has("-i") && !parsed.options.has("--in-place")) continue;
-      const programFromOption = parsed.optionValues.has("-e") || parsed.optionValues.has("-E");
-      for (const operand of parsed.operands.slice(programFromOption ? 0 : 1)) add(operand);
+      if (!parsed.options.has("-i") && !parsed.options.has("--in-place"))
+        continue;
+      const programFromOption =
+        parsed.optionValues.has("-e") || parsed.optionValues.has("-E");
+      for (const operand of parsed.operands.slice(programFromOption ? 0 : 1))
+        add(operand);
     } else if (commandName === "find") {
       if (args.includes("-delete")) {
         for (const root of findTraversalRoots(args)) add(root);
@@ -1023,7 +1075,10 @@ export function shellWriteTargets(command: string, cwd = process.cwd()): string[
       for (const value of attachedPaths) add(value);
     } else if (commandName === "copy-item") {
       add(operands.at(-1));
-      for (const value of attachedPathOptionValues(args, new Set(["destination"]))) {
+      for (const value of attachedPathOptionValues(
+        args,
+        new Set(["destination"]),
+      )) {
         add(value);
       }
     } else if (commandName === "rsync") {

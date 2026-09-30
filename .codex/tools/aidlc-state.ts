@@ -228,7 +228,7 @@ const HARNESS_DOC_DIRS = new Set([
 function emitAudit(
   projectDir: string,
   eventType: string,
-  fields: Record<string, string>
+  fields: Record<string, string>,
 ): string {
   if (holdsAuditLock(projectDir)) {
     return appendAuditEntryUnlocked(eventType, fields, projectDir).timestamp;
@@ -247,7 +247,10 @@ function emitAudit(
 // completion path lock-clean. When no ledger exists (Kiro/Codex/opencode, or a
 // Claude session that never folded) this returns {} and the completion event is
 // unchanged.
-function stageRollupFields(pd: string, stageSlug: string): Record<string, string> {
+function stageRollupFields(
+  pd: string,
+  stageSlug: string,
+): Record<string, string> {
   try {
     return stageUsageAuditFields(pd, stageSlug);
   } catch {
@@ -274,7 +277,7 @@ function auditField(block: string, fieldName: string): string | null {
 function hasStageAuditEvent(
   projectDir: string,
   eventType: string,
-  stageSlug: string
+  stageSlug: string,
 ): boolean {
   // Read across every per-clone audit shard (one in the common single-clone /
   // flat-legacy case; the glob-merge matters only when concurrent clones append
@@ -282,9 +285,10 @@ function hasStageAuditEvent(
   const audit = readAllAuditShards(projectDir);
   if (audit.length === 0) return false;
   const workflowStarts = findAllEvents(audit, "WORKFLOW_STARTED");
-  const since = workflowStarts.length > 0
-    ? workflowStarts[workflowStarts.length - 1].timestamp
-    : "";
+  const since =
+    workflowStarts.length > 0
+      ? workflowStarts[workflowStarts.length - 1].timestamp
+      : "";
   return findAllEvents(audit, eventType).some((ev) => {
     if (since && ev.timestamp < since) return false;
     // Rows committed by a `--single` stage-runner run carry a synthetic
@@ -321,8 +325,7 @@ function hasTeamAttemptStageAuditEvent(
     if (
       rows.some(
         (row) =>
-          row.timestamp === rows[i].timestamp &&
-          row.shard !== rows[i].shard,
+          row.timestamp === rows[i].timestamp && row.shard !== rows[i].shard,
       )
     ) {
       while (
@@ -333,12 +336,14 @@ function hasTeamAttemptStageAuditEvent(
       }
     }
   }
-  return rows.slice(floor + 1).some(
-    (row) =>
-      row.event === eventType &&
-      auditBlockField(row.block, "Stage") === stageSlug &&
-      !auditBlockField(row.block, "Workflow")?.startsWith("single-stage:"),
-  );
+  return rows
+    .slice(floor + 1)
+    .some(
+      (row) =>
+        row.event === eventType &&
+        auditBlockField(row.block, "Stage") === stageSlug &&
+        !auditBlockField(row.block, "Workflow")?.startsWith("single-stage:"),
+    );
 }
 
 interface OrderedAuditEvent {
@@ -360,7 +365,8 @@ function orderedMainWorkflowAudit(projectDir: string): OrderedAuditEvent[] {
     .map((block, position): OrderedAuditEvent | null => {
       const event = auditField(block, "Event");
       if (!event) return null;
-      if (auditField(block, "Workflow")?.startsWith("single-stage:")) return null;
+      if (auditField(block, "Workflow")?.startsWith("single-stage:"))
+        return null;
       return {
         event,
         block,
@@ -370,7 +376,8 @@ function orderedMainWorkflowAudit(projectDir: string): OrderedAuditEvent[] {
     })
     .filter((event): event is OrderedAuditEvent => event !== null)
     .sort((a, b) => {
-      if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+      if (a.timestamp !== b.timestamp)
+        return a.timestamp < b.timestamp ? -1 : 1;
       return a.position - b.position;
     });
   const workflowStart = events.findLastIndex(
@@ -482,7 +489,7 @@ function auditTailHasFields(
 // with Revision Count 0 and no GATE_REJECTED row.
 function unrecordedRevisionSinceGateOpen(
   pd: string,
-  stage: { slug: string; produces?: string[] }
+  stage: { slug: string; produces?: string[] },
 ): boolean {
   const audit = readAllAuditShards(pd);
   if (audit.length === 0) return false; // no ledger -> nothing to reconcile
@@ -590,7 +597,10 @@ const SLUG_RE = /^[a-z][a-z0-9-]*$/;
 function validateSlug(slug: string | undefined): string {
   if (!slug) errorWithSlug("(missing)", `Missing --slug <slug>`);
   if (!SLUG_RE.test(slug)) {
-    errorWithSlug(slug, `Invalid --slug: "${slug}". Must be kebab-case (lowercase letter then [a-z0-9-]).`);
+    errorWithSlug(
+      slug,
+      `Invalid --slug: "${slug}". Must be kebab-case (lowercase letter then [a-z0-9-]).`,
+    );
   }
   return slug;
 }
@@ -682,7 +692,8 @@ export function main(argv: string[]): void {
     args.splice(pdIdx, 2);
   }
   stateSessionOverride =
-    resolveWorkflowSelection(resolveProjectDir(projectDir)).sessionId ?? undefined;
+    resolveWorkflowSelection(resolveProjectDir(projectDir)).sessionId ??
+    undefined;
 
   const subcommand = args[0];
 
@@ -709,7 +720,8 @@ export function main(argv: string[]): void {
   if (
     subcommand &&
     engineOwnedTransitions.has(subcommand) &&
-    process.env.AIDLC_STATE_TRANSITION_OWNER !== `orchestrate:${process.ppid}` &&
+    process.env.AIDLC_STATE_TRANSITION_OWNER !==
+      `orchestrate:${process.ppid}` &&
     !(
       subcommand === "fold-unit-merge" &&
       process.env.AIDLC_STATE_TRANSITION_OWNER === `unit-merge:${process.ppid}`
@@ -850,7 +862,7 @@ export function main(argv: string[]): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, set-construction-iteration, set-unit-ownership, set-unit-gate-rhythm, refresh-unit-progress, sync-unit-scope-stage, fold-unit-merge, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, unit, park, unpark`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, set-construction-iteration, set-unit-ownership, set-unit-gate-rhythm, refresh-unit-progress, sync-unit-scope-stage, fold-unit-merge, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, unit, park, unpark`,
         );
     }
   } catch (e) {
@@ -861,12 +873,7 @@ export function main(argv: string[]): void {
     if (e instanceof StateGuardRefusalError) {
       const pd = resolveProjectDir(projectDir);
       exitWithError(
-        guardRefusalOutput(
-          pd,
-          e.refusal,
-          e.attempt,
-          e.resourceFingerprints,
-        ),
+        guardRefusalOutput(pd, e.refusal, e.attempt, e.resourceFingerprints),
       );
     }
     exitWithError(errorMessage(e));
@@ -899,32 +906,32 @@ function handleSet(args: string[]): void {
   // V1, B reads V1, A writes V2, B writes V1.5 → A's field lost). The +1/-1
   // increment forms are especially exposed — they read-modify a counter.
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  for (const pair of args) {
-    const eqIdx = pair.indexOf("=");
-    if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
-    const field = pair.slice(0, eqIdx);
-    let value = pair.slice(eqIdx + 1);
+    for (const pair of args) {
+      const eqIdx = pair.indexOf("=");
+      if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
+      const field = pair.slice(0, eqIdx);
+      let value = pair.slice(eqIdx + 1);
 
-    // Special values
-    if (value === "NOW") {
-      value = isoTimestamp();
-    } else if (value === "+1") {
-      const current = getField(content, field);
-      const num = current ? parseInt(current, 10) : 0;
-      value = String(num + 1);
-    } else if (value === "-1") {
-      const current = getField(content, field);
-      const num = current ? parseInt(current, 10) : 0;
-      value = String(Math.max(0, num - 1));
+      // Special values
+      if (value === "NOW") {
+        value = isoTimestamp();
+      } else if (value === "+1") {
+        const current = getField(content, field);
+        const num = current ? parseInt(current, 10) : 0;
+        value = String(num + 1);
+      } else if (value === "-1") {
+        const current = getField(content, field);
+        const num = current ? parseInt(current, 10) : 0;
+        value = String(Math.max(0, num - 1));
+      }
+
+      content = setField(content, field, value);
     }
 
-    content = setField(content, field, value);
-  }
-
-  writeStateFile(pd, content);
-  console.log(JSON.stringify({ updated: true, fields: args.length }));
+    writeStateFile(pd, content);
+    console.log(JSON.stringify({ updated: true, fields: args.length }));
   });
 }
 
@@ -958,15 +965,15 @@ function handleSetSkeletonStance(args: string[]): void {
   // C2b lost-update safety: read→write under one lock (a concurrent `set` of an
   // unrelated field must not lose this stance write, nor vice versa).
   withAuditLock(pd, () => {
-  const content = readStateFile(pd);
-  const updated = setOrInsertField(
-    content,
-    "## Runtime State",
-    "Skeleton Stance",
-    stance,
-  );
-  writeStateFile(pd, updated);
-  console.log(JSON.stringify({ updated: true, skeleton_stance: stance }));
+    const content = readStateFile(pd);
+    const updated = setOrInsertField(
+      content,
+      "## Runtime State",
+      "Skeleton Stance",
+      stance,
+    );
+    writeStateFile(pd, updated);
+    console.log(JSON.stringify({ updated: true, skeleton_stance: stance }));
   });
 }
 
@@ -998,21 +1005,23 @@ function handleSetConstructionIteration(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
   // Lost-update safety: read-then-write under one lock, as for the stance write.
   withAuditLock(pd, () => {
-  const content = readStateFile(pd);
-  if (value !== "unit-major" && isTeamUnitOwnership(content)) {
-    error(
-      "Construction Iteration cannot leave unit-major while Unit Ownership is team. " +
-        "Set unit ownership to solo first.",
+    const content = readStateFile(pd);
+    if (value !== "unit-major" && isTeamUnitOwnership(content)) {
+      error(
+        "Construction Iteration cannot leave unit-major while Unit Ownership is team. " +
+          "Set unit ownership to solo first.",
+      );
+    }
+    const updated = setOrInsertField(
+      content,
+      "## Runtime State",
+      "Construction Iteration",
+      value,
     );
-  }
-  const updated = setOrInsertField(
-    content,
-    "## Runtime State",
-    "Construction Iteration",
-    value,
-  );
-  writeStateFile(pd, updated);
-  console.log(JSON.stringify({ updated: true, construction_iteration: value }));
+    writeStateFile(pd, updated);
+    console.log(
+      JSON.stringify({ updated: true, construction_iteration: value }),
+    );
   });
 }
 
@@ -1071,8 +1080,7 @@ function hasCurrentTeamUnitActivity(pd: string, content: string): boolean {
       if (
         rows.some(
           (row) =>
-            row.timestamp === rows[i].timestamp &&
-            row.shard !== rows[i].shard,
+            row.timestamp === rows[i].timestamp && row.shard !== rows[i].shard,
         )
       ) {
         while (
@@ -1236,7 +1244,10 @@ function parseUnitProgressTable(section: string): {
   const firstTableLine = lines.findIndex((line) => line.startsWith("|"));
   if (firstTableLine < 0) refuseUnitProgress("Invalid Unit Progress table.");
   const table = lines.slice(firstTableLine).map((line) =>
-    line.split("|").slice(1, -1).map((cell) => cell.trim())
+    line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim()),
   );
   if (
     table.length < 2 ||
@@ -1369,9 +1380,7 @@ function handleRefreshUnitProgress(
           : undefined,
       );
     } catch (e) {
-      refuseUnitProgress(
-        `Refusing Unit Progress refresh: ${errorMessage(e)}`,
-      );
+      refuseUnitProgress(`Refusing Unit Progress refresh: ${errorMessage(e)}`);
     }
     const suppliedStates = Object.entries(payload.stage_states).sort(
       ([a], [b]) => a.localeCompare(b),
@@ -1389,10 +1398,10 @@ function handleRefreshUnitProgress(
     }
     const section = foldUnit
       ? foldUnitProgressSection(
-        currentUnitProgressSection(content),
-        authoritative.section,
-        foldUnit,
-      )
+          currentUnitProgressSection(content),
+          authoritative.section,
+          foldUnit,
+        )
       : authoritative.section;
     content = upsertUnitProgressSection(content, section);
     const stageEntries = Object.entries(authoritative.stageStates);
@@ -1413,10 +1422,8 @@ function handleRefreshUnitProgress(
       content = setCheckbox(content, slug, state);
       if (
         state === "completed" &&
-        (
-          getSlugState(before, slug) !== "completed" ||
-          !hasStageAuditEvent(pd, "STAGE_COMPLETED", slug)
-        )
+        (getSlugState(before, slug) !== "completed" ||
+          !hasStageAuditEvent(pd, "STAGE_COMPLETED", slug))
       ) {
         completedNow.push(slug);
       }
@@ -1430,8 +1437,9 @@ function handleRefreshUnitProgress(
     let started: string | null = null;
     let phaseBoundary = false;
     let workflowCompleted = false;
-    let completedFinalStage: NonNullable<ReturnType<typeof findStageBySlug>> | null =
-      null;
+    let completedFinalStage: NonNullable<
+      ReturnType<typeof findStageBySlug>
+    > | null = null;
     if (allBlockStagesComplete && blockSlugs.includes(currentSlug)) {
       const finalSlug = blockSlugs[blockSlugs.length - 1];
       const workflowScope = getField(content, "Scope") ?? "";
@@ -1443,7 +1451,11 @@ function handleRefreshUnitProgress(
         phaseBoundary = finalStage.phase !== next.phase;
         content = setCheckbox(content, next.slug, "in-progress");
         content = setField(content, "Current Stage", next.slug);
-        content = setField(content, "Lifecycle Phase", next.phase.toUpperCase());
+        content = setField(
+          content,
+          "Lifecycle Phase",
+          next.phase.toUpperCase(),
+        );
         content = setField(content, "Next Stage", nextAfter?.slug ?? "none");
         content = setField(content, "In Progress", next.slug);
         content = setField(content, "Active Agent", next.lead_agent);
@@ -1456,10 +1468,7 @@ function handleRefreshUnitProgress(
           content = setPhaseProgress(content, next.phase, "Active");
         }
         started = next.slug;
-      } else if (
-        finalStage &&
-        getField(before, "Status") !== "Completed"
-      ) {
+      } else if (finalStage && getField(before, "Status") !== "Completed") {
         const timestamp = isoTimestamp();
         content = setField(content, "Current Stage", finalSlug);
         content = setField(content, "Status", "Completed");
@@ -1525,8 +1534,7 @@ function handleRefreshUnitProgress(
         });
         emitAudit(pd, "WORKFLOW_COMPLETED", {
           Scope: scope,
-          Details:
-            `Scope: ${scope}, ${countCheckboxes(content, "completed")} stages completed`,
+          Details: `Scope: ${scope}, ${countCheckboxes(content, "completed")} stages completed`,
           ...workflowRollupFields(pd),
         });
       }
@@ -1542,12 +1550,14 @@ function handleRefreshUnitProgress(
     }
     afterWrite?.();
     if (!quiet) {
-      console.log(JSON.stringify({
-        refreshed: true,
-        completed: completedNow,
-        started,
-        workflow_completed: workflowCompleted,
-      }));
+      console.log(
+        JSON.stringify({
+          refreshed: true,
+          completed: completedNow,
+          started,
+          workflow_completed: workflowCompleted,
+        }),
+      );
     }
   });
 }
@@ -1574,7 +1584,9 @@ function handleFoldUnitMerge(args: string[]): void {
     !existing.git_commit_oid ||
     !["git-landed", "state-folded", "complete"].includes(existing.status)
   ) {
-    error(`No git-landed Unit merge transaction matches "${unit}" at ${pinnedOid}.`);
+    error(
+      `No git-landed Unit merge transaction matches "${unit}" at ${pinnedOid}.`,
+    );
   }
   const transaction = existing;
   const mergeCommitOid = transaction.git_commit_oid!;
@@ -1585,7 +1597,9 @@ function handleFoldUnitMerge(args: string[]): void {
     transaction.space !== space ||
     transaction.intent_uuid !== intentUuid
   ) {
-    error(`Unit "${unit}" merge transaction belongs to another active space or intent.`);
+    error(
+      `Unit "${unit}" merge transaction belongs to another active space or intent.`,
+    );
   }
   const ancestor = spawnSync(
     "git",
@@ -1606,13 +1620,16 @@ function handleFoldUnitMerge(args: string[]): void {
     parents.status !== 0 ||
     parents.stdout.trim().split(/\s+/)[1] !== pinnedOid
   ) {
-    error(`Unit "${unit}" has no controlled merge commit for pinned OID ${pinnedOid}.`);
+    error(
+      `Unit "${unit}" has no controlled merge commit for pinned OID ${pinnedOid}.`,
+    );
   }
   const mainShard = auditShardName(pd);
   const mainRows = readAuditShardEvents(pd)
     .filter((row) => basename(row.shard) === mainShard)
     .sort((a, b) => {
-      if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+      if (a.timestamp !== b.timestamp)
+        return a.timestamp < b.timestamp ? -1 : 1;
       if (a.shardIndex !== b.shardIndex) return a.shardIndex - b.shardIndex;
       return a.pos - b.pos;
     });
@@ -1648,9 +1665,7 @@ function handleFoldUnitMerge(args: string[]): void {
   }
   const authorization = transaction.state_fold_authorized;
   if (!authorization) {
-    error(
-      `Unit "${unit}" state fold has no land-bound claim authorization.`,
-    );
+    error(`Unit "${unit}" state fold has no land-bound claim authorization.`);
   }
   if (authorization.owner !== transaction.owner) {
     error(
@@ -1683,9 +1698,7 @@ function handleFoldUnitMerge(args: string[]): void {
         auditBlockField(row.block, "Tombstone OID") ===
           transaction.released_after_git?.tombstone_oid &&
         auditBlockField(row.block, "Tombstone Generation") ===
-          String(
-            transaction.released_after_git?.tombstone_generation,
-          ) &&
+          String(transaction.released_after_git?.tombstone_generation) &&
         auditBlockField(row.block, "User Input") ===
           transaction.released_after_git?.user_input,
     );
@@ -1742,12 +1755,14 @@ function handleFoldUnitMerge(args: string[]): void {
       }
     },
   );
-  console.log(JSON.stringify({
-    folded: true,
-    unit,
-    pinned_oid: pinnedOid,
-    generation,
-  }));
+  console.log(
+    JSON.stringify({
+      folded: true,
+      unit,
+      pinned_oid: pinnedOid,
+      generation,
+    }),
+  );
 }
 
 function handleSyncUnitScopeStage(args: string[]): void {
@@ -1762,10 +1777,7 @@ function handleSyncUnitScopeStage(args: string[]): void {
     const stamp = validateLiveUnitScope(pd, unit);
     if (!stamp) error("Scoped Unit stage sync requires a live Unit claim.");
     const stage = findStageBySlug(slug);
-    if (
-      stage?.phase !== "construction" ||
-      stage.for_each !== "unit-of-work"
-    ) {
+    if (stage?.phase !== "construction" || stage.for_each !== "unit-of-work") {
       error(`Stage "${slug}" is not a per-unit Construction stage.`);
     }
     content = setField(content, "Current Stage", slug);
@@ -1777,12 +1789,14 @@ function handleSyncUnitScopeStage(args: string[]): void {
     }
     content = setField(content, "Last Updated", isoTimestamp());
     writeStateFile(pd, content);
-    console.log(JSON.stringify({
-      synced: true,
-      stage: slug,
-      unit,
-      generation: stamp.generation,
-    }));
+    console.log(
+      JSON.stringify({
+        synced: true,
+        stage: slug,
+        unit,
+        generation: stamp.generation,
+      }),
+    );
   });
 }
 
@@ -1808,7 +1822,7 @@ function handlePark(_args: string[]): void {
   const initialContent = readStateFile(pd);
   if (
     getField(initialContent, "Construction Autonomy Mode")?.trim() ===
-      "autonomous"
+    "autonomous"
   ) {
     error(
       "Refusing to park: Construction Autonomy Mode is autonomous. An unattended " +
@@ -1830,11 +1844,13 @@ function handlePark(_args: string[]): void {
       `[aidlc] warning: parked Unit "${scopeStamp.unit}" locally from its checkout stamp; ` +
         "claim liveness was not required and will be rechecked at the next claim-sensitive boundary.\n",
     );
-    console.log(JSON.stringify({
-      parked: true,
-      unit: scopeStamp.unit,
-      checkout_local: true,
-    }));
+    console.log(
+      JSON.stringify({
+        parked: true,
+        unit: scopeStamp.unit,
+        checkout_local: true,
+      }),
+    );
     return;
   }
   withAuditLock(pd, () => {
@@ -1857,11 +1873,23 @@ function handlePark(_args: string[]): void {
     emitAudit(pd, "WORKFLOW_PARKED", {
       Stage: currentSlug,
     });
-    content = setOrInsertField(content, "## Runtime State", "Parked", timestamp);
-    content = setOrInsertField(content, "## Runtime State", "Parked At Stage", currentSlug);
+    content = setOrInsertField(
+      content,
+      "## Runtime State",
+      "Parked",
+      timestamp,
+    );
+    content = setOrInsertField(
+      content,
+      "## Runtime State",
+      "Parked At Stage",
+      currentSlug,
+    );
     content = setField(content, "Last Updated", timestamp);
     writeStateFile(pd, content);
-    console.log(JSON.stringify({ parked: true, stage: currentSlug, timestamp }));
+    console.log(
+      JSON.stringify({ parked: true, stage: currentSlug, timestamp }),
+    );
   });
 }
 
@@ -1878,11 +1906,13 @@ function handleUnpark(_args: string[]): void {
     } catch {
       // Idempotent.
     }
-    console.log(JSON.stringify({
-      unparked: true,
-      was_parked: wasParked,
-      checkout_local: true,
-    }));
+    console.log(
+      JSON.stringify({
+        unparked: true,
+        was_parked: wasParked,
+        checkout_local: true,
+      }),
+    );
     return;
   }
   withAuditLock(pd, () => {
@@ -1944,11 +1974,17 @@ function handleUnit(args: string[]): void {
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
   if (stage.for_each !== "unit-of-work") {
-    error(`Stage "${slug}" is not per-unit (for_each: unit-of-work); unit receipts do not apply.`);
+    error(
+      `Stage "${slug}" is not per-unit (for_each: unit-of-work); unit receipts do not apply.`,
+    );
   }
   if (action === "pause") {
-    if (!reason) error("unit pause requires --reason <text> (why the unit stopped).");
-    if (!nextAction) error("unit pause requires --next-action <text> (the exact next step on resume).");
+    if (!reason)
+      error("unit pause requires --reason <text> (why the unit stopped).");
+    if (!nextAction)
+      error(
+        "unit pause requires --next-action <text> (the exact next step on resume).",
+      );
   }
   if (waveMode && action !== "complete") {
     error("unit --wave is supported only with the complete action.");
@@ -1999,14 +2035,11 @@ function handleUnit(args: string[]): void {
     // wave has no completion receipt yet, and old wave receipts can remain
     // after an explicit switch to unit-major, so ledger mode is insufficient.
     // The route check is read-only and shares this lock's ledger snapshot.
-    const routed = action === "complete"
-      ? {}
-      : readEngineUnitDirective(pd, slug, unit, action);
-    if (
-      routed.kind === "run-stage" &&
-      routed.stage === slug &&
-      routed.wave
-    ) {
+    const routed =
+      action === "complete"
+        ? {}
+        : readEngineUnitDirective(pd, slug, unit, action);
+    if (routed.kind === "run-stage" && routed.stage === slug && routed.wave) {
       throw new UnitWaveRouteRefusalError(
         `Refusing unit ${action} for "${unit}" of "${slug}": a wave is active for this stage ` +
           "(the orchestration engine currently routes it as a batch). " +
@@ -2038,7 +2071,14 @@ function handleUnit(args: string[]): void {
       if (checkpoint && checkpoint.unit === unit) {
         // Idempotent re-entry on the same unit: a crashed conductor may re-run
         // start after resume; acknowledge without a duplicate receipt.
-        console.log(JSON.stringify({ unit, stage: slug, state: checkpoint.state, already_active: true }));
+        console.log(
+          JSON.stringify({
+            unit,
+            stage: slug,
+            state: checkpoint.state,
+            already_active: true,
+          }),
+        );
         return;
       }
       requireEngineRoutedUnit(routed, slug, unit);
@@ -2057,7 +2097,11 @@ function handleUnit(args: string[]): void {
         );
       }
     } else if (action === "resume") {
-      if (!checkpoint || checkpoint.unit !== unit || checkpoint.state !== "paused") {
+      if (
+        !checkpoint ||
+        checkpoint.unit !== unit ||
+        checkpoint.state !== "paused"
+      ) {
         error(
           `Refusing to resume unit "${unit}" for "${slug}": it is not the paused unit` +
             `${checkpoint ? ` (active: "${checkpoint.unit}", ${checkpoint.state})` : " (no unit is active)"}.`,
@@ -2137,7 +2181,12 @@ function handleUnit(args: string[]): void {
       content = removeField(content, "Unit Pause Reason");
       content = removeField(content, "Unit Next Action");
     } else {
-      content = setOrInsertField(content, "## Runtime State", "Active Unit", unit);
+      content = setOrInsertField(
+        content,
+        "## Runtime State",
+        "Active Unit",
+        unit,
+      );
       content = setOrInsertField(
         content,
         "## Runtime State",
@@ -2145,8 +2194,18 @@ function handleUnit(args: string[]): void {
         action === "pause" ? "paused" : "in-progress",
       );
       if (action === "pause") {
-        content = setOrInsertField(content, "## Runtime State", "Unit Pause Reason", reason ?? "");
-        content = setOrInsertField(content, "## Runtime State", "Unit Next Action", nextAction ?? "");
+        content = setOrInsertField(
+          content,
+          "## Runtime State",
+          "Unit Pause Reason",
+          reason ?? "",
+        );
+        content = setOrInsertField(
+          content,
+          "## Runtime State",
+          "Unit Next Action",
+          nextAction ?? "",
+        );
       } else {
         content = removeField(content, "Unit Pause Reason");
         content = removeField(content, "Unit Next Action");
@@ -2154,17 +2213,22 @@ function handleUnit(args: string[]): void {
     }
     content = setField(content, "Last Updated", timestamp);
     writeStateFile(pd, content);
-    console.log(JSON.stringify({
-      emitted: eventType,
-      stage: slug,
-      unit,
-      timestamp,
-      ...(waveMode ? { wave: true, memory_entries: memoryEntries } : {}),
-    }));
+    console.log(
+      JSON.stringify({
+        emitted: eventType,
+        stage: slug,
+        unit,
+        timestamp,
+        ...(waveMode ? { wave: true, memory_entries: memoryEntries } : {}),
+      }),
+    );
   });
 }
 
-function validateStateLineValue(label: string, value: string | undefined): void {
+function validateStateLineValue(
+  label: string,
+  value: string | undefined,
+): void {
   if (value !== undefined && hasUnsafeSingleLineCharacter(value)) {
     error(`${label} must be printable text on one physical line.`);
   }
@@ -2197,13 +2261,13 @@ function readEngineUnitDirective(
     const result = spawnSync(command[0], command.slice(1), {
       cwd: pd,
       encoding: "utf-8",
-        env: {
-          ...process.env,
-          AIDLC_PROJECT_DIR: pd,
-          [ROUTE_CHECK_ENV]: "1",
-          ...(stateSessionOverride
-            ? { AIDLC_SESSION_OVERRIDE: stateSessionOverride }
-            : {}),
+      env: {
+        ...process.env,
+        AIDLC_PROJECT_DIR: pd,
+        [ROUTE_CHECK_ENV]: "1",
+        ...(stateSessionOverride
+          ? { AIDLC_SESSION_OVERRIDE: stateSessionOverride }
+          : {}),
       },
       timeout: 30_000,
     });
@@ -2223,7 +2287,7 @@ function readEngineUnitDirective(
     }
     const transport =
       directive !== null && typeof directive === "object"
-        ? directive as { kind?: unknown; continue_token?: unknown }
+        ? (directive as { kind?: unknown; continue_token?: unknown })
         : {};
     if (transport.kind !== "load-steering") break;
     if (
@@ -2238,7 +2302,7 @@ function readEngineUnitDirective(
     subargs = ["continue", transport.continue_token, "--project-dir", pd];
   }
   return directive !== null && typeof directive === "object"
-    ? directive as EngineUnitDirective
+    ? (directive as EngineUnitDirective)
     : {};
 }
 
@@ -2284,13 +2348,13 @@ function requireEngineRoutedWaveUnit(
     const result = spawnSync(command[0], command.slice(1), {
       cwd: pd,
       encoding: "utf-8",
-        env: {
-          ...process.env,
-          AIDLC_PROJECT_DIR: pd,
-          [ROUTE_CHECK_ENV]: "1",
-          ...(stateSessionOverride
-            ? { AIDLC_SESSION_OVERRIDE: stateSessionOverride }
-            : {}),
+      env: {
+        ...process.env,
+        AIDLC_PROJECT_DIR: pd,
+        [ROUTE_CHECK_ENV]: "1",
+        ...(stateSessionOverride
+          ? { AIDLC_SESSION_OVERRIDE: stateSessionOverride }
+          : {}),
       },
       timeout: 30_000,
     });
@@ -2310,7 +2374,7 @@ function requireEngineRoutedWaveUnit(
     }
     const transport =
       directive !== null && typeof directive === "object"
-        ? directive as { kind?: unknown; continue_token?: unknown }
+        ? (directive as { kind?: unknown; continue_token?: unknown })
         : {};
     if (transport.kind !== "load-steering") break;
     if (
@@ -2327,7 +2391,7 @@ function requireEngineRoutedWaveUnit(
 
   const routed =
     directive !== null && typeof directive === "object"
-      ? directive as {
+      ? (directive as {
           kind?: unknown;
           stage?: unknown;
           wave?: {
@@ -2338,9 +2402,11 @@ function requireEngineRoutedWaveUnit(
               review_state?: unknown;
             }>;
           };
-        }
+        })
       : {};
-  const entry = routed.wave?.entries?.find((candidate) => candidate.unit === unit);
+  const entry = routed.wave?.entries?.find(
+    (candidate) => candidate.unit === unit,
+  );
   const reviewSettled =
     entry?.review_state === "READY" ||
     entry?.review_state === "NOT-READY" ||
@@ -2375,7 +2441,9 @@ function fanInWaveUnitMemory(pd: string, stage: string, unit: string): number {
   }
   const unitPath = join(rec, "construction", unit, stage, "memory.md");
   const parentPath = join(rec, "construction", stage, "memory.md");
-  const unitContent = existsSync(unitPath) ? readFileSync(unitPath, "utf-8") : "";
+  const unitContent = existsSync(unitPath)
+    ? readFileSync(unitPath, "utf-8")
+    : "";
   const entries = parseMemoryEntries(unitContent);
   if (entries.length === 0 && !existsSync(parentPath)) return 0;
 
@@ -2405,7 +2473,10 @@ function fanInWaveUnitMemory(pd: string, stage: string, unit: string): number {
 
   mkdirSync(dirname(parentPath), { recursive: true });
   if (!existsSync(parentPath) || added > 0) {
-    writeFileAtomic(parentPath, parentContent.endsWith("\n") ? parentContent : `${parentContent}\n`);
+    writeFileAtomic(
+      parentPath,
+      parentContent.endsWith("\n") ? parentContent : `${parentContent}\n`,
+    );
   }
   return added;
 }
@@ -2417,7 +2488,11 @@ function fanInWaveUnitMemory(pd: string, stage: string, unit: string): number {
 // required list applies (fail strict, like unitCovered's kinds=null path).
 function missingUnitArtifacts(
   pd: string,
-  stage: { slug: string; produces?: string[]; produces_kinds?: Record<string, string[]> },
+  stage: {
+    slug: string;
+    produces?: string[];
+    produces_kinds?: Record<string, string[]>;
+  },
   unit: string,
 ): string[] {
   const rec = recordDir(pd);
@@ -2435,7 +2510,13 @@ function missingUnitArtifacts(
   }
   const missing: string[] = [];
   for (const name of required) {
-    const p = join(rec, "construction", unit, stage.slug, artifactFilename(name));
+    const p = join(
+      rec,
+      "construction",
+      unit,
+      stage.slug,
+      artifactFilename(name),
+    );
     if (!isRegularFile(p)) missing.push(name);
   }
   return missing;
@@ -2454,7 +2535,9 @@ function handleCheckbox(args: string[]): void {
     const slug = pair.slice(0, eqIdx);
     const stateStr = pair.slice(eqIdx + 1);
     if (!isCheckboxState(stateStr)) {
-      error(`Invalid state: ${stateStr}. Valid: ${VALID_CHECKBOX_STATES.join(", ")}`);
+      error(
+        `Invalid state: ${stateStr}. Valid: ${VALID_CHECKBOX_STATES.join(", ")}`,
+      );
     }
     changes.push({ slug, state: stateStr });
   }
@@ -2463,18 +2546,24 @@ function handleCheckbox(args: string[]): void {
   // Completed counter resync sees a consistent snapshot (a concurrent checkbox
   // flip between our read and write would otherwise desync the count).
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  for (const { slug, state } of changes) {
-    content = setCheckbox(content, slug, state);
-  }
+    for (const { slug, state } of changes) {
+      content = setCheckbox(content, slug, state);
+    }
 
-  // Sync Completed counter to actual [x] count
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
+    // Sync Completed counter to actual [x] count
+    const completedCount = countCheckboxes(content, "completed");
+    content = setField(content, "Completed", String(completedCount));
 
-  writeStateFile(pd, content);
-  console.log(JSON.stringify({ updated: true, checkboxes: changes.length, completed_count: completedCount }));
+    writeStateFile(pd, content);
+    console.log(
+      JSON.stringify({
+        updated: true,
+        checkboxes: changes.length,
+        completed_count: completedCount,
+      }),
+    );
   });
 }
 
@@ -2482,7 +2571,9 @@ function handleCount(args: string[]): void {
   if (args.length < 1) error("Usage: aidlc-state.ts count <state>");
   const stateStr = args[0];
   if (!isCheckboxState(stateStr)) {
-    error(`Invalid state: ${stateStr}. Valid: ${VALID_CHECKBOX_STATES.join(", ")}`);
+    error(
+      `Invalid state: ${stateStr}. Valid: ${VALID_CHECKBOX_STATES.join(", ")}`,
+    );
   }
   const pd = resolveProjectDir(projectDir);
   const content = readStateFile(pd);
@@ -2540,9 +2631,12 @@ function autonomousSwarmOwnsStage(
   stateContent: string,
 ): boolean {
   if (stage.phase !== "construction") return false;
-  if (stage.for_each !== "unit-of-work" || stage.mode !== "subagent") return false;
+  if (stage.for_each !== "unit-of-work" || stage.mode !== "subagent")
+    return false;
   if (!isAutonomousMode(stateContent)) return false;
-  if (getField(stateContent, "Construction Iteration")?.trim() === "unit-major") {
+  if (
+    getField(stateContent, "Construction Iteration")?.trim() === "unit-major"
+  ) {
     return false;
   }
   const scope = getField(stateContent, "Scope");
@@ -2570,7 +2664,9 @@ function isSettledSwarmForArtifactGuard(
   stateContent: string,
   action: ReviewerPreconditionAction = "complete",
 ): boolean {
-  if (getField(stateContent, "Construction Iteration")?.trim() === "unit-major") {
+  if (
+    getField(stateContent, "Construction Iteration")?.trim() === "unit-major"
+  ) {
     return false;
   }
   if (!isAutonomousSwarmStage(pd, stateContent, stage)) return false;
@@ -2627,7 +2723,9 @@ function currentAttemptSwarmUnits(
     );
   }
   const live = new Set(resolution.units);
-  const missing = [...obligations.units].filter((unit) => !live.has(unit)).sort();
+  const missing = [...obligations.units]
+    .filter((unit) => !live.has(unit))
+    .sort();
   const added = resolution.units
     .filter((unit) => !obligations.units.has(unit))
     .sort();
@@ -2635,7 +2733,9 @@ function currentAttemptSwarmUnits(
     const detail = [
       missing.length > 0 ? `missing attempt Units: ${missing.join(", ")}` : "",
       added.length > 0 ? `added Units: ${added.join(", ")}` : "",
-    ].filter(Boolean).join("; ");
+    ]
+      .filter(Boolean)
+      .join("; ");
     error(
       `${reviewerPreconditionPrefix(stageSlug, action)}: the Unit DAG changed during the current swarm attempt ` +
         `(${detail}). Restore unit-of-work-dependency.md to the attempt-bound Unit set or restart the stage attempt.`,
@@ -2720,7 +2820,7 @@ function revisionBackstopDisabled(): boolean {
 // correct refusal (there is no record to have written them to).
 function producesDirsForStage(
   pd: string,
-  stage: { slug: string; phase: string; for_each?: string }
+  stage: { slug: string; phase: string; for_each?: string },
 ): string[] {
   if (KNOWN_CODEKB_STAGES.has(stage.slug)) {
     const repos = intentRepos(pd);
@@ -2761,7 +2861,13 @@ function producesDirsForStage(
 // exactly as strict as today.
 function producesArtifactsExist(
   pd: string,
-  stage: { slug: string; phase: string; for_each?: string; produces?: string[]; produces_kinds?: Record<string, string[]> }
+  stage: {
+    slug: string;
+    phase: string;
+    for_each?: string;
+    produces?: string[];
+    produces_kinds?: Record<string, string[]>;
+  },
 ): boolean {
   const produces = stage.produces ?? [];
   if (produces.length === 0) return true; // nothing declared -> nothing to verify
@@ -2785,9 +2891,12 @@ function producesArtifactsExist(
   }
   const dirs = producesDirsForStage(pd, stage);
   if (KNOWN_CODEKB_STAGES.has(stage.slug)) {
-    return dirs.length > 0 && dirs.every((dir) =>
-      produces.every((name) =>
-        isRegularFile(join(dir, artifactFilename(name)))
+    return (
+      dirs.length > 0 &&
+      dirs.every((dir) =>
+        produces.every((name) =>
+          isRegularFile(join(dir, artifactFilename(name))),
+        ),
       )
     );
   }
@@ -2823,8 +2932,10 @@ interface GateSensorEvaluation {
 
 function pathIsWithin(root: string, candidate: string): boolean {
   const rel = relative(root, candidate);
-  return rel === "" ||
-    (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+  return (
+    rel === "" ||
+    (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel))
+  );
 }
 
 // Resolve every existing declared deliverable, reusing the same stage directory
@@ -2842,10 +2953,7 @@ function existingDeclaredArtifactPaths(
   },
   artifacts?: string,
 ): string[] {
-  const names = [
-    ...(stage.produces ?? []),
-    ...(stage.optional_produces ?? []),
-  ];
+  const names = [...(stage.produces ?? []), ...(stage.optional_produces ?? [])];
   const declaredFilenames = new Set(names.map(artifactFilename));
   const dirs = producesDirsForStage(pd, stage);
   const projectRoot = realpathSync(pd);
@@ -2917,7 +3025,10 @@ function existingDeclaredArtifactPaths(
 }
 
 function parseSensorFireVerdict(stdout: string): SensorFireVerdict | null {
-  const lines = stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   for (let i = lines.length - 1; i >= 0; i--) {
     try {
       const value = JSON.parse(lines[i]) as Partial<SensorFireVerdict>;
@@ -2958,8 +3069,10 @@ function gateSensorMatchesOutput(
   >[number],
   outputPath: string,
 ): boolean {
-  return sensor.matches === undefined ||
-    new Bun.Glob(sensor.matches).match(outputPath.replace(/\\/g, "/"));
+  return (
+    sensor.matches === undefined ||
+    new Bun.Glob(sensor.matches).match(outputPath.replace(/\\/g, "/"))
+  );
 }
 
 function artifactFingerprint(path: string): string | null {
@@ -2979,18 +3092,23 @@ function fireGateSensors(
   const issues: BlockingSensorIssue[] = [];
   const fingerprints = new Map<string, string>();
   if (
-    resolveCeremony("sensors", getField(stateContent, "Scope"), stateContent).value === "off"
-  ) return { issues, fingerprints };
+    resolveCeremony("sensors", getField(stateContent, "Scope"), stateContent)
+      .value === "off"
+  )
+    return { issues, fingerprints };
   const paths = existingDeclaredArtifactPaths(pd, stage, artifacts);
   if (paths.length === 0) return { issues, fingerprints };
 
-  const sensors = (stage.sensors_applicable ?? []).filter((sensor) =>
-    sensor.fire_on === "gate"
+  const sensors = (stage.sensors_applicable ?? []).filter(
+    (sensor) => sensor.fire_on === "gate",
   );
   for (const sensor of sensors) {
     if (sensor.default_severity !== "blocking") continue;
     for (const outputPath of paths) {
-      if (!gateSensorMatchesOutput(sensor, outputPath) || fingerprints.has(outputPath)) {
+      if (
+        !gateSensorMatchesOutput(sensor, outputPath) ||
+        fingerprints.has(outputPath)
+      ) {
         continue;
       }
       const fingerprint = artifactFingerprint(outputPath);
@@ -3008,17 +3126,17 @@ function fireGateSensors(
   }
 
   const executable = compiledExecutable();
-  const sensorTool = fileURLToPath(new URL("./aidlc-sensor.ts", import.meta.url));
+  const sensorTool = fileURLToPath(
+    new URL("./aidlc-sensor.ts", import.meta.url),
+  );
   for (const sensor of sensors) {
     for (const outputPath of paths) {
       if (!gateSensorMatchesOutput(sensor, outputPath)) continue;
       const expectedFingerprint = fingerprints.get(outputPath);
       if (
         sensor.default_severity === "blocking" &&
-        (
-          expectedFingerprint === undefined ||
-          artifactFingerprint(outputPath) !== expectedFingerprint
-        )
+        (expectedFingerprint === undefined ||
+          artifactFingerprint(outputPath) !== expectedFingerprint)
       ) {
         issues.push({
           sensorId: sensor.id,
@@ -3115,7 +3233,8 @@ function fireGateSensors(
           sensorId: sensor.id,
           outputPath,
           detailPath: null,
-          reason: "dispatcher verdict identity did not match the requested fire",
+          reason:
+            "dispatcher verdict identity did not match the requested fire",
         });
         continue;
       }
@@ -3135,7 +3254,7 @@ function fireGateSensors(
         detailPath: verdict.detail_path,
         reason:
           verdict.result === "passed"
-            ? verdict.note ?? "invalid passed verdict"
+            ? (verdict.note ?? "invalid passed verdict")
             : verdict.result === "budget-override"
               ? "sensor execution exceeded its budget"
               : "failed verdict omitted its detail path",
@@ -3174,21 +3293,25 @@ function hasBlockingSensorOverrideAuthorization(
   const rows = readAuditShardEvents(pd);
   const stageRows = rows.filter((row) => {
     const workflow = auditField(row.block, "Workflow");
-    return auditField(row.block, "Stage") === slug &&
-      !workflow?.startsWith("single-stage:");
+    return (
+      auditField(row.block, "Stage") === slug &&
+      !workflow?.startsWith("single-stage:")
+    );
   });
-  const boundaries = stageRows.filter((row) =>
-    row.event === "STAGE_STARTED" ||
-    row.event === "STAGE_AWAITING_APPROVAL" ||
-    row.event === "GATE_REJECTED"
+  const boundaries = stageRows.filter(
+    (row) =>
+      row.event === "STAGE_STARTED" ||
+      row.event === "STAGE_AWAITING_APPROVAL" ||
+      row.event === "GATE_REJECTED",
   );
-  const interactions = stageRows.filter((row) =>
-    row.event === "DECISION_RECORDED" ||
-    row.event === "QUESTION_ANSWERED"
+  const interactions = stageRows.filter(
+    (row) =>
+      row.event === "DECISION_RECORDED" || row.event === "QUESTION_ANSWERED",
   );
-  const answers = interactions.filter((row) =>
-    row.event === "QUESTION_ANSWERED" &&
-    auditField(row.block, "Details") === BLOCKING_SENSOR_OVERRIDE_CHOICE
+  const answers = interactions.filter(
+    (row) =>
+      row.event === "QUESTION_ANSWERED" &&
+      auditField(row.block, "Details") === BLOCKING_SENSOR_OVERRIDE_CHOICE,
   );
 
   for (const answer of answers) {
@@ -3196,8 +3319,8 @@ function hasBlockingSensorOverrideAuthorization(
       continue;
     }
     if (
-      !interactions.every((row) =>
-        row === answer || auditEventIsAfter(answer, row)
+      !interactions.every(
+        (row) => row === answer || auditEventIsAfter(answer, row),
       )
     ) {
       continue;
@@ -3215,15 +3338,16 @@ function hasBlockingSensorOverrideAuthorization(
         .split(",")
         .map((option) => option.trim());
       return BLOCKING_SENSOR_OVERRIDE_OPTIONS.every((option) =>
-        options.includes(option)
+        options.includes(option),
       );
     });
     if (!decision) continue;
-    const humanTurn = rows.some((row) =>
-      row.event === "HUMAN_TURN" &&
-      row.shard === answer.shard &&
-      row.pos > decision.pos &&
-      row.pos < answer.pos
+    const humanTurn = rows.some(
+      (row) =>
+        row.event === "HUMAN_TURN" &&
+        row.shard === answer.shard &&
+        row.pos > decision.pos &&
+        row.pos < answer.pos,
     );
     if (humanTurn) return true;
   }
@@ -3242,7 +3366,7 @@ function enforceBlockingGateSensors(
   if (issues.length === 0) return;
   const sensorIds = [...new Set(issues.map((issue) => issue.sensorId))];
   const detailPaths = issues.flatMap((issue) =>
-    issue.detailPath === null ? [] : [issue.detailPath]
+    issue.detailPath === null ? [] : [issue.detailPath],
   );
   const reasons = issues.map(
     (issue) => `${issue.sensorId}@${issue.outputPath}: ${issue.reason}`,
@@ -3295,7 +3419,7 @@ function addBlockingSensorOverrideFields(
     ...new Set(issues.map((issue) => issue.sensorId)),
   ].join(",");
   const detailPaths = issues.flatMap((issue) =>
-    issue.detailPath === null ? [] : [issue.detailPath]
+    issue.detailPath === null ? [] : [issue.detailPath],
   );
   if (detailPaths.length > 0) {
     fields["Blocking Sensor Detail Paths"] = detailPaths.join(",");
@@ -3460,7 +3584,16 @@ function workspaceHasWork(pd: string): boolean {
 // untouched. `stage` is the StageEntry being completed. No-op when bypass active.
 function verifyStageArtifacts(
   pd: string,
-  stage: { slug: string; name: string; phase: string; for_each?: string; mode?: string; produces?: string[]; produces_kinds?: Record<string, string[]>; workspace_requires?: boolean },
+  stage: {
+    slug: string;
+    name: string;
+    phase: string;
+    for_each?: string;
+    mode?: string;
+    produces?: string[];
+    produces_kinds?: Record<string, string[]>;
+    workspace_requires?: boolean;
+  },
   action: ReviewerPreconditionAction = "complete",
 ): void {
   if (artifactGuardDisabled()) return;
@@ -3488,13 +3621,14 @@ function verifyStageArtifacts(
   if (!producesArtifactsExist(pd, stage)) {
     const message =
       `${reviewerPreconditionPrefix(stage.slug, action)}: none of its declared artifacts exist ` +
-        `under the intent's record directory. The stage protocol requires ${stage.name} ` +
-        `to produce output before the gate. Produce the artifacts before completing. ` +
-        `(declared: ${(stage.produces ?? []).join(", ") || "none"})`;
+      `under the intent's record directory. The stage protocol requires ${stage.name} ` +
+      `to produce output before the gate. Produce the artifacts before completing. ` +
+      `(declared: ${(stage.produces ?? []).join(", ") || "none"})`;
     refuseStateGuard(pd, stateContent ?? readStateFile(pd), stage, {
       code: "REQUIRED_ARTIFACTS_MISSING",
       blockedAction: action,
-      invariant: "Every applicable required output exists before certification.",
+      invariant:
+        "Every applicable required output exists before certification.",
       userMessage: message,
     });
   }
@@ -3502,14 +3636,15 @@ function verifyStageArtifacts(
   if (stage.workspace_requires && !workspaceHasWork(pd)) {
     const message =
       `${reviewerPreconditionPrefix(stage.slug, action)}: it is a code-producing stage ` +
-        `(workspace_requires) but no source work is evident outside the aidlc/ ` +
-        `workspace tree. In a git workspace this means no uncommitted change and no ` +
-        `code in the last commit; otherwise no source file exists. Planning docs alone ` +
-        `do not satisfy ${stage.name} - write the code to the workspace.`;
+      `(workspace_requires) but no source work is evident outside the aidlc/ ` +
+      `workspace tree. In a git workspace this means no uncommitted change and no ` +
+      `code in the last commit; otherwise no source file exists. Planning docs alone ` +
+      `do not satisfy ${stage.name} - write the code to the workspace.`;
     refuseStateGuard(pd, stateContent ?? readStateFile(pd), stage, {
       code: "REQUIRED_SOURCE_WORK_MISSING",
       blockedAction: action,
-      invariant: "A workspace-producing stage contains application source work.",
+      invariant:
+        "A workspace-producing stage contains application source work.",
       userMessage: message,
     });
   }
@@ -3548,7 +3683,8 @@ function observeChangeControl(
     checked.acceptedChanges ?? [],
     changeControlSelection,
   );
-  if (notices.length > 0) console.log(JSON.stringify({ change_notices: notices }));
+  if (notices.length > 0)
+    console.log(JSON.stringify({ change_notices: notices }));
 }
 
 function verifySummaryConfirmationPrecondition(
@@ -3651,7 +3787,9 @@ function refuseStateGuard(
   const snapshot = guardAttemptState(pd, content, stage, {
     ...(input.unit ? { unit: input.unit } : {}),
     ...(input.receipts ? { receipts: input.receipts } : {}),
-    ...(input.summaryCoverage ? { summaryCoverage: input.summaryCoverage } : {}),
+    ...(input.summaryCoverage
+      ? { summaryCoverage: input.summaryCoverage }
+      : {}),
   });
   const teamGate = teamUnitGateStatus(pd, content, stage.slug, input.unit);
   const refusal = evaluateGuardRefusal({
@@ -3667,7 +3805,11 @@ function refuseStateGuard(
     ...(teamGate ? { teamGate } : {}),
     ...(input.autonomousBolt ? { autonomousBolt: input.autonomousBolt } : {}),
   });
-  throw new StateGuardRefusalError(refusal, snapshot.attempt, snapshot.resources);
+  throw new StateGuardRefusalError(
+    refusal,
+    snapshot.attempt,
+    snapshot.resources,
+  );
 }
 
 function verifyReviewerPrecondition(
@@ -3700,7 +3842,7 @@ function verifyReviewerPrecondition(
   // the receipt requirement there.
   const autonomousSwarm = isAutonomousSwarmStage(pd, content, stage);
   const reviewClass = autonomousSwarm
-    ? stage.review_class ?? "adversarial"
+    ? (stage.review_class ?? "adversarial")
     : resolveReviewClass(
         stage.review_class ?? "adversarial",
         getField(content, "Scope") ?? "",
@@ -3737,15 +3879,18 @@ function verifyReviewerPrecondition(
     receipts.stagePending?.verificationFailed === true ||
     verificationFailedUnits.length > 0
   ) {
-    const unit = verificationFailedUnits.length === 1
-      ? verificationFailedUnits[0]
-      : undefined;
-    const scope = verificationFailedUnits.length > 0
-      ? ` for Unit${verificationFailedUnits.length === 1 ? "" : "s"} ${verificationFailedUnits.join(", ")}`
-      : "";
-    const iteration = unit === undefined
-      ? receipts.stagePending?.iteration ?? 1
-      : receipts.unitPending.get(unit)?.iteration ?? 1;
+    const unit =
+      verificationFailedUnits.length === 1
+        ? verificationFailedUnits[0]
+        : undefined;
+    const scope =
+      verificationFailedUnits.length > 0
+        ? ` for Unit${verificationFailedUnits.length === 1 ? "" : "s"} ${verificationFailedUnits.join(", ")}`
+        : "";
+    const iteration =
+      unit === undefined
+        ? (receipts.stagePending?.iteration ?? 1)
+        : (receipts.unitPending.get(unit)?.iteration ?? 1);
     const unitFlag = unit === undefined ? "" : ` --unit ${unit}`;
     const message =
       `${reviewerPreconditionPrefix(stage.slug, action)} because the recorded review${scope} ` +
@@ -3756,7 +3901,8 @@ function verifyReviewerPrecondition(
     refuseStateGuard(pd, content, stage, {
       code: "REVIEW_EVIDENCE_MISSING",
       blockedAction: action,
-      invariant: "A recorded review remains available and matches its completion.",
+      invariant:
+        "A recorded review remains available and matches its completion.",
       userMessage: message,
       receipts,
       unit,
@@ -3769,8 +3915,8 @@ function verifyReviewerPrecondition(
         : "";
     const message =
       `${reviewerPreconditionPrefix(stage.slug, action)}: the recovery review${scope} ` +
-        "is still in progress. Finish that review and record its result before " +
-        "presenting the gate or completing the stage.";
+      "is still in progress. Finish that review and record its result before " +
+      "presenting the gate or completing the stage.";
     refuseStateGuard(pd, content, stage, {
       code: "REVIEW_RECOVERY_PENDING",
       blockedAction: action,
@@ -3778,9 +3924,7 @@ function verifyReviewerPrecondition(
       userMessage: message,
       receipts,
       unit:
-        pendingRecoveryUnits.length === 1
-          ? pendingRecoveryUnits[0]
-          : undefined,
+        pendingRecoveryUnits.length === 1 ? pendingRecoveryUnits[0] : undefined,
     });
   }
 
@@ -3788,16 +3932,9 @@ function verifyReviewerPrecondition(
   // The workspace-global newest-receipt reconciliation remains the outer
   // boundary; freshReviewReceipts additionally validates each modern unit
   // binding and applies newest-fresh-claimant shielding per path.
-  const sourceFreshnessOff =
-    process.env.AIDLC_SKIP_SOURCE_FRESHNESS === "1";
+  const sourceFreshnessOff = process.env.AIDLC_SKIP_SOURCE_FRESHNESS === "1";
   const settledSwarm =
-    perUnit &&
-    settledSwarmForArtifactGuardOrError(
-      pd,
-      stage,
-      content,
-      action,
-    );
+    perUnit && settledSwarmForArtifactGuardOrError(pd, stage, content, action);
   // A tightly bounded reconciliation handles the one intentional exception to
   // the global outer boundary: after an unclaimed addition is reverted, the
   // current baseline delta can be fully covered by fresh modern unit bindings
@@ -3828,7 +3965,10 @@ function verifyReviewerPrecondition(
     }
     const claimModels = [...receipts.freshUnitClaims.values()];
     baselineUnclaimed = [...baselineChanged]
-      .filter((pathKey) => !claimModels.some((claims) => sourceClaimCovers(pathKey, claims)))
+      .filter(
+        (pathKey) =>
+          !claimModels.some((claims) => sourceClaimCovers(pathKey, claims)),
+      )
       .sort();
   }
   const resolutionForReconciliation = perUnit ? resolveBoltDag(pd) : null;
@@ -3915,7 +4055,14 @@ function verifyReviewerPrecondition(
   if (noDagObserved) {
     if (receipts.mergedBoltUnits.size === 0) {
       if (!sawStageReview) {
-        reviewerPreconditionError(pd, content, stage, reviewer, receipts, action);
+        reviewerPreconditionError(
+          pd,
+          content,
+          stage,
+          reviewer,
+          receipts,
+          action,
+        );
       }
       return;
     }
@@ -3946,9 +4093,7 @@ function verifyReviewerPrecondition(
   if (missing.length > 0) {
     if (noDagObserved) {
       const requestCommands = missing.flatMap((unit) => {
-        if (
-          receipts.unitStaleProgress.get(unit)?.recoverySpent === true
-        ) {
+        if (receipts.unitStaleProgress.get(unit)?.recoverySpent === true) {
           return [];
         }
         const pending = receipts.unitPending.get(unit);
@@ -3964,8 +4109,7 @@ function verifyReviewerPrecondition(
         ];
       });
       const recoverySpent = missing.filter(
-        (unit) =>
-          receipts.unitStaleProgress.get(unit)?.recoverySpent === true,
+        (unit) => receipts.unitStaleProgress.get(unit)?.recoverySpent === true,
       );
       const guidance =
         requestCommands.length > 0
@@ -3990,7 +4134,9 @@ function verifyReviewerPrecondition(
       );
     }
     const stale = missing.filter((unit) => receipts.unitStale.has(unit));
-    const neverReviewed = missing.filter((unit) => !receipts.unitStale.has(unit));
+    const neverReviewed = missing.filter(
+      (unit) => !receipts.unitStale.has(unit),
+    );
     const recoveryAvailable = stale.filter(
       (unit) => receipts.unitStaleProgress.get(unit)?.recoverySpent !== true,
     );
@@ -4004,25 +4150,25 @@ function verifyReviewerPrecondition(
           `run \`aidlc-log.ts review --stage ${stage.slug} --unit <unit> --reviewer ` +
           `${reviewer} --iteration <next ordinal>\`, then record the verdict with ` +
           `the same command plus \`--verdict <READY|NOT-READY>\` and stop editing ` +
-          `this stage's output documents, that unit's source-manifest.json, and `
-          + `that unit's claimed source paths.`,
+          `this stage's output documents, that unit's source-manifest.json, and ` +
+          `that unit's claimed source paths.`,
       );
     }
     if (recoverySpent.length > 0) {
       guidance.push(
         autonomousSwarm
           ? `For autonomous units whose recovery was already spent (${recoverySpent.join(", ")}), ` +
-            `do not put them in --claimed or finalize/merge them. Halt and ask the ` +
-            `human whether to restart each Bolt; on approval abort/discard the old ` +
-            `Bolt and rerun the current swarm prepare step so the fresh Bolt ` +
-            `attempt restores one review allowance.`
+              `do not put them in --claimed or finalize/merge them. Halt and ask the ` +
+              `human whether to restart each Bolt; on approval abort/discard the old ` +
+              `Bolt and rerun the current swarm prepare step so the fresh Bolt ` +
+              `attempt restores one review allowance.`
           : `For units whose recovery was already spent (${recoverySpent.join(", ")}), ` +
-            `the one recovery review was already used and their output changed ` +
-            `again. ${recoveryGuidance(pd, content, stage.slug)}` +
-            (requestChangesResetIsExecutable(content, stage.slug)
-              ? " Only a human Request Changes decision resets the review attempt; " +
-                "do not record that rejection on the human's behalf."
-              : ""),
+              `the one recovery review was already used and their output changed ` +
+              `again. ${recoveryGuidance(pd, content, stage.slug)}` +
+              (requestChangesResetIsExecutable(content, stage.slug)
+                ? " Only a human Request Changes decision resets the review attempt; " +
+                  "do not record that rejection on the human's behalf."
+                : ""),
       );
     }
     if (neverReviewed.length > 0) {
@@ -4038,7 +4184,7 @@ function verifyReviewerPrecondition(
         `(${missing.join(", ")}). Changed after review: ` +
         `${stale.length > 0 ? stale.join(", ") : "none"}. Not yet reviewed: ` +
         `${neverReviewed.length > 0 ? neverReviewed.join(", ") : "none"}. ` +
-        guidance.join(" ")
+        guidance.join(" "),
     );
   }
 
@@ -4070,7 +4216,8 @@ function verifyReviewerPrecondition(
         const path = key.slice(separator + 1);
         return repo ? `${repo}/${path}` : path;
       });
-      const more = unclaimed.length > 10 ? ` … and ${unclaimed.length - 10} more` : "";
+      const more =
+        unclaimed.length > 10 ? ` … and ${unclaimed.length - 10} more` : "";
       error(
         `Refusing to complete "${stage.slug}": ${unclaimed.length} application-source path(s) changed during this stage run ` +
           `that no reviewed unit's source manifest claims (${rendered.join(", ")}${more}). Add each path to the owning ` +
@@ -4103,23 +4250,23 @@ function staleSourcePreconditionError(
   action: ReviewerPreconditionAction,
 ): never {
   const slug = stage.slug;
-  const recoverySpent =
-    receipts.sourceStaleProgress?.recoverySpent === true;
+  const recoverySpent = receipts.sourceStaleProgress?.recoverySpent === true;
   const reason = receipts.sourceStaleReason;
   if (reason === "boundary-unbindable") {
     const message =
       `Refusing to complete "${slug}": the reviewed source boundary could not be ` +
-        "fingerprinted, so this is not evidence that application source changed. " +
-        "Repair .aidlc-source-paths.json or the workspace source boundary, then " +
-        `record a fresh review by ${reviewer}. ${recoveryGuidance(pd, content, slug)}` +
-        (recoverySpent && requestChangesResetIsExecutable(content, slug)
-          ? " Only a human Request Changes decision resets the review attempt; do not " +
-            "record that rejection on the human's behalf."
-          : "");
+      "fingerprinted, so this is not evidence that application source changed. " +
+      "Repair .aidlc-source-paths.json or the workspace source boundary, then " +
+      `record a fresh review by ${reviewer}. ${recoveryGuidance(pd, content, slug)}` +
+      (recoverySpent && requestChangesResetIsExecutable(content, slug)
+        ? " Only a human Request Changes decision resets the review attempt; do not " +
+          "record that rejection on the human's behalf."
+        : "");
     refuseStateGuard(pd, content, stage, {
       code: "SOURCE_BOUNDARY_UNBINDABLE",
       blockedAction: action,
-      invariant: "Reviewed source is bound to a reproducible workspace boundary.",
+      invariant:
+        "Reviewed source is bound to a reproducible workspace boundary.",
       userMessage: message,
       receipts,
     });
@@ -4127,24 +4274,25 @@ function staleSourcePreconditionError(
   if (recoverySpent) {
     const message =
       `Refusing to complete "${slug}": the workspace source changed again after ` +
-        `the one recovery review by ${reviewer} (source-fingerprint mismatch). ` +
-        `${recoveryGuidance(pd, content, slug)} ` +
-        (requestChangesResetIsExecutable(content, slug)
-          ? "Only a human Request Changes decision resets the review attempt; do not " +
-            "record that rejection on the human's behalf."
-          : "");
+      `the one recovery review by ${reviewer} (source-fingerprint mismatch). ` +
+      `${recoveryGuidance(pd, content, slug)} ` +
+      (requestChangesResetIsExecutable(content, slug)
+        ? "Only a human Request Changes decision resets the review attempt; do not " +
+          "record that rejection on the human's behalf."
+        : "");
     refuseStateGuard(pd, content, stage, {
       code: "SOURCE_RECOVERY_SPENT",
       blockedAction: action,
-      invariant: "The current source remains covered by the bounded review attempt.",
+      invariant:
+        "The current source remains covered by the bounded review attempt.",
       userMessage: message,
       receipts,
     });
   }
   const message =
     `Cannot complete "${slug}" because the project source changed after ${reviewer} ` +
-      `reviewed it. Ask ${reviewer} to review the current source once more and record ` +
-      `the verdict, or revert the source change, then try again.`;
+    `reviewed it. Ask ${reviewer} to review the current source once more and record ` +
+    `the verdict, or revert the source change, then try again.`;
   refuseStateGuard(pd, content, stage, {
     code: "SOURCE_REVIEW_STALE",
     blockedAction: action,
@@ -4173,19 +4321,20 @@ function verifyPipelineLinkPrecondition(
   const evidence = pipelineLinkEvidence(pd, stage);
   if (evidence.missing.length === 0) return;
   const missing = evidence.missing.map(({ link, repo }) =>
-    repo ? `${repo}:${link}` : link
+    repo ? `${repo}:${link}` : link,
   );
   const message =
     `Cannot complete "${stage.slug}" because these pipeline handoffs have not been ` +
-      `recorded for the current run: ${missing.join(", ")}. Run aidlc-log.ts link after ` +
-      `each agent returns` +
-      `${evidence.repos.length > 0 ? " with --repo <repo>" : ""}, or set ` +
-      `AIDLC_DISABLE_ENSEMBLE_EVIDENCE=1 only to recover a legitimately-run in-flight pipeline.`;
+    `recorded for the current run: ${missing.join(", ")}. Run aidlc-log.ts link after ` +
+    `each agent returns` +
+    `${evidence.repos.length > 0 ? " with --repo <repo>" : ""}, or set ` +
+    `AIDLC_DISABLE_ENSEMBLE_EVIDENCE=1 only to recover a legitimately-run in-flight pipeline.`;
   const content = readStateFile(pd);
   refuseStateGuard(pd, content, stage, {
     code: "PIPELINE_EVIDENCE_MISSING",
     blockedAction: "complete",
-    invariant: "Every required pipeline handoff is recorded in the current attempt.",
+    invariant:
+      "Every required pipeline handoff is recorded in the current attempt.",
     userMessage: message,
   });
 }
@@ -4211,35 +4360,35 @@ function staleReviewPreconditionError(
   action: ReviewerPreconditionAction = "complete",
 ): never {
   const slug = stage.slug;
-  const recoverySpent =
-    receipts.stageStaleProgress?.recoverySpent === true;
+  const recoverySpent = receipts.stageStaleProgress?.recoverySpent === true;
   if (recoverySpent) {
     const message =
       `${reviewerPreconditionPrefix(slug, action)}: this stage's output document ` +
-        `changed again after the one recovery review by ${reviewer}. ` +
-        recoveryGuidance(pd, content, slug) +
-        (requestChangesResetIsExecutable(content, slug)
-          ? " Only a human Request Changes decision resets the review attempt; do not " +
-            "record that rejection on the human's behalf."
-          : "");
+      `changed again after the one recovery review by ${reviewer}. ` +
+      recoveryGuidance(pd, content, slug) +
+      (requestChangesResetIsExecutable(content, slug)
+        ? " Only a human Request Changes decision resets the review attempt; do not " +
+          "record that rejection on the human's behalf."
+        : "");
     refuseStateGuard(pd, content, stage, {
       code: "ARTIFACT_RECOVERY_SPENT",
       blockedAction: action,
-      invariant: "The current output remains covered by the bounded review attempt.",
+      invariant:
+        "The current output remains covered by the bounded review attempt.",
       userMessage: message,
       receipts,
     });
   }
   const message =
     `${reviewerPreconditionPrefix(slug, action)} because an output document changed after ` +
-      `${reviewer} reviewed it. Run ` +
-      `one recovery review pass with \`aidlc-log.ts review --stage ${slug} ` +
-      `--reviewer ${reviewer} --iteration <next ordinal>\`, then record the verdict ` +
-      `with the same command plus \`--verdict <READY|NOT-READY>\`. After that ` +
-      `review, stop editing this stage's output documents. If the recovery pass was already ` +
-      `spent, present the situation to the human at the approval gate; a human ` +
-      `Request Changes decision resets the review attempt. Do not record a rejection ` +
-      `on the human's behalf.`;
+    `${reviewer} reviewed it. Run ` +
+    `one recovery review pass with \`aidlc-log.ts review --stage ${slug} ` +
+    `--reviewer ${reviewer} --iteration <next ordinal>\`, then record the verdict ` +
+    `with the same command plus \`--verdict <READY|NOT-READY>\`. After that ` +
+    `review, stop editing this stage's output documents. If the recovery pass was already ` +
+    `spent, present the situation to the human at the approval gate; a human ` +
+    `Request Changes decision resets the review attempt. Do not record a rejection ` +
+    `on the human's behalf.`;
   refuseStateGuard(pd, content, stage, {
     code: "ARTIFACT_REVIEW_STALE",
     blockedAction: action,
@@ -4281,7 +4430,8 @@ function reviewerPreconditionError(
     refuseStateGuard(pd, content, stage, {
       code: "REVIEW_EVIDENCE_MISSING",
       blockedAction: action,
-      invariant: "A pending review request receives a verifiable recorded result.",
+      invariant:
+        "A pending review request receives a verifiable recorded result.",
       userMessage: message,
       receipts,
     });
@@ -4289,27 +4439,28 @@ function reviewerPreconditionError(
   if (action === "present-approval-gate") {
     const message =
       `Cannot present "${slug}" for approval because ${reviewer} has not reviewed the ` +
-        `current output. Apply any fixes first, then request the review with ` +
-        `\`aidlc-log.ts review --stage ${slug} --reviewer ${reviewer} --iteration ` +
-        `<next ordinal>\` and record its verdict with the same command plus ` +
-        `\`--verdict <READY|NOT-READY>\`. After recording the verdict, do not edit ` +
-        `this stage's output documents; include suggestions from a READY review in the ` +
-        `approval summary instead.`;
+      `current output. Apply any fixes first, then request the review with ` +
+      `\`aidlc-log.ts review --stage ${slug} --reviewer ${reviewer} --iteration ` +
+      `<next ordinal>\` and record its verdict with the same command plus ` +
+      `\`--verdict <READY|NOT-READY>\`. After recording the verdict, do not edit ` +
+      `this stage's output documents; include suggestions from a READY review in the ` +
+      `approval summary instead.`;
     refuseStateGuard(pd, content, stage, {
       code: "REVIEW_EVIDENCE_MISSING",
       blockedAction: action,
-      invariant: "Reviewer-bearing stages have current terminal review evidence.",
+      invariant:
+        "Reviewer-bearing stages have current terminal review evidence.",
       userMessage: message,
       receipts,
     });
   }
   const message =
     `Cannot complete "${slug}" because ${reviewer} has not reviewed the current output. ` +
-      `Apply any fixes first, then request the review with \`aidlc-log.ts review --stage ` +
-      `${slug} --reviewer ${reviewer} --iteration <next ordinal>\` and record its verdict ` +
-      `with the same command plus \`--verdict <READY|NOT-READY>\`. After recording the ` +
-      `verdict, do not edit this stage's output documents; include suggestions from a ` +
-      `READY review in the approval summary instead.`;
+    `Apply any fixes first, then request the review with \`aidlc-log.ts review --stage ` +
+    `${slug} --reviewer ${reviewer} --iteration <next ordinal>\` and record its verdict ` +
+    `with the same command plus \`--verdict <READY|NOT-READY>\`. After recording the ` +
+    `verdict, do not edit this stage's output documents; include suggestions from a ` +
+    `READY review in the approval summary instead.`;
   refuseStateGuard(pd, content, stage, {
     code: "REVIEW_EVIDENCE_MISSING",
     blockedAction: action,
@@ -4327,7 +4478,7 @@ function reviewRecoverySpentInCurrentAttempt(
   if (!stage.reviewer) return false;
   const autonomousSwarm = isAutonomousSwarmStage(pd, content, stage);
   const reviewClass = autonomousSwarm
-    ? stage.review_class ?? "adversarial"
+    ? (stage.review_class ?? "adversarial")
     : resolveReviewClass(
         stage.review_class ?? "adversarial",
         getField(content, "Scope") ?? "",
@@ -4371,222 +4522,235 @@ function handleAdvance(
   // guard's early `return` exits the arrow cleanly; the lock releases in
   // withAuditLock's finally.
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  // Look up stage data
-  const completedStage = findStageBySlug(completedSlug);
-  if (!completedStage) error(`Unknown stage: ${completedSlug}`);
+    // Look up stage data
+    const completedStage = findStageBySlug(completedSlug);
+    if (!completedStage) error(`Unknown stage: ${completedSlug}`);
 
-  // Scope is authoritative for deriving next stage — refuse silent "feature"
-  // fallback when the state file is missing or corrupted. Adversarial finding.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to advance — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-
-  // Slug validation — `advance <slug>` is a post-gate-approval transition.
-  // The caller must have just finished <completedSlug>. Silently accepting
-  // any slug (even ones unrelated to the current state) would mutate
-  // unrelated stages and emit bogus events.
-  //
-  // Accept two shapes cleanly:
-  //   1. completedSlug matches `Current Stage` (normal post-approve flow);
-  //   2. completedSlug is already `[x]` (idempotent replay / approve-first).
-  // Anything else errors.
-  const completedCbBefore = parseCheckboxes(content).find(
-    (c) => c.slug === completedSlug
-  );
-  const currentStageField = getField(content, "Current Stage");
-  const matchesCurrent = completedSlug === currentStageField;
-  const alreadyMarkedCompleted = completedCbBefore?.state === "completed";
-  const stageCompletedAlreadyAudited =
-    alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
-  if (!matchesCurrent && !alreadyMarkedCompleted) {
-    error(
-      `Cannot advance "${completedSlug}": Current Stage is "${currentStageField}" and "${completedSlug}" is ${
-        completedCbBefore?.state ?? "unknown"
-      }. Pass the slug that's actually active, or use 'skip' / 'complete-workflow'.`
-    );
-  }
-
-  // If next-slug was not provided, derive it from the scope AND state file.
-  // The state file's EXECUTE/SKIP suffix (set by handleInit with Greenfield
-  // overrides) and per-stage checkbox state take precedence over the
-  // scope-mapping.json defaults.
-  let nextSlug: string;
-  if (positional.length >= 2) {
-    nextSlug = positional[1];
-    // Validate the caller-supplied next slug is in scope AND not already
-    // SKIP-stamped in the state file. Symmetric with single-arg form.
-    const stateOverrides = parseStateStageSuffixes(content);
-    const nextAction =
-      stateOverrides.get(nextSlug) ??
-      loadScopeMapping()[scope]?.stages[nextSlug];
-    if (nextAction === "SKIP") {
+    // Scope is authoritative for deriving next stage — refuse silent "feature"
+    // fallback when the state file is missing or corrupted. Adversarial finding.
+    const scope = getField(content, "Scope");
+    if (!scope) {
       error(
-        `Cannot advance to "${nextSlug}": stage is SKIP for scope "${scope}" (or state file). Pick the next EXECUTE stage or use 'skip'.`
+        `State file has no Scope field. Refusing to advance — fix the state file first.`,
       );
     }
-  } else {
-    const next = nextInScopeStage(completedSlug, scope, content);
-    if (!next) {
+    if (!validScopes().has(scope)) {
       error(
-        `No next in-scope stage after "${completedSlug}" for scope "${scope}". ` +
-          `Use 'complete-workflow' if this was the final stage.`
+        `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
       );
     }
-    nextSlug = next.slug;
-  }
-  const nextStage = findStageBySlug(nextSlug);
-  if (!nextStage) error(`Unknown stage: ${nextSlug}`);
 
-  // Idempotency guard — if completedSlug is already [x] AND nextSlug has
-  // already left pending with Current Stage pointing at it, this is a replay.
-  // Skip the whole emission block and exit cleanly, rather than doubling
-  // STAGE_STARTED / PHASE_COMPLETED / PHASE_VERIFIED / PHASE_STARTED.
-  // Adversarial finding: the previous alreadyMarkedCompleted guard only
-  // suppressed STAGE_COMPLETED; phase events still doubled.
-  // The next stage counts as already-started in ANY of its post-start gate
-  // states — in-progress, awaiting-approval, revising. Matching only
-  // in-progress let a stale replay demote a gate-held `[?]`/`[R]` next stage
-  // back to `[-]` and re-emit STAGE_STARTED.
-  const nextCbBefore = parseCheckboxes(content).find(
-    (c) => c.slug === nextSlug
-  );
-  const nextAlreadyStarted =
-    nextCbBefore?.state === "in-progress" ||
-    nextCbBefore?.state === "awaiting-approval" ||
-    nextCbBefore?.state === "revising";
-  const isReplay =
-    alreadyMarkedCompleted &&
-    stageCompletedAlreadyAudited &&
-    nextAlreadyStarted &&
-    currentStageField === nextSlug;
-  if (isReplay) {
+    // Slug validation — `advance <slug>` is a post-gate-approval transition.
+    // The caller must have just finished <completedSlug>. Silently accepting
+    // any slug (even ones unrelated to the current state) would mutate
+    // unrelated stages and emit bogus events.
+    //
+    // Accept two shapes cleanly:
+    //   1. completedSlug matches `Current Stage` (normal post-approve flow);
+    //   2. completedSlug is already `[x]` (idempotent replay / approve-first).
+    // Anything else errors.
+    const completedCbBefore = parseCheckboxes(content).find(
+      (c) => c.slug === completedSlug,
+    );
+    const currentStageField = getField(content, "Current Stage");
+    const matchesCurrent = completedSlug === currentStageField;
+    const alreadyMarkedCompleted = completedCbBefore?.state === "completed";
+    const stageCompletedAlreadyAudited =
+      alreadyMarkedCompleted &&
+      hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
+    if (!matchesCurrent && !alreadyMarkedCompleted) {
+      error(
+        `Cannot advance "${completedSlug}": Current Stage is "${currentStageField}" and "${completedSlug}" is ${
+          completedCbBefore?.state ?? "unknown"
+        }. Pass the slug that's actually active, or use 'skip' / 'complete-workflow'.`,
+      );
+    }
+
+    // If next-slug was not provided, derive it from the scope AND state file.
+    // The state file's EXECUTE/SKIP suffix (set by handleInit with Greenfield
+    // overrides) and per-stage checkbox state take precedence over the
+    // scope-mapping.json defaults.
+    let nextSlug: string;
+    if (positional.length >= 2) {
+      nextSlug = positional[1];
+      // Validate the caller-supplied next slug is in scope AND not already
+      // SKIP-stamped in the state file. Symmetric with single-arg form.
+      const stateOverrides = parseStateStageSuffixes(content);
+      const nextAction =
+        stateOverrides.get(nextSlug) ??
+        loadScopeMapping()[scope]?.stages[nextSlug];
+      if (nextAction === "SKIP") {
+        error(
+          `Cannot advance to "${nextSlug}": stage is SKIP for scope "${scope}" (or state file). Pick the next EXECUTE stage or use 'skip'.`,
+        );
+      }
+    } else {
+      const next = nextInScopeStage(completedSlug, scope, content);
+      if (!next) {
+        error(
+          `No next in-scope stage after "${completedSlug}" for scope "${scope}". ` +
+            `Use 'complete-workflow' if this was the final stage.`,
+        );
+      }
+      nextSlug = next.slug;
+    }
+    const nextStage = findStageBySlug(nextSlug);
+    if (!nextStage) error(`Unknown stage: ${nextSlug}`);
+
+    // Idempotency guard — if completedSlug is already [x] AND nextSlug has
+    // already left pending with Current Stage pointing at it, this is a replay.
+    // Skip the whole emission block and exit cleanly, rather than doubling
+    // STAGE_STARTED / PHASE_COMPLETED / PHASE_VERIFIED / PHASE_STARTED.
+    // Adversarial finding: the previous alreadyMarkedCompleted guard only
+    // suppressed STAGE_COMPLETED; phase events still doubled.
+    // The next stage counts as already-started in ANY of its post-start gate
+    // states — in-progress, awaiting-approval, revising. Matching only
+    // in-progress let a stale replay demote a gate-held `[?]`/`[R]` next stage
+    // back to `[-]` and re-emit STAGE_STARTED.
+    const nextCbBefore = parseCheckboxes(content).find(
+      (c) => c.slug === nextSlug,
+    );
+    const nextAlreadyStarted =
+      nextCbBefore?.state === "in-progress" ||
+      nextCbBefore?.state === "awaiting-approval" ||
+      nextCbBefore?.state === "revising";
+    const isReplay =
+      alreadyMarkedCompleted &&
+      stageCompletedAlreadyAudited &&
+      nextAlreadyStarted &&
+      currentStageField === nextSlug;
+    if (isReplay) {
+      console.log(
+        JSON.stringify({
+          completed: completedSlug,
+          started: nextSlug,
+          replay: true,
+          timestamp: isoTimestamp(),
+        }),
+      );
+      return;
+    }
+
+    // A true replay above is already fully applied and remains idempotent. A
+    // crash-window partial approval does not satisfy all replay predicates, so it
+    // still reaches the shared admission chain (reviewer evidence always; the
+    // artifact, summary, and pipeline guards when THIS advance is the completion).
+    admitStageAction(pd, content, completedStage, {
+      action: "complete",
+      entrypoint: "advance",
+    });
+
+    // Detect phase boundary (for PHASE_COMPLETED/VERIFIED/STARTED emissions)
+    const crossesPhaseBoundary = completedStage.phase !== nextStage.phase;
+
+    // 1. Mark completed-slug → [x] (idempotent)
+    content = setCheckbox(content, completedSlug, "completed");
+
+    // 2. Mark next-slug → [-]
+    content = setCheckbox(content, nextSlug, "in-progress");
+
+    // 3. Update fields
+    const nextAfterNext = nextInScopeStage(nextSlug, scope, content);
+    const timestamp = isoTimestamp();
+
+    content = setField(content, "Current Stage", nextStage.slug);
+    content = setField(
+      content,
+      "Lifecycle Phase",
+      nextStage.phase.toUpperCase(),
+    );
+    content = setField(
+      content,
+      "Next Stage",
+      nextAfterNext ? nextAfterNext.slug : "none",
+    );
+    content = setField(content, "In Progress", nextStage.slug);
+    content = setField(content, "Active Agent", nextStage.lead_agent);
+    content = setField(content, "Status", "Running");
+    content = setField(content, "Last Updated", timestamp);
+    content = setField(content, "Last Completed Stage", completedSlug);
+    content = setField(content, "Next Action", `Execute ${nextStage.name}`);
+
+    // Sync Completed counter to actual [x] count
+    const completedCount = countCheckboxes(content, "completed");
+    content = setField(content, "Completed", String(completedCount));
+
+    // Phase Progress rows mirror the boundary events emitted below: the
+    // completed phase's row flips to Verified and the entered phase's to Active,
+    // in the same state write. Display-only (routing reads Lifecycle Phase and
+    // the checkboxes), but without the flip the section holds its initial values
+    // forever and contradicts the checkboxes underneath it.
+    if (crossesPhaseBoundary) {
+      content = setPhaseProgress(content, completedStage.phase, "Verified");
+      content = setPhaseProgress(content, nextStage.phase, "Active");
+    }
+
+    const validationFields =
+      !alreadyMarkedCompleted || !stageCompletedAlreadyAudited
+        ? stageValidationAuditFields(pd, completedStage, content)
+        : {};
+    const validationWarning =
+      inheritedValidationWarning ?? validationFields[VALIDATION_WARNING_FIELD];
+
+    // 4. Atomic audit emission — audit-first, then state write.
+    // If audit fails, throw before touching state (writeStateFile below is skipped).
+    try {
+      // Emit STAGE_COMPLETED only if approve didn't already emit it.
+      if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
+        emitAudit(pd, "STAGE_COMPLETED", {
+          Stage: completedSlug,
+          ...validationFields,
+          Details: `Stage ${completedStage.name} completed`,
+          ...usageFields,
+        });
+      }
+      if (crossesPhaseBoundary) {
+        emitAudit(pd, "PHASE_COMPLETED", {
+          "From phase": completedStage.phase,
+          "To phase": nextStage.phase,
+          "Stages completed": String(completedCount),
+        });
+        emitAudit(pd, "PHASE_VERIFIED", {
+          "Phase boundary": `${completedStage.phase} → ${nextStage.phase}`,
+        });
+        emitAudit(pd, "PHASE_STARTED", {
+          Phase: nextStage.phase,
+          Scope: scope,
+        });
+      }
+      emitAudit(pd, "STAGE_STARTED", {
+        Stage: nextSlug,
+        Agent: nextStage.lead_agent,
+        ...(nextStage.workspace_requires
+          ? sourceBaselineAuditFields(pd, nextSlug)
+          : {}),
+      });
+    } catch (e) {
+      error(`Audit emission failed: ${errorMessage(e)}`);
+    }
+
+    writeStateFile(pd, content);
+
     console.log(
       JSON.stringify({
         completed: completedSlug,
         started: nextSlug,
-        replay: true,
-        timestamp: isoTimestamp(),
-      })
+        phase: nextStage.phase.toUpperCase(),
+        phase_boundary: crossesPhaseBoundary,
+        completed_count: completedCount,
+        next_after: nextAfterNext ? nextAfterNext.slug : null,
+        already_completed: alreadyMarkedCompleted,
+        memory_path: relativeMemoryPath(
+          nextStage.phase,
+          nextStage.slug,
+          relativeRecordDir(pd),
+        ),
+        timestamp,
+        ...(validationWarning ? { warnings: [validationWarning] } : {}),
+      }),
     );
-    return;
-  }
-
-  // A true replay above is already fully applied and remains idempotent. A
-  // crash-window partial approval does not satisfy all replay predicates, so it
-  // still reaches the shared admission chain (reviewer evidence always; the
-  // artifact, summary, and pipeline guards when THIS advance is the completion).
-  admitStageAction(pd, content, completedStage, {
-    action: "complete",
-    entrypoint: "advance",
-  });
-
-  // Detect phase boundary (for PHASE_COMPLETED/VERIFIED/STARTED emissions)
-  const crossesPhaseBoundary = completedStage.phase !== nextStage.phase;
-
-  // 1. Mark completed-slug → [x] (idempotent)
-  content = setCheckbox(content, completedSlug, "completed");
-
-  // 2. Mark next-slug → [-]
-  content = setCheckbox(content, nextSlug, "in-progress");
-
-  // 3. Update fields
-  const nextAfterNext = nextInScopeStage(nextSlug, scope, content);
-  const timestamp = isoTimestamp();
-
-  content = setField(content, "Current Stage", nextStage.slug);
-  content = setField(content, "Lifecycle Phase", nextStage.phase.toUpperCase());
-  content = setField(content, "Next Stage", nextAfterNext ? nextAfterNext.slug : "none");
-  content = setField(content, "In Progress", nextStage.slug);
-  content = setField(content, "Active Agent", nextStage.lead_agent);
-  content = setField(content, "Status", "Running");
-  content = setField(content, "Last Updated", timestamp);
-  content = setField(content, "Last Completed Stage", completedSlug);
-  content = setField(content, "Next Action", `Execute ${nextStage.name}`);
-
-  // Sync Completed counter to actual [x] count
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
-
-  // Phase Progress rows mirror the boundary events emitted below: the
-  // completed phase's row flips to Verified and the entered phase's to Active,
-  // in the same state write. Display-only (routing reads Lifecycle Phase and
-  // the checkboxes), but without the flip the section holds its initial values
-  // forever and contradicts the checkboxes underneath it.
-  if (crossesPhaseBoundary) {
-    content = setPhaseProgress(content, completedStage.phase, "Verified");
-    content = setPhaseProgress(content, nextStage.phase, "Active");
-  }
-
-  const validationFields =
-    !alreadyMarkedCompleted || !stageCompletedAlreadyAudited
-      ? stageValidationAuditFields(pd, completedStage, content)
-      : {};
-  const validationWarning =
-    inheritedValidationWarning ?? validationFields[VALIDATION_WARNING_FIELD];
-
-  // 4. Atomic audit emission — audit-first, then state write.
-  // If audit fails, throw before touching state (writeStateFile below is skipped).
-  try {
-    // Emit STAGE_COMPLETED only if approve didn't already emit it.
-    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
-      emitAudit(pd, "STAGE_COMPLETED", {
-        Stage: completedSlug,
-        ...validationFields,
-        Details: `Stage ${completedStage.name} completed`,
-        ...usageFields,
-      });
-    }
-    if (crossesPhaseBoundary) {
-      emitAudit(pd, "PHASE_COMPLETED", {
-        "From phase": completedStage.phase,
-        "To phase": nextStage.phase,
-        "Stages completed": String(completedCount),
-      });
-      emitAudit(pd, "PHASE_VERIFIED", {
-        "Phase boundary": `${completedStage.phase} → ${nextStage.phase}`,
-      });
-      emitAudit(pd, "PHASE_STARTED", {
-        Phase: nextStage.phase,
-        Scope: scope,
-      });
-    }
-    emitAudit(pd, "STAGE_STARTED", {
-      Stage: nextSlug,
-      Agent: nextStage.lead_agent,
-      ...(nextStage.workspace_requires
-        ? sourceBaselineAuditFields(pd, nextSlug)
-        : {}),
-    });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
-
-  writeStateFile(pd, content);
-
-  console.log(
-    JSON.stringify({
-      completed: completedSlug,
-      started: nextSlug,
-      phase: nextStage.phase.toUpperCase(),
-      phase_boundary: crossesPhaseBoundary,
-      completed_count: completedCount,
-      next_after: nextAfterNext ? nextAfterNext.slug : null,
-      already_completed: alreadyMarkedCompleted,
-      memory_path: relativeMemoryPath(nextStage.phase, nextStage.slug, relativeRecordDir(pd)),
-      timestamp,
-      ...(validationWarning ? { warnings: [validationWarning] } : {}),
-    })
-  );
   });
 }
 
@@ -4600,85 +4764,100 @@ function handleFinalize(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: read→decide→write under one lock (no audit here).
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  const completedStage = findStageBySlug(completedSlug);
-  if (!completedStage) error(`Unknown stage: ${completedSlug}`);
+    const completedStage = findStageBySlug(completedSlug);
+    if (!completedStage) error(`Unknown stage: ${completedSlug}`);
 
-  // Artifact guard. finalize also marks a stage [x], so it is a completing
-  // transition that must not rubber-stamp. The shared admission chain guards only
-  // when the slug is not already [x] (an idempotent re-finalize already passed
-  // it), and runs before any mutation so a refusal leaves state untouched.
-  admitStageAction(pd, content, completedStage, {
-    action: "complete",
-    entrypoint: "finalize",
-  });
+    // Artifact guard. finalize also marks a stage [x], so it is a completing
+    // transition that must not rubber-stamp. The shared admission chain guards only
+    // when the slug is not already [x] (an idempotent re-finalize already passed
+    // it), and runs before any mutation so a refusal leaves state untouched.
+    admitStageAction(pd, content, completedStage, {
+      action: "complete",
+      entrypoint: "finalize",
+    });
 
-  // 1. Mark completed
-  content = setCheckbox(content, completedSlug, "completed");
+    // 1. Mark completed
+    content = setCheckbox(content, completedSlug, "completed");
 
-  // 2. Sync Completed counter to actual [x] count
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
+    // 2. Sync Completed counter to actual [x] count
+    const completedCount = countCheckboxes(content, "completed");
+    content = setField(content, "Completed", String(completedCount));
 
-  // 3. Look up next in-scope stage. Refuse silent fallback on missing/invalid
-  // Scope — matches handleAdvance's stance. Adversarial: pre-Phase-11 code
-  // silently used "feature" when Scope was absent, hiding state-file corruption.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to finalize — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-  // Thread the live state content into BOTH walks so per-stage EXECUTE/SKIP
-  // suffix overrides (a recomposed plan) and prior [x]/[S] checkboxes are
-  // honoured - the same threading the advance path does (:869/:935). Without
-  // it these two calls project the next move from the STATIC scope grid and
-  // route around any recompose flip.
-  const nextStage = nextInScopeStage(completedSlug, scope, content);
-  const nextAfterNext = nextStage ? nextInScopeStage(nextStage.slug, scope, content) : null;
-  const timestamp = isoTimestamp();
-
-  // 4. Update state fields (but do NOT mark next stage [-] or set In Progress)
-  if (nextStage) {
-    content = setField(content, "Current Stage", nextStage.slug);
-    content = setField(content, "Next Stage", nextAfterNext ? nextAfterNext.slug : "none");
-    content = setField(content, "Lifecycle Phase", nextStage.phase.toUpperCase());
-    content = setField(content, "Active Agent", nextStage.lead_agent);
-    // Phase Progress boundary flip - mirrors handleAdvance's. finalize moves
-    // the cursor without emitting phase events, but the display rows must
-    // still track the phase the cursor now sits in.
-    if (completedStage.phase !== nextStage.phase) {
-      content = setPhaseProgress(content, completedStage.phase, "Verified");
-      content = setPhaseProgress(content, nextStage.phase, "Active");
+    // 3. Look up next in-scope stage. Refuse silent fallback on missing/invalid
+    // Scope — matches handleAdvance's stance. Adversarial: pre-Phase-11 code
+    // silently used "feature" when Scope was absent, hiding state-file corruption.
+    const scope = getField(content, "Scope");
+    if (!scope) {
+      error(
+        `State file has no Scope field. Refusing to finalize — fix the state file first.`,
+      );
     }
-  } else {
-    content = setField(content, "Current Stage", "none");
-    content = setField(content, "Next Stage", "none");
-    content = setField(content, "Status", "Completed");
-    content = setField(content, "In Progress", "none");
-    // No next stage: the workflow is done - the final phase is Verified.
-    content = setPhaseProgress(content, completedStage.phase, "Verified");
-  }
-  content = setField(content, "Last Completed Stage", completedSlug);
-  content = setField(content, "Last Updated", timestamp);
-  content = setField(content, "Next Action", nextStage ? `Resume from ${nextStage.name}` : "Workflow complete");
+    if (!validScopes().has(scope)) {
+      error(
+        `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
+      );
+    }
+    // Thread the live state content into BOTH walks so per-stage EXECUTE/SKIP
+    // suffix overrides (a recomposed plan) and prior [x]/[S] checkboxes are
+    // honoured - the same threading the advance path does (:869/:935). Without
+    // it these two calls project the next move from the STATIC scope grid and
+    // route around any recompose flip.
+    const nextStage = nextInScopeStage(completedSlug, scope, content);
+    const nextAfterNext = nextStage
+      ? nextInScopeStage(nextStage.slug, scope, content)
+      : null;
+    const timestamp = isoTimestamp();
 
-  writeStateFile(pd, content);
-  console.log(
-    JSON.stringify({
-      completed: completedSlug,
-      completed_count: completedCount,
-      next_stage: nextStage?.slug || "none",
-      phase: nextStage?.phase.toUpperCase() || completedStage.phase.toUpperCase(),
-      timestamp,
-    })
-  );
+    // 4. Update state fields (but do NOT mark next stage [-] or set In Progress)
+    if (nextStage) {
+      content = setField(content, "Current Stage", nextStage.slug);
+      content = setField(
+        content,
+        "Next Stage",
+        nextAfterNext ? nextAfterNext.slug : "none",
+      );
+      content = setField(
+        content,
+        "Lifecycle Phase",
+        nextStage.phase.toUpperCase(),
+      );
+      content = setField(content, "Active Agent", nextStage.lead_agent);
+      // Phase Progress boundary flip - mirrors handleAdvance's. finalize moves
+      // the cursor without emitting phase events, but the display rows must
+      // still track the phase the cursor now sits in.
+      if (completedStage.phase !== nextStage.phase) {
+        content = setPhaseProgress(content, completedStage.phase, "Verified");
+        content = setPhaseProgress(content, nextStage.phase, "Active");
+      }
+    } else {
+      content = setField(content, "Current Stage", "none");
+      content = setField(content, "Next Stage", "none");
+      content = setField(content, "Status", "Completed");
+      content = setField(content, "In Progress", "none");
+      // No next stage: the workflow is done - the final phase is Verified.
+      content = setPhaseProgress(content, completedStage.phase, "Verified");
+    }
+    content = setField(content, "Last Completed Stage", completedSlug);
+    content = setField(content, "Last Updated", timestamp);
+    content = setField(
+      content,
+      "Next Action",
+      nextStage ? `Resume from ${nextStage.name}` : "Workflow complete",
+    );
+
+    writeStateFile(pd, content);
+    console.log(
+      JSON.stringify({
+        completed: completedSlug,
+        completed_count: completedCount,
+        next_stage: nextStage?.slug || "none",
+        phase:
+          nextStage?.phase.toUpperCase() || completedStage.phase.toUpperCase(),
+        timestamp,
+      }),
+    );
   });
 }
 
@@ -4694,7 +4873,9 @@ function handleCompleteWorkflow(
     (a, i) => !a.startsWith("--") && i !== reasonValueIdx,
   );
   if (positional.length < 1)
-    error("Usage: aidlc-state.ts complete-workflow <completed-slug> [--reason <text>]");
+    error(
+      "Usage: aidlc-state.ts complete-workflow <completed-slug> [--reason <text>]",
+    );
   const completedSlug = positional[0];
 
   // Optional --reason flag for recording why the workflow completed early
@@ -4711,125 +4892,126 @@ function handleCompleteWorkflow(
   // a single snapshot (audit-first / decide-inside-lock). emitAudit uses the
   // unlocked variant because the lock is held.
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  const completedStage = findStageBySlug(completedSlug);
-  if (!completedStage) error(`Unknown stage: ${completedSlug}`);
+    const completedStage = findStageBySlug(completedSlug);
+    if (!completedStage) error(`Unknown stage: ${completedSlug}`);
 
-  // If the slug is already [x], approve already emitted STAGE_COMPLETED —
-  // skip re-emission to avoid duplicates. Matches handleAdvance's
-  // alreadyMarkedCompleted guard.
-  const alreadyMarkedCompleted =
-    parseCheckboxes(content).find((c) => c.slug === completedSlug)?.state ===
-    "completed";
-  const stageCompletedAlreadyAudited =
-    alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
+    // If the slug is already [x], approve already emitted STAGE_COMPLETED —
+    // skip re-emission to avoid duplicates. Matches handleAdvance's
+    // alreadyMarkedCompleted guard.
+    const alreadyMarkedCompleted =
+      parseCheckboxes(content).find((c) => c.slug === completedSlug)?.state ===
+      "completed";
+    const stageCompletedAlreadyAudited =
+      alreadyMarkedCompleted &&
+      hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
 
-  // Artifact guard (issue #366). complete-workflow marks the FINAL stage [x], so
-  // it is a completing transition too. Guard only when the slug is not already
-  // [x]: approve delegates here AFTER marking the slug [x] and running the guard
-  // itself, so this skips the double-check on that path while still refusing a
-  // direct `complete-workflow <active-slug>` that never produced artifacts. Runs
-  // before any mutation so a refusal leaves state untouched.
-  admitStageAction(pd, content, completedStage, {
-    action: "complete",
-    entrypoint: "complete-workflow",
-  });
+    // Artifact guard (issue #366). complete-workflow marks the FINAL stage [x], so
+    // it is a completing transition too. Guard only when the slug is not already
+    // [x]: approve delegates here AFTER marking the slug [x] and running the guard
+    // itself, so this skips the double-check on that path while still refusing a
+    // direct `complete-workflow <active-slug>` that never produced artifacts. Runs
+    // before any mutation so a refusal leaves state untouched.
+    admitStageAction(pd, content, completedStage, {
+      action: "complete",
+      entrypoint: "complete-workflow",
+    });
 
-  // 1. Mark completed
-  content = setCheckbox(content, completedSlug, "completed");
+    // 1. Mark completed
+    content = setCheckbox(content, completedSlug, "completed");
 
-  // 2. Sync Completed counter
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
+    // 2. Sync Completed counter
+    const completedCount = countCheckboxes(content, "completed");
+    content = setField(content, "Completed", String(completedCount));
 
-  // 3. Update all fields atomically for workflow completion
-  const timestamp = isoTimestamp();
-  content = setField(content, "Status", "Completed");
-  content = setField(content, "Last Updated", timestamp);
-  content = setField(content, "Last Completed Stage", completedSlug);
-  content = setField(content, "In Progress", "none");
-  content = setField(content, "Next Stage", "none");
-  content = setField(content, "Next Action", "Workflow complete");
-  // Phase Progress: workflow completion is the final phase's boundary - its
-  // row flips to Verified alongside the PHASE_COMPLETED/PHASE_VERIFIED pair
-  // emitted below (the advance-side flip only fires on stage->stage
-  // boundaries, so the last phase would otherwise stay Active forever).
-  content = setPhaseProgress(content, completedStage.phase, "Verified");
+    // 3. Update all fields atomically for workflow completion
+    const timestamp = isoTimestamp();
+    content = setField(content, "Status", "Completed");
+    content = setField(content, "Last Updated", timestamp);
+    content = setField(content, "Last Completed Stage", completedSlug);
+    content = setField(content, "In Progress", "none");
+    content = setField(content, "Next Stage", "none");
+    content = setField(content, "Next Action", "Workflow complete");
+    // Phase Progress: workflow completion is the final phase's boundary - its
+    // row flips to Verified alongside the PHASE_COMPLETED/PHASE_VERIFIED pair
+    // emitted below (the advance-side flip only fires on stage->stage
+    // boundaries, so the last phase would otherwise stay Active forever).
+    content = setPhaseProgress(content, completedStage.phase, "Verified");
 
-  // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to complete workflow — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-  const validationFields =
-    !alreadyMarkedCompleted || !stageCompletedAlreadyAudited
-      ? stageValidationAuditFields(pd, completedStage, content)
-      : {};
-  const validationWarning =
-    inheritedValidationWarning ?? validationFields[VALIDATION_WARNING_FIELD];
-  try {
-    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
-      emitAudit(pd, "STAGE_COMPLETED", {
-        Stage: completedSlug,
-        ...validationFields,
-        Details: `Final stage ${completedStage.name} completed`,
-        ...stageUsageFields,
-      });
+    // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
+    const scope = getField(content, "Scope");
+    if (!scope) {
+      error(
+        `State file has no Scope field. Refusing to complete workflow — fix the state file first.`,
+      );
     }
-    emitAudit(pd, "PHASE_COMPLETED", {
-      "From phase": completedStage.phase,
-      "To phase": "(end)",
-      "Stages completed": String(completedCount),
-    });
-    emitAudit(pd, "PHASE_VERIFIED", {
-      "Phase boundary": `${completedStage.phase} → end`,
-    });
-    const workflowFields: Record<string, string> = {
-      Scope: scope,
-      Details: `Scope: ${scope}, ${completedCount} stages completed`,
-      ...workflowUsageFields,
-    };
-    if (reason) workflowFields.Reason = reason;
-    emitAudit(pd, "WORKFLOW_COMPLETED", workflowFields);
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
+    if (!validScopes().has(scope)) {
+      error(
+        `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
+      );
+    }
+    const validationFields =
+      !alreadyMarkedCompleted || !stageCompletedAlreadyAudited
+        ? stageValidationAuditFields(pd, completedStage, content)
+        : {};
+    const validationWarning =
+      inheritedValidationWarning ?? validationFields[VALIDATION_WARNING_FIELD];
+    try {
+      if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
+        emitAudit(pd, "STAGE_COMPLETED", {
+          Stage: completedSlug,
+          ...validationFields,
+          Details: `Final stage ${completedStage.name} completed`,
+          ...stageUsageFields,
+        });
+      }
+      emitAudit(pd, "PHASE_COMPLETED", {
+        "From phase": completedStage.phase,
+        "To phase": "(end)",
+        "Stages completed": String(completedCount),
+      });
+      emitAudit(pd, "PHASE_VERIFIED", {
+        "Phase boundary": `${completedStage.phase} → end`,
+      });
+      const workflowFields: Record<string, string> = {
+        Scope: scope,
+        Details: `Scope: ${scope}, ${completedCount} stages completed`,
+        ...workflowUsageFields,
+      };
+      if (reason) workflowFields.Reason = reason;
+      emitAudit(pd, "WORKFLOW_COMPLETED", workflowFields);
+    } catch (e) {
+      error(`Audit emission failed: ${errorMessage(e)}`);
+    }
 
-  writeStateFile(pd, content);
-  // Intent status lifecycle: terminal completion flips the active intent's
-  // registry row to "complete". This is the determinism (field write) gated by
-  // the human-confirmed completion that drove complete-workflow here — never an
-  // automatic inference from state, so a crashed run never self-completes. Runs
-  // under the workspace lock already held (every intents.json mutation takes the
-  // sentinel bucket). No-op for the legacy flat record (no registry row).
-  const completedSelection = resolveWorkflowSelection(pd);
-  const completedIntentDir = completedSelection.intent;
-  if (completedIntentDir) {
-    updateIntentStatus(
-      pd,
-      completedIntentDir,
-      "complete",
-      completedSelection.space,
+    writeStateFile(pd, content);
+    // Intent status lifecycle: terminal completion flips the active intent's
+    // registry row to "complete". This is the determinism (field write) gated by
+    // the human-confirmed completion that drove complete-workflow here — never an
+    // automatic inference from state, so a crashed run never self-completes. Runs
+    // under the workspace lock already held (every intents.json mutation takes the
+    // sentinel bucket). No-op for the legacy flat record (no registry row).
+    const completedSelection = resolveWorkflowSelection(pd);
+    const completedIntentDir = completedSelection.intent;
+    if (completedIntentDir) {
+      updateIntentStatus(
+        pd,
+        completedIntentDir,
+        "complete",
+        completedSelection.space,
+      );
+    }
+    console.log(
+      JSON.stringify({
+        completed: completedSlug,
+        completed_count: completedCount,
+        status: "Completed",
+        reason: reason || null,
+        timestamp,
+        ...(validationWarning ? { warnings: [validationWarning] } : {}),
+      }),
     );
-  }
-  console.log(
-    JSON.stringify({
-      completed: completedSlug,
-      completed_count: completedCount,
-      status: "Completed",
-      reason: reason || null,
-      timestamp,
-      ...(validationWarning ? { warnings: [validationWarning] } : {}),
-    })
-  );
   });
 }
 
@@ -4845,14 +5027,14 @@ function getSlugState(content: string, slug: string): CheckboxState | null {
 function validateSlugInState(
   content: string,
   slug: string,
-  expected: CheckboxState | CheckboxState[]
+  expected: CheckboxState | CheckboxState[],
 ): void {
   const actual = getSlugState(content, slug);
   if (actual === null) error(`Stage not found in state file: ${slug}`);
   const allowed = Array.isArray(expected) ? expected : [expected];
   if (!allowed.includes(actual)) {
     error(
-      `Stage ${slug} is in state '${actual}' but command requires one of: ${allowed.join(", ")}`
+      `Stage ${slug} is in state '${actual}' but command requires one of: ${allowed.join(", ")}`,
     );
   }
 }
@@ -4902,11 +5084,7 @@ function teamGateContext(
     return { unit, scope: "per-stage", stages: [stage] };
   }
   const workflowScope = getField(content, "Scope") ?? "";
-  const stages = unitMajorConstructionStageSlugs(
-    workflowScope,
-    content,
-    true,
-  )
+  const stages = unitMajorConstructionStageSlugs(workflowScope, content, true)
     .map((slug) => findStageBySlug(slug))
     .filter(
       (entry): entry is NonNullable<ReturnType<typeof findStageBySlug>> =>
@@ -4965,7 +5143,8 @@ function verifyReviewerPreconditionForUnit(
     refuseStateGuard(pd, content, stage, {
       code: "REVIEW_EVIDENCE_MISSING",
       blockedAction: action,
-      invariant: "Reviewer-bearing Units have current terminal review evidence.",
+      invariant:
+        "Reviewer-bearing Units have current terminal review evidence.",
       userMessage: message,
       unit,
       receipts,
@@ -5022,13 +5201,7 @@ function verifyTeamUnitGateEvidence(
         summaryCoverage: summary.summaryCoverage,
       });
     }
-    verifyReviewerPreconditionForUnit(
-      pd,
-      content,
-      stage,
-      context.unit,
-      action,
-    );
+    verifyReviewerPreconditionForUnit(pd, content, stage, context.unit, action);
     if (stage.workspace_requires) verifyStageArtifacts(pd, stage, action);
   }
 }
@@ -5043,10 +5216,7 @@ function verifyTeamUnitGatePipelinePrecondition(
 }
 
 export type GuardPreflightAction =
-  | "present-approval-gate"
-  | "revise"
-  | "complete"
-  | "review-request";
+  "present-approval-gate" | "revise" | "complete" | "review-request";
 
 export type GuardPreflightResult =
   | { executable: true }
@@ -5221,11 +5391,10 @@ function handleGateStart(args: string[]): void {
     args.slice(1),
   );
   if (!preflightTeamGate) {
-    validateSlugInState(
-      preflightContent,
-      slug,
-      ["in-progress", "awaiting-approval"],
-    );
+    validateSlugInState(preflightContent, slug, [
+      "in-progress",
+      "awaiting-approval",
+    ]);
   }
   admitStageAction(pd, preflightContent, preflightStage, {
     action: "present-approval-gate",
@@ -5250,34 +5419,88 @@ function handleGateStart(args: string[]): void {
   // C2b lost-update safety: validate→transition→emit-audit→write under one
   // lock (the state-precondition check and the write see one snapshot).
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  const stage = findStageBySlug(slug);
-  if (!stage) error(`Unknown stage: ${slug}`);
-  const teamGate = teamGateContext(content, stage, args.slice(1));
-  if (teamGate) {
-    admitStageAction(pd, content, stage, {
-      action: "present-approval-gate",
-      unit: teamGate.unit,
-    });
-    verifyGateSensorArtifactsUnchanged(slug, gateSensorEvaluation);
-    const status = unitGateStatus(
-      pd,
-      stage.slug,
-      teamGate.unit,
-      teamGate.scope,
-    );
-    if (status === "approved") {
-      error(
-        `Gate for unit "${teamGate.unit}" of "${stage.slug}" is already approved.`,
+    const stage = findStageBySlug(slug);
+    if (!stage) error(`Unknown stage: ${slug}`);
+    const teamGate = teamGateContext(content, stage, args.slice(1));
+    if (teamGate) {
+      admitStageAction(pd, content, stage, {
+        action: "present-approval-gate",
+        unit: teamGate.unit,
+      });
+      verifyGateSensorArtifactsUnchanged(slug, gateSensorEvaluation);
+      const status = unitGateStatus(
+        pd,
+        stage.slug,
+        teamGate.unit,
+        teamGate.scope,
       );
-    }
-    if (status === "awaiting-approval") {
+      if (status === "approved") {
+        error(
+          `Gate for unit "${teamGate.unit}" of "${stage.slug}" is already approved.`,
+        );
+      }
+      if (status === "awaiting-approval") {
+        console.log(
+          JSON.stringify({
+            slug,
+            unit: teamGate.unit,
+            gate_scope: teamGate.scope,
+            new_state: "awaiting-approval",
+            already_awaiting_approval: true,
+            revalidated: true,
+          }),
+        );
+        return;
+      }
+      const timestamp = isoTimestamp();
+      content = setField(content, "Last Updated", timestamp);
+      try {
+        emitAudit(pd, "STAGE_AWAITING_APPROVAL", {
+          ...teamGateFields(stage, teamGate),
+          ...(artifacts ? { Artifacts: artifacts } : {}),
+          ...(recovered ? { Recovered: "true" } : {}),
+        });
+      } catch (e) {
+        error(`Audit emission failed: ${errorMessage(e)}`);
+      }
+      writeStateFile(pd, content);
       console.log(
         JSON.stringify({
           slug,
           unit: teamGate.unit,
           gate_scope: teamGate.scope,
+          new_state: "awaiting-approval",
+          timestamp,
+        }),
+      );
+      return;
+    }
+    validateSlugInState(content, slug, ["in-progress", "awaiting-approval"]);
+    const alreadyAwaiting = getSlugState(content, slug) === "awaiting-approval";
+    admitStageAction(pd, content, stage, { action: "present-approval-gate" });
+    verifyGateSensorArtifactsUnchanged(slug, gateSensorEvaluation);
+    if (alreadyAwaiting) {
+      if (gateSensorEvaluation.issues.length > 0 && overrideBlockingSensors) {
+        try {
+          const fields: Record<string, string> = {
+            Stage: slug,
+            Revalidated: "true",
+          };
+          addBlockingSensorOverrideFields(
+            fields,
+            gateSensorEvaluation.issues,
+            true,
+          );
+          emitAudit(pd, "STAGE_AWAITING_APPROVAL", fields);
+        } catch (e) {
+          error(`Audit emission failed: ${errorMessage(e)}`);
+        }
+      }
+      console.log(
+        JSON.stringify({
+          slug,
           new_state: "awaiting-approval",
           already_awaiting_approval: true,
           revalidated: true,
@@ -5285,82 +5508,29 @@ function handleGateStart(args: string[]): void {
       );
       return;
     }
+
+    content = setCheckbox(content, slug, "awaiting-approval");
     const timestamp = isoTimestamp();
     content = setField(content, "Last Updated", timestamp);
+
     try {
-      emitAudit(pd, "STAGE_AWAITING_APPROVAL", {
-        ...teamGateFields(stage, teamGate),
-        ...(artifacts ? { Artifacts: artifacts } : {}),
-        ...(recovered ? { Recovered: "true" } : {}),
-      });
+      const fields: Record<string, string> = { Stage: slug };
+      if (artifacts) fields.Artifacts = artifacts;
+      if (recovered) fields.Recovered = "true";
+      addBlockingSensorOverrideFields(
+        fields,
+        gateSensorEvaluation.issues,
+        overrideBlockingSensors,
+      );
+      emitAudit(pd, "STAGE_AWAITING_APPROVAL", fields);
     } catch (e) {
       error(`Audit emission failed: ${errorMessage(e)}`);
     }
+
     writeStateFile(pd, content);
-    console.log(JSON.stringify({
-      slug,
-      unit: teamGate.unit,
-      gate_scope: teamGate.scope,
-      new_state: "awaiting-approval",
-      timestamp,
-    }));
-    return;
-  }
-  validateSlugInState(content, slug, ["in-progress", "awaiting-approval"]);
-  const alreadyAwaiting = getSlugState(content, slug) === "awaiting-approval";
-  admitStageAction(pd, content, stage, { action: "present-approval-gate" });
-  verifyGateSensorArtifactsUnchanged(slug, gateSensorEvaluation);
-  if (alreadyAwaiting) {
-    if (
-      gateSensorEvaluation.issues.length > 0 &&
-      overrideBlockingSensors
-    ) {
-      try {
-        const fields: Record<string, string> = {
-          Stage: slug,
-          Revalidated: "true",
-        };
-        addBlockingSensorOverrideFields(
-          fields,
-          gateSensorEvaluation.issues,
-          true,
-        );
-        emitAudit(pd, "STAGE_AWAITING_APPROVAL", fields);
-      } catch (e) {
-        error(`Audit emission failed: ${errorMessage(e)}`);
-      }
-    }
     console.log(
-      JSON.stringify({
-        slug,
-        new_state: "awaiting-approval",
-        already_awaiting_approval: true,
-        revalidated: true,
-      }),
+      JSON.stringify({ slug, new_state: "awaiting-approval", timestamp }),
     );
-    return;
-  }
-
-  content = setCheckbox(content, slug, "awaiting-approval");
-  const timestamp = isoTimestamp();
-  content = setField(content, "Last Updated", timestamp);
-
-  try {
-    const fields: Record<string, string> = { Stage: slug };
-    if (artifacts) fields.Artifacts = artifacts;
-    if (recovered) fields.Recovered = "true";
-    addBlockingSensorOverrideFields(
-      fields,
-      gateSensorEvaluation.issues,
-      overrideBlockingSensors,
-    );
-    emitAudit(pd, "STAGE_AWAITING_APPROVAL", fields);
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
-
-  writeStateFile(pd, content);
-  console.log(JSON.stringify({ slug, new_state: "awaiting-approval", timestamp }));
   });
 }
 
@@ -5434,7 +5604,8 @@ function verifyApprovalDecision(
 }
 
 function handleApprove(args: string[]): void {
-  if (args.length < 1) error("Usage: aidlc-state.ts approve <slug> [--user-input <text>]");
+  if (args.length < 1)
+    error("Usage: aidlc-state.ts approve <slug> [--user-input <text>]");
   const slug = args[0];
   const { userInput } = parseApproveFlags(args.slice(1));
 
@@ -5465,11 +5636,7 @@ function handleApprove(args: string[]): void {
     });
   } else {
     verifyStageArtifacts(pd, preflightStage);
-    verifySummaryConfirmationPrecondition(
-      pd,
-      preflightContent,
-      preflightStage,
-    );
+    verifySummaryConfirmationPrecondition(pd, preflightContent, preflightStage);
   }
   const preflightBackstop =
     preflightTeamGate === null &&
@@ -5494,247 +5661,245 @@ function handleApprove(args: string[]): void {
   // advance's re-read. The original ordering is preserved: approve writes its
   // own state (slug → [x]) BEFORE delegating, so the nested re-read sees it.
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  const stage = findStageBySlug(slug);
-  if (!stage) error(`Unknown stage: ${slug}`);
-  const teamGate = teamGateContext(content, stage, args.slice(1));
-  if (!teamGate) {
-    validateSlugInState(content, slug, "awaiting-approval");
-  }
-  const { approvalInput, autonomousDecision } = verifyApprovalDecision(
-    pd,
-    content,
-    stage,
-    userInput,
-    teamGate !== null,
-  );
+    const stage = findStageBySlug(slug);
+    if (!stage) error(`Unknown stage: ${slug}`);
+    const teamGate = teamGateContext(content, stage, args.slice(1));
+    if (!teamGate) {
+      validateSlugInState(content, slug, "awaiting-approval");
+    }
+    const { approvalInput, autonomousDecision } = verifyApprovalDecision(
+      pd,
+      content,
+      stage,
+      userInput,
+      teamGate !== null,
+    );
 
-  if (teamGate) {
+    if (teamGate) {
+      admitStageAction(pd, content, stage, {
+        action: "complete",
+        entrypoint: "approve",
+        unit: teamGate.unit,
+      });
+      const reviewFindingDispositions = acceptedRiskDispositionField(
+        pd,
+        teamGate.stages,
+        teamGate.unit,
+      );
+      const status = unitGateStatus(
+        pd,
+        stage.slug,
+        teamGate.unit,
+        teamGate.scope,
+      );
+      if (status !== "awaiting-approval") {
+        error(
+          `Gate for unit "${teamGate.unit}" of "${stage.slug}" is ${status}; ` +
+            "open or revise the gate before approving it.",
+        );
+      }
+      if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
+        error(
+          `Refusing to approve unit "${teamGate.unit}" for "${slug}": a real human ` +
+            "has not acted at this gate since it opened.",
+        );
+      }
+      const timestamp = isoTimestamp();
+      content = setField(content, "Last Updated", timestamp);
+      try {
+        emitAudit(pd, "GATE_APPROVED", {
+          ...teamGateFields(stage, teamGate),
+          ...(approvalInput ? { "User Input": approvalInput } : {}),
+          ...(reviewFindingDispositions
+            ? {
+                [REVIEW_FINDING_DISPOSITIONS_FIELD]: reviewFindingDispositions,
+              }
+            : {}),
+        });
+      } catch (e) {
+        error(`Audit emission failed: ${errorMessage(e)}`);
+      }
+      writeStateFile(pd, content);
+      console.log(
+        JSON.stringify({
+          slug,
+          unit: teamGate.unit,
+          gate_scope: teamGate.scope,
+          approved: true,
+          timestamp,
+        }),
+      );
+      return;
+    }
+
+    // Artifact guard (issue #366): a stage cannot be approved without evidence of
+    // work on disk. Runs BEFORE any mutation so a refusal (error() -> exit) leaves
+    // state untouched. The nested handleAdvance / handleCompleteWorkflow below see
+    // the slug as already [x] and skip their own guard, so this is the single
+    // enforcement point on the approve path. Bypass via AIDLC_SKIP_ARTIFACT_GUARD.
+    // Covers per-unit Construction stages (globs the record's
+    // construction/<unit>/<slug>/) and code-producing stages (workspace_requires).
+    verifyStageArtifacts(pd, stage);
+    verifySummaryConfirmationPrecondition(pd, content, stage);
+
+    // Gate-revision backstop: reconcile a revision the conductor performed at an
+    // open gate but never recorded (it skipped the `reject` verb). When the ledger
+    // proves the human revised this stage's artifact at the open gate with no
+    // recorded reject (unrecordedRevisionSinceGateOpen), backfill the missing
+    // GATE_REJECTED + STAGE_REVISING pair (tagged Recovered) and persist [R].
+    // A reviewer-bearing stage must then obtain a fresh post-rejection receipt
+    // before this command may emit the recovered gate re-entry. When that guard
+    // refuses, the durable [R] state routes the conductor through normal `revise`
+    // after review instead of leaving an invalid [?] gate open.
+    // Skipped under the off-switch and in autonomous Construction (no human at the
+    // gate, so no human-driven revision to reconcile).
+    const backstopNow =
+      !revisionBackstopDisabled() &&
+      !autonomousDecision &&
+      unrecordedRevisionSinceGateOpen(pd, stage);
+    if (backstopNow && !preflightBackstop) {
+      error(
+        `Refusing to approve "${slug}": revision evidence changed during the gate ` +
+          "preflight. Retry the approval so revised bytes can be checked before re-entry.",
+      );
+    }
+    if (backstopNow) {
+      const priorCount = getField(content, "Revision Count");
+      const priorParsed = priorCount ? parseInt(priorCount, 10) : 0;
+      const revCount = (Number.isFinite(priorParsed) ? priorParsed : 0) + 1;
+      content = setField(content, "Revision Count", String(revCount));
+      content = setCheckbox(content, slug, "revising");
+      content = setField(content, "Last Updated", isoTimestamp());
+      // Audit-first: a failed emission aborts before any state write (matches the
+      // GATE_APPROVED/STAGE_COMPLETED try/catch below).
+      try {
+        emitAudit(pd, "GATE_REJECTED", {
+          Stage: slug,
+          Recovered: "true",
+          Details:
+            "Backfilled by the revision backstop: the artifact was revised at " +
+            "an open gate with no reject recorded",
+          ...priorAcceptedSourceFields(pd, stage),
+        });
+        emitAudit(pd, "STAGE_REVISING", {
+          Stage: slug,
+          "Revision count": String(revCount),
+          Recovered: "true",
+        });
+      } catch (e) {
+        error(`Audit emission failed: ${errorMessage(e)}`);
+      }
+      writeStateFile(pd, content);
+      verifyGateSensorArtifactsUnchanged(slug, backstopSensorEvaluation);
+      verifySummaryConfirmationPrecondition(pd, content, stage);
+      verifyPipelineLinkPrecondition(pd, stage);
+      if (!reviewerGateGuardDisabled()) {
+        verifyReviewerPrecondition(pd, content, stage, "present-approval-gate");
+      }
+      enforceBlockingGateSensors(
+        pd,
+        content,
+        slug,
+        "revised",
+        backstopSensorEvaluation.issues,
+        false,
+      );
+      try {
+        emitAudit(pd, "STAGE_AWAITING_APPROVAL", {
+          Stage: slug,
+          Recovered: "true",
+          Details: "Re-entering gate after backfilled revision",
+        });
+      } catch (e) {
+        error(`Audit emission failed: ${errorMessage(e)}`);
+      }
+      content = setCheckbox(content, slug, "awaiting-approval");
+      content = setField(content, "Last Updated", isoTimestamp());
+      writeStateFile(pd, content);
+    }
+
+    // The shared admission chain for approve: artifacts and summary again (they
+    // ran before the backstop above and are re-read here), then pipeline and
+    // reviewer evidence. The router preflights `approve` through the same call.
     admitStageAction(pd, content, stage, {
       action: "complete",
       entrypoint: "approve",
-      unit: teamGate.unit,
     });
-    const reviewFindingDispositions = acceptedRiskDispositionField(
-      pd,
-      teamGate.stages,
-      teamGate.unit,
-    );
-    const status = unitGateStatus(
-      pd,
-      stage.slug,
-      teamGate.unit,
-      teamGate.scope,
-    );
-    if (status !== "awaiting-approval") {
+    const reviewFindingDispositions = acceptedRiskDispositionField(pd, stage);
+
+    // Scope is required for next-stage derivation. Validate it before persisting
+    // approval: a post-write routing failure would otherwise leave `[x]` as a
+    // durable but incomplete approval and make crash recovery security-sensitive.
+    const scope = getField(content, "Scope");
+    if (!scope) {
       error(
-        `Gate for unit "${teamGate.unit}" of "${stage.slug}" is ${status}; ` +
-          "open or revise the gate before approving it.",
+        `State file has no Scope field. Refusing to advance after approve — fix the state file first.`,
       );
     }
-    if (
-      !humanPresenceGuardDisabled() &&
-      !humanActedSinceGate(pd)
-    ) {
+    if (!validScopes().has(scope)) {
       error(
-        `Refusing to approve unit "${teamGate.unit}" for "${slug}": a real human ` +
-          "has not acted at this gate since it opened.",
+        `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
       );
     }
+
     const timestamp = isoTimestamp();
+
+    content = setCheckbox(content, slug, "completed");
     content = setField(content, "Last Updated", timestamp);
+    const completedCount = countCheckboxes(content, "completed");
+    content = setField(content, "Completed", String(completedCount));
+    content = setField(content, "Last Completed Stage", slug);
+
+    // Capture before the first audit append. The lifecycle-facing helper is
+    // fail-open: failures produce a receipt-less completion plus a persistent
+    // warning instead of stranding GATE_APPROVED without STAGE_COMPLETED.
+    const validationFields = stageValidationAuditFields(pd, stage, content);
+    const validationWarning = validationFields[VALIDATION_WARNING_FIELD];
+
+    // Atomic audit emissions (audit-first). GATE_APPROVED records the human
+    // decision; STAGE_COMPLETED records the state transition the approval
+    // implies. Both emit here so the audit trail is correct even if the
+    // downstream advance/complete-workflow fails.
     try {
-      emitAudit(pd, "GATE_APPROVED", {
-        ...teamGateFields(stage, teamGate),
-        ...(approvalInput ? { "User Input": approvalInput } : {}),
-        ...(reviewFindingDispositions
-          ? {
-              [REVIEW_FINDING_DISPOSITIONS_FIELD]:
-                reviewFindingDispositions,
-            }
-          : {}),
+      const gateFields: Record<string, string> = { Stage: slug };
+      if (approvalInput) gateFields["User Input"] = approvalInput;
+      if (reviewFindingDispositions) {
+        gateFields[REVIEW_FINDING_DISPOSITIONS_FIELD] =
+          reviewFindingDispositions;
+      }
+      emitAudit(pd, "GATE_APPROVED", gateFields);
+
+      emitAudit(pd, "STAGE_COMPLETED", {
+        Stage: slug,
+        ...validationFields,
+        Details: `Stage ${stage.name} approved by gate`,
+        ...usageFields,
       });
     } catch (e) {
       error(`Audit emission failed: ${errorMessage(e)}`);
     }
+
     writeStateFile(pd, content);
-    console.log(JSON.stringify({
-      slug,
-      unit: teamGate.unit,
-      gate_scope: teamGate.scope,
-      approved: true,
-      timestamp,
-    }));
-    return;
-  }
 
-  // Artifact guard (issue #366): a stage cannot be approved without evidence of
-  // work on disk. Runs BEFORE any mutation so a refusal (error() -> exit) leaves
-  // state untouched. The nested handleAdvance / handleCompleteWorkflow below see
-  // the slug as already [x] and skip their own guard, so this is the single
-  // enforcement point on the approve path. Bypass via AIDLC_SKIP_ARTIFACT_GUARD.
-  // Covers per-unit Construction stages (globs the record's
-  // construction/<unit>/<slug>/) and code-producing stages (workspace_requires).
-  verifyStageArtifacts(pd, stage);
-  verifySummaryConfirmationPrecondition(pd, content, stage);
-
-  // Gate-revision backstop: reconcile a revision the conductor performed at an
-  // open gate but never recorded (it skipped the `reject` verb). When the ledger
-  // proves the human revised this stage's artifact at the open gate with no
-  // recorded reject (unrecordedRevisionSinceGateOpen), backfill the missing
-  // GATE_REJECTED + STAGE_REVISING pair (tagged Recovered) and persist [R].
-  // A reviewer-bearing stage must then obtain a fresh post-rejection receipt
-  // before this command may emit the recovered gate re-entry. When that guard
-  // refuses, the durable [R] state routes the conductor through normal `revise`
-  // after review instead of leaving an invalid [?] gate open.
-  // Skipped under the off-switch and in autonomous Construction (no human at the
-  // gate, so no human-driven revision to reconcile).
-  const backstopNow =
-    !revisionBackstopDisabled() &&
-    !autonomousDecision &&
-    unrecordedRevisionSinceGateOpen(pd, stage);
-  if (backstopNow && !preflightBackstop) {
-    error(
-      `Refusing to approve "${slug}": revision evidence changed during the gate ` +
-        "preflight. Retry the approval so revised bytes can be checked before re-entry.",
-    );
-  }
-  if (backstopNow) {
-    const priorCount = getField(content, "Revision Count");
-    const priorParsed = priorCount ? parseInt(priorCount, 10) : 0;
-    const revCount = (Number.isFinite(priorParsed) ? priorParsed : 0) + 1;
-    content = setField(content, "Revision Count", String(revCount));
-    content = setCheckbox(content, slug, "revising");
-    content = setField(content, "Last Updated", isoTimestamp());
-    // Audit-first: a failed emission aborts before any state write (matches the
-    // GATE_APPROVED/STAGE_COMPLETED try/catch below).
-    try {
-      emitAudit(pd, "GATE_REJECTED", {
-        Stage: slug,
-        Recovered: "true",
-        Details:
-          "Backfilled by the revision backstop: the artifact was revised at " +
-          "an open gate with no reject recorded",
-        ...priorAcceptedSourceFields(pd, stage),
-      });
-      emitAudit(pd, "STAGE_REVISING", {
-        Stage: slug,
-        "Revision count": String(revCount),
-        Recovered: "true",
-      });
-    } catch (e) {
-      error(`Audit emission failed: ${errorMessage(e)}`);
+    // No explicit consume step (ledger-event design): the GATE_APPROVED
+    // emitted by this commit IS the freshness boundary for the next gate. A second
+    // gate auto-cascaded in the same human turn finds the last gate resolution
+    // (this GATE_APPROVED) AFTER the only HUMAN_TURN, so humanActedSinceGate refuses
+    // it — one commit per human turn, from ledger order, with no marker to flip.
+    const next = nextInScopeStage(slug, scope, content);
+    if (next) {
+      // Delegate to handleAdvance. The slug is now [x], so handleAdvance takes
+      // the alreadyMarkedCompleted path and skips re-emitting STAGE_COMPLETED.
+      // Reentrant call — runs under the depth-2 lock without re-acquire.
+      handleAdvance([slug], validationWarning);
+    } else {
+      // Final stage — complete the workflow. handleCompleteWorkflow re-sets
+      // the checkbox to [x] (idempotent) and emits PHASE_COMPLETED +
+      // PHASE_VERIFIED + WORKFLOW_COMPLETED. Reentrant call — see above.
+      handleCompleteWorkflow([slug], validationWarning);
     }
-    writeStateFile(pd, content);
-    verifyGateSensorArtifactsUnchanged(slug, backstopSensorEvaluation);
-    verifySummaryConfirmationPrecondition(pd, content, stage);
-    verifyPipelineLinkPrecondition(pd, stage);
-    if (!reviewerGateGuardDisabled()) {
-      verifyReviewerPrecondition(pd, content, stage, "present-approval-gate");
-    }
-    enforceBlockingGateSensors(
-      pd,
-      content,
-      slug,
-      "revised",
-      backstopSensorEvaluation.issues,
-      false,
-    );
-    try {
-      emitAudit(pd, "STAGE_AWAITING_APPROVAL", {
-        Stage: slug,
-        Recovered: "true",
-        Details: "Re-entering gate after backfilled revision",
-      });
-    } catch (e) {
-      error(`Audit emission failed: ${errorMessage(e)}`);
-    }
-    content = setCheckbox(content, slug, "awaiting-approval");
-    content = setField(content, "Last Updated", isoTimestamp());
-    writeStateFile(pd, content);
-  }
-
-  // The shared admission chain for approve: artifacts and summary again (they
-  // ran before the backstop above and are re-read here), then pipeline and
-  // reviewer evidence. The router preflights `approve` through the same call.
-  admitStageAction(pd, content, stage, {
-    action: "complete",
-    entrypoint: "approve",
-  });
-  const reviewFindingDispositions = acceptedRiskDispositionField(pd, stage);
-
-  // Scope is required for next-stage derivation. Validate it before persisting
-  // approval: a post-write routing failure would otherwise leave `[x]` as a
-  // durable but incomplete approval and make crash recovery security-sensitive.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to advance after approve — fix the state file first.`,
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
-    );
-  }
-
-  const timestamp = isoTimestamp();
-
-  content = setCheckbox(content, slug, "completed");
-  content = setField(content, "Last Updated", timestamp);
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
-  content = setField(content, "Last Completed Stage", slug);
-
-  // Capture before the first audit append. The lifecycle-facing helper is
-  // fail-open: failures produce a receipt-less completion plus a persistent
-  // warning instead of stranding GATE_APPROVED without STAGE_COMPLETED.
-  const validationFields = stageValidationAuditFields(pd, stage, content);
-  const validationWarning = validationFields[VALIDATION_WARNING_FIELD];
-
-  // Atomic audit emissions (audit-first). GATE_APPROVED records the human
-  // decision; STAGE_COMPLETED records the state transition the approval
-  // implies. Both emit here so the audit trail is correct even if the
-  // downstream advance/complete-workflow fails.
-  try {
-    const gateFields: Record<string, string> = { Stage: slug };
-    if (approvalInput) gateFields["User Input"] = approvalInput;
-    if (reviewFindingDispositions) {
-      gateFields[REVIEW_FINDING_DISPOSITIONS_FIELD] =
-        reviewFindingDispositions;
-    }
-    emitAudit(pd, "GATE_APPROVED", gateFields);
-
-    emitAudit(pd, "STAGE_COMPLETED", {
-      Stage: slug,
-      ...validationFields,
-      Details: `Stage ${stage.name} approved by gate`,
-      ...usageFields,
-    });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
-
-  writeStateFile(pd, content);
-
-  // No explicit consume step (ledger-event design): the GATE_APPROVED
-  // emitted by this commit IS the freshness boundary for the next gate. A second
-  // gate auto-cascaded in the same human turn finds the last gate resolution
-  // (this GATE_APPROVED) AFTER the only HUMAN_TURN, so humanActedSinceGate refuses
-  // it — one commit per human turn, from ledger order, with no marker to flip.
-  const next = nextInScopeStage(slug, scope, content);
-  if (next) {
-    // Delegate to handleAdvance. The slug is now [x], so handleAdvance takes
-    // the alreadyMarkedCompleted path and skips re-emitting STAGE_COMPLETED.
-    // Reentrant call — runs under the depth-2 lock without re-acquire.
-    handleAdvance([slug], validationWarning);
-  } else {
-    // Final stage — complete the workflow. handleCompleteWorkflow re-sets
-    // the checkbox to [x] (idempotent) and emits PHASE_COMPLETED +
-    // PHASE_VERIFIED + WORKFLOW_COMPLETED. Reentrant call — see above.
-    handleCompleteWorkflow([slug], validationWarning);
-  }
   });
 }
 
@@ -5751,7 +5916,9 @@ function getFlagValue(args: string[], flag: string): string | undefined {
   }
   const val = args[idx + 1];
   if (val.startsWith("--")) {
-    error(`${flag} expects a value, got another flag: "${val}". Did you forget the value?`);
+    error(
+      `${flag} expects a value, got another flag: "${val}". Did you forget the value?`,
+    );
   }
   return val;
 }
@@ -5800,13 +5967,11 @@ function handleReject(args: string[]): void {
   }
   const slug = args[0];
   const decision = getFlagValue(args.slice(1), "--user-input")?.trim();
-  const feedback =
-    (getFlagValue(args.slice(1), "--feedback") ??
-      getFlagValue(args.slice(1), "--reason"))?.trim();
-  const rejectedFindings = getFlagValues(
-    args.slice(1),
-    "--reject-finding",
-  );
+  const feedback = (
+    getFlagValue(args.slice(1), "--feedback") ??
+    getFlagValue(args.slice(1), "--reason")
+  )?.trim();
+  const rejectedFindings = getFlagValues(args.slice(1), "--reject-finding");
 
   const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: validate→increment Revision Count→emit-audit→write
@@ -5816,217 +5981,224 @@ function handleReject(args: string[]): void {
   // serialises, and re-running the same input recomputes from the locked
   // snapshot rather than double-incrementing a stale value.
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  const stage = findStageBySlug(slug);
-  if (!stage) error(`Unknown stage: ${slug}`);
-  const teamGate = teamGateContext(content, stage, args.slice(1));
-  if (!teamGate) {
-    validateSlugInState(content, slug, ["awaiting-approval", "in-progress"]);
-  }
-  const feedbackStatus = guardRecoveryFeedbackStatus(
-    pd,
-    content,
-    slug,
-    teamGate?.unit,
-    feedback ?? "",
-  );
-  if (feedbackStatus === "other-remedy") {
-    const selectedAction = selectedGuardRecoveryRemedyAction(
+    const stage = findStageBySlug(slug);
+    if (!stage) error(`Unknown stage: ${slug}`);
+    const teamGate = teamGateContext(content, stage, args.slice(1));
+    if (!teamGate) {
+      validateSlugInState(content, slug, ["awaiting-approval", "in-progress"]);
+    }
+    const feedbackStatus = guardRecoveryFeedbackStatus(
       pd,
       content,
       slug,
       teamGate?.unit,
+      feedback ?? "",
     );
-    error(
-      `Refusing to reject "${slug}": the recovery-question choice was not Request Changes.` +
-        (selectedAction ? ` The selected action was "${selectedAction}".` : "") +
-        " Carry out that action, or re-present the recovery question and wait for the human to choose Request Changes.",
-    );
-  }
-  if (feedbackStatus === "awaiting-feedback") {
-    error(
-      `Refusing to reject "${slug}": the guard-recovery choice is not revision ` +
-        `feedback. Ask "What should change?", end the turn, and wait for the ` +
-        "human's separate response before retrying.",
-    );
-  }
-  const autonomousDecision =
-    !teamGate && isAutonomousConstructionGate(content, stage);
-  if (
-    !autonomousDecision &&
-    feedbackStatus === "not-applicable" &&
-    !humanPresenceGuardDisabled() &&
-    !isRequestChangesChoice(decision)
-  ) {
-    const cancellation = isNonAnswer(decision)
-      ? " The reply is cancellation boilerplate, not a decision."
-      : "";
-    error(
-      `Refusing to reject "${slug}": received reply ${formatReceivedReply(decision)} did not ` +
-        `match an offered choice at the held gate.${cancellation} ` +
-        "Re-present the original held gate with every offered choice and wait for the human " +
-        "to choose one.",
-    );
-  }
-  if (!feedback) {
-    error(
-      `Refusing to reject "${slug}": Request Changes requires nonblank revision feedback in ` +
-        "--feedback (or --reason through aidlc-orchestrate.ts report).",
-    );
-  }
-  if (isNonAnswer(feedback)) {
-    error(
-      `Refusing to reject "${slug}": revision feedback ${formatReceivedReply(feedback)} is ` +
-        "cancellation boilerplate. Re-present the original held gate with every offered choice " +
-        "and wait for the human to choose one.",
-    );
-  }
-  if (feedbackStatus === "mismatch") {
-    error(
-      `Refusing to reject "${slug}": --feedback does not exactly match the ` +
-        "human's separate guard-recovery response. Pass their text unchanged.",
-    );
-  }
-
-  const autonomousMode = isAutonomousMode(content);
-  const recoveryResetNeedsHuman =
-    !teamGate &&
-    autonomousMode &&
-    reviewRecoverySpentInCurrentAttempt(pd, content, stage);
-  if (
-    (!autonomousDecision || recoveryResetNeedsHuman) &&
-    !humanPresenceGuardDisabled() &&
-    !humanActedSinceGate(pd)
-  ) {
-    if (recoveryResetNeedsHuman) {
+    if (feedbackStatus === "other-remedy") {
+      const selectedAction = selectedGuardRecoveryRemedyAction(
+        pd,
+        content,
+        slug,
+        teamGate?.unit,
+      );
       error(
-        `Cannot request changes for "${slug}" because its recovery review has already ` +
-          `been used and only a new human choice can start another review attempt. Present ` +
-          `the situation at the approval question and wait for a typed Request Changes choice.${unattendedHumanPresenceHint()}`,
+        `Refusing to reject "${slug}": the recovery-question choice was not Request Changes.` +
+          (selectedAction
+            ? ` The selected action was "${selectedAction}".`
+            : "") +
+          " Carry out that action, or re-present the recovery question and wait for the human to choose Request Changes.",
       );
     }
-    error(
-      `Cannot request changes for "${slug}" because no new human reply has been received ` +
-        `for this approval question. Wait for the human to type Request Changes and their ` +
-        `feedback, then retry.${unattendedHumanPresenceHint()}`,
-    );
-  }
-
-  // Authorship floor (issue 742). The presence check above proves a human is in
-  // the session, not that this rejection is theirs — so a conductor blocked by
-  // the review-budget/receipt ordering can satisfy it while writing its own
-  // change request, because GATE_REJECTED is the only event that restores an
-  // advisory review budget. That reopen is the single most attractive forgery in
-  // the protocol and the one seen in the field, so refuse the self-attributed
-  // rejection here rather than laundering it into the trail as the human's.
-  // Autonomous Construction is exempt (the conductor owns the decision there).
-  const rejectionAuthorship =
-    autonomousDecision || humanPresenceGuardDisabled()
-      ? null
-      : selfAttributedDecisionMarker(feedback, "rejection");
-  if (rejectionAuthorship) {
-    error(
-      `Cannot request changes for "${slug}" because --feedback says it was written by the ` +
-        `assistant (${rejectionAuthorship.category}: "${rejectionAuthorship.phrase}"). ` +
-        `Requesting changes is the human's decision. Explain why another review is needed at ` +
-        `the approval question and wait for the human to choose.`,
-    );
-  }
-  const reviewFindingDispositions = rejectedFindingDispositionField(
-    pd,
-    teamGate?.stages ?? stage,
-    rejectedFindings,
-    teamGate?.unit,
-  );
-
-  if (teamGate) {
-    const priorStatus = unitGateStatus(
-      pd,
-      stage.slug,
-      teamGate.unit,
-      teamGate.scope,
-    );
+    if (feedbackStatus === "awaiting-feedback") {
+      error(
+        `Refusing to reject "${slug}": the guard-recovery choice is not revision ` +
+          `feedback. Ask "What should change?", end the turn, and wait for the ` +
+          "human's separate response before retrying.",
+      );
+    }
+    const autonomousDecision =
+      !teamGate && isAutonomousConstructionGate(content, stage);
     if (
-      priorStatus !== "awaiting-approval" &&
-      priorStatus !== "pending"
+      !autonomousDecision &&
+      feedbackStatus === "not-applicable" &&
+      !humanPresenceGuardDisabled() &&
+      !isRequestChangesChoice(decision)
     ) {
+      const cancellation = isNonAnswer(decision)
+        ? " The reply is cancellation boilerplate, not a decision."
+        : "";
       error(
-        `Gate for unit "${teamGate.unit}" of "${stage.slug}" is ${priorStatus}; ` +
-          "only a pending or awaiting gate can be rejected.",
+        `Refusing to reject "${slug}": received reply ${formatReceivedReply(decision)} did not ` +
+          `match an offered choice at the held gate.${cancellation} ` +
+          "Re-present the original held gate with every offered choice and wait for the human " +
+          "to choose one.",
       );
     }
+    if (!feedback) {
+      error(
+        `Refusing to reject "${slug}": Request Changes requires nonblank revision feedback in ` +
+          "--feedback (or --reason through aidlc-orchestrate.ts report).",
+      );
+    }
+    if (isNonAnswer(feedback)) {
+      error(
+        `Refusing to reject "${slug}": revision feedback ${formatReceivedReply(feedback)} is ` +
+          "cancellation boilerplate. Re-present the original held gate with every offered choice " +
+          "and wait for the human to choose one.",
+      );
+    }
+    if (feedbackStatus === "mismatch") {
+      error(
+        `Refusing to reject "${slug}": --feedback does not exactly match the ` +
+          "human's separate guard-recovery response. Pass their text unchanged.",
+      );
+    }
+
+    const autonomousMode = isAutonomousMode(content);
+    const recoveryResetNeedsHuman =
+      !teamGate &&
+      autonomousMode &&
+      reviewRecoverySpentInCurrentAttempt(pd, content, stage);
+    if (
+      (!autonomousDecision || recoveryResetNeedsHuman) &&
+      !humanPresenceGuardDisabled() &&
+      !humanActedSinceGate(pd)
+    ) {
+      if (recoveryResetNeedsHuman) {
+        error(
+          `Cannot request changes for "${slug}" because its recovery review has already ` +
+            `been used and only a new human choice can start another review attempt. Present ` +
+            `the situation at the approval question and wait for a typed Request Changes choice.${unattendedHumanPresenceHint()}`,
+        );
+      }
+      error(
+        `Cannot request changes for "${slug}" because no new human reply has been received ` +
+          `for this approval question. Wait for the human to type Request Changes and their ` +
+          `feedback, then retry.${unattendedHumanPresenceHint()}`,
+      );
+    }
+
+    // Authorship floor (issue 742). The presence check above proves a human is in
+    // the session, not that this rejection is theirs — so a conductor blocked by
+    // the review-budget/receipt ordering can satisfy it while writing its own
+    // change request, because GATE_REJECTED is the only event that restores an
+    // advisory review budget. That reopen is the single most attractive forgery in
+    // the protocol and the one seen in the field, so refuse the self-attributed
+    // rejection here rather than laundering it into the trail as the human's.
+    // Autonomous Construction is exempt (the conductor owns the decision there).
+    const rejectionAuthorship =
+      autonomousDecision || humanPresenceGuardDisabled()
+        ? null
+        : selfAttributedDecisionMarker(feedback, "rejection");
+    if (rejectionAuthorship) {
+      error(
+        `Cannot request changes for "${slug}" because --feedback says it was written by the ` +
+          `assistant (${rejectionAuthorship.category}: "${rejectionAuthorship.phrase}"). ` +
+          `Requesting changes is the human's decision. Explain why another review is needed at ` +
+          `the approval question and wait for the human to choose.`,
+      );
+    }
+    const reviewFindingDispositions = rejectedFindingDispositionField(
+      pd,
+      teamGate?.stages ?? stage,
+      rejectedFindings,
+      teamGate?.unit,
+    );
+
+    if (teamGate) {
+      const priorStatus = unitGateStatus(
+        pd,
+        stage.slug,
+        teamGate.unit,
+        teamGate.scope,
+      );
+      if (priorStatus !== "awaiting-approval" && priorStatus !== "pending") {
+        error(
+          `Gate for unit "${teamGate.unit}" of "${stage.slug}" is ${priorStatus}; ` +
+            "only a pending or awaiting gate can be rejected.",
+        );
+      }
+      const current = getField(content, "Revision Count");
+      const parsed = current ? parseInt(current, 10) : 0;
+      const revCount = (Number.isFinite(parsed) ? parsed : 0) + 1;
+      content = setField(content, "Revision Count", String(revCount));
+      const timestamp = isoTimestamp();
+      content = setField(content, "Last Updated", timestamp);
+      const fields = teamGateFields(stage, teamGate);
+      try {
+        emitAudit(pd, "GATE_REJECTED", {
+          ...fields,
+          Feedback: feedback,
+          ...(reviewFindingDispositions
+            ? {
+                [REVIEW_FINDING_DISPOSITIONS_FIELD]: reviewFindingDispositions,
+              }
+            : {}),
+        });
+        emitAudit(pd, "STAGE_REVISING", {
+          ...fields,
+          "Revision count": String(revCount),
+          Feedback: feedback,
+        });
+      } catch (e) {
+        error(`Audit emission failed: ${errorMessage(e)}`);
+      }
+      writeStateFile(pd, content);
+      console.log(
+        JSON.stringify({
+          slug,
+          unit: teamGate.unit,
+          gate_scope: teamGate.scope,
+          new_state: "revising",
+          revision_count: revCount,
+          timestamp,
+        }),
+      );
+      return;
+    }
+
+    // Increment Revision Count. Guard against non-numeric values (missing field,
+    // manual edits, legacy state files) by coercing non-integers to 0.
     const current = getField(content, "Revision Count");
     const parsed = current ? parseInt(current, 10) : 0;
     const revCount = (Number.isFinite(parsed) ? parsed : 0) + 1;
     content = setField(content, "Revision Count", String(revCount));
+
+    content = setCheckbox(content, slug, "revising");
     const timestamp = isoTimestamp();
     content = setField(content, "Last Updated", timestamp);
-    const fields = teamGateFields(stage, teamGate);
+
     try {
-      emitAudit(pd, "GATE_REJECTED", {
-        ...fields,
+      const rejFields: Record<string, string> = {
+        Stage: slug,
         Feedback: feedback,
-        ...(reviewFindingDispositions
-          ? {
-              [REVIEW_FINDING_DISPOSITIONS_FIELD]:
-                reviewFindingDispositions,
-            }
-          : {}),
-      });
+        ...priorAcceptedSourceFields(pd, stage),
+      };
+      if (reviewFindingDispositions) {
+        rejFields[REVIEW_FINDING_DISPOSITIONS_FIELD] =
+          reviewFindingDispositions;
+      }
+      emitAudit(pd, "GATE_REJECTED", rejFields);
       emitAudit(pd, "STAGE_REVISING", {
-        ...fields,
+        Stage: slug,
         "Revision count": String(revCount),
         Feedback: feedback,
       });
     } catch (e) {
       error(`Audit emission failed: ${errorMessage(e)}`);
     }
+
     writeStateFile(pd, content);
-    console.log(JSON.stringify({
-      slug,
-      unit: teamGate.unit,
-      gate_scope: teamGate.scope,
-      new_state: "revising",
-      revision_count: revCount,
-      timestamp,
-    }));
-    return;
-  }
-
-  // Increment Revision Count. Guard against non-numeric values (missing field,
-  // manual edits, legacy state files) by coercing non-integers to 0.
-  const current = getField(content, "Revision Count");
-  const parsed = current ? parseInt(current, 10) : 0;
-  const revCount = (Number.isFinite(parsed) ? parsed : 0) + 1;
-  content = setField(content, "Revision Count", String(revCount));
-
-  content = setCheckbox(content, slug, "revising");
-  const timestamp = isoTimestamp();
-  content = setField(content, "Last Updated", timestamp);
-
-  try {
-    const rejFields: Record<string, string> = {
-      Stage: slug,
-      Feedback: feedback,
-      ...priorAcceptedSourceFields(pd, stage),
-    };
-    if (reviewFindingDispositions) {
-      rejFields[REVIEW_FINDING_DISPOSITIONS_FIELD] =
-        reviewFindingDispositions;
-    }
-    emitAudit(pd, "GATE_REJECTED", rejFields);
-    emitAudit(pd, "STAGE_REVISING", {
-      Stage: slug,
-      "Revision count": String(revCount),
-      Feedback: feedback,
-    });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
-
-  writeStateFile(pd, content);
-  console.log(JSON.stringify({ slug, new_state: "revising", revision_count: revCount, timestamp }));
+    console.log(
+      JSON.stringify({
+        slug,
+        new_state: "revising",
+        revision_count: revCount,
+        timestamp,
+      }),
+    );
   });
 }
 
@@ -6074,7 +6246,11 @@ function handleRevise(args: string[]): void {
     action: "revise",
     ...(preflightTeamGate ? { unit: preflightTeamGate.unit } : {}),
   });
-  const gateSensorEvaluation = fireGateSensors(pd, preflightStage, preflightContent);
+  const gateSensorEvaluation = fireGateSensors(
+    pd,
+    preflightStage,
+    preflightContent,
+  );
   enforceBlockingGateSensors(
     pd,
     preflightContent,
@@ -6087,73 +6263,77 @@ function handleRevise(args: string[]): void {
 
   // C2b lost-update safety: validate→transition→emit-audit→write under one lock.
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  const stage = findStageBySlug(slug);
-  if (!stage) error(`Unknown stage: ${slug}`);
-  const teamGate = teamGateContext(content, stage, args.slice(1));
-  if (teamGate) {
-    const status = unitGateStatus(
-      pd,
-      stage.slug,
-      teamGate.unit,
-      teamGate.scope,
-    );
-    if (status !== "revising") {
-      error(
-        `Gate for unit "${teamGate.unit}" of "${stage.slug}" is ${status}; ` +
-          "only a revising gate can re-enter approval.",
+    const stage = findStageBySlug(slug);
+    if (!stage) error(`Unknown stage: ${slug}`);
+    const teamGate = teamGateContext(content, stage, args.slice(1));
+    if (teamGate) {
+      const status = unitGateStatus(
+        pd,
+        stage.slug,
+        teamGate.unit,
+        teamGate.scope,
       );
+      if (status !== "revising") {
+        error(
+          `Gate for unit "${teamGate.unit}" of "${stage.slug}" is ${status}; ` +
+            "only a revising gate can re-enter approval.",
+        );
+      }
+      admitStageAction(pd, content, stage, {
+        action: "revise",
+        unit: teamGate.unit,
+      });
+      const timestamp = isoTimestamp();
+      content = setField(content, "Last Updated", timestamp);
+      try {
+        emitAudit(pd, "STAGE_AWAITING_APPROVAL", {
+          ...teamGateFields(stage, teamGate),
+          Details: "Re-entering unit gate after revision",
+        });
+      } catch (e) {
+        error(`Audit emission failed: ${errorMessage(e)}`);
+      }
+      writeStateFile(pd, content);
+      console.log(
+        JSON.stringify({
+          slug,
+          unit: teamGate.unit,
+          gate_scope: teamGate.scope,
+          new_state: "awaiting-approval",
+          timestamp,
+        }),
+      );
+      return;
     }
-    admitStageAction(pd, content, stage, {
-      action: "revise",
-      unit: teamGate.unit,
-    });
+    validateSlugInState(content, slug, "revising");
+    admitStageAction(pd, content, stage, { action: "revise" });
+    verifyGateSensorArtifactsUnchanged(slug, gateSensorEvaluation);
+
+    content = setCheckbox(content, slug, "awaiting-approval");
     const timestamp = isoTimestamp();
     content = setField(content, "Last Updated", timestamp);
+
     try {
-      emitAudit(pd, "STAGE_AWAITING_APPROVAL", {
-        ...teamGateFields(stage, teamGate),
-        Details: "Re-entering unit gate after revision",
-      });
+      const fields: Record<string, string> = {
+        Stage: slug,
+        Details: "Re-entering gate after revision",
+      };
+      addBlockingSensorOverrideFields(
+        fields,
+        gateSensorEvaluation.issues,
+        overrideBlockingSensors,
+      );
+      emitAudit(pd, "STAGE_AWAITING_APPROVAL", fields);
     } catch (e) {
       error(`Audit emission failed: ${errorMessage(e)}`);
     }
+
     writeStateFile(pd, content);
-    console.log(JSON.stringify({
-      slug,
-      unit: teamGate.unit,
-      gate_scope: teamGate.scope,
-      new_state: "awaiting-approval",
-      timestamp,
-    }));
-    return;
-  }
-  validateSlugInState(content, slug, "revising");
-  admitStageAction(pd, content, stage, { action: "revise" });
-  verifyGateSensorArtifactsUnchanged(slug, gateSensorEvaluation);
-
-  content = setCheckbox(content, slug, "awaiting-approval");
-  const timestamp = isoTimestamp();
-  content = setField(content, "Last Updated", timestamp);
-
-  try {
-    const fields: Record<string, string> = {
-      Stage: slug,
-      Details: "Re-entering gate after revision",
-    };
-    addBlockingSensorOverrideFields(
-      fields,
-      gateSensorEvaluation.issues,
-      overrideBlockingSensors,
+    console.log(
+      JSON.stringify({ slug, new_state: "awaiting-approval", timestamp }),
     );
-    emitAudit(pd, "STAGE_AWAITING_APPROVAL", fields);
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
-
-  writeStateFile(pd, content);
-  console.log(JSON.stringify({ slug, new_state: "awaiting-approval", timestamp }));
   });
 }
 
@@ -6179,145 +6359,180 @@ function handleSkip(args: string[]): void {
   const workflowUsageFields = workflowRollupFields(pd);
   // C2b lost-update safety: validate→transition→emit-audit→write under one lock.
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+    let content = readStateFile(pd);
 
-  const stage = findStageBySlug(slug);
-  if (!stage) error(`Unknown stage: ${slug}`);
-  if (!route) {
-    validateSlugInState(content, slug, ["pending", "in-progress", "revising"]);
+    const stage = findStageBySlug(slug);
+    if (!stage) error(`Unknown stage: ${slug}`);
+    if (!route) {
+      validateSlugInState(content, slug, [
+        "pending",
+        "in-progress",
+        "revising",
+      ]);
 
+      content = setCheckbox(content, slug, "skipped");
+      const timestamp = isoTimestamp();
+      content = setField(content, "Last Updated", timestamp);
+
+      try {
+        const fields: Record<string, string> = { Stage: slug };
+        if (reason) fields.Reason = reason;
+        emitAudit(pd, "STAGE_SKIPPED", fields);
+      } catch (e) {
+        error(`Audit emission failed: ${errorMessage(e)}`);
+      }
+
+      writeStateFile(pd, content);
+      console.log(JSON.stringify({ slug, new_state: "skipped", timestamp }));
+      return;
+    }
+
+    if (!reason) {
+      error("aidlc-state.ts skip --route requires a nonblank --reason <text>.");
+    }
+    validateSlugInState(content, slug, ["in-progress", "revising", "skipped"]);
+    const currentStage = getField(content, "Current Stage");
+    if (currentStage !== slug) {
+      error(
+        `Cannot route skipped stage "${slug}": Current Stage is "${currentStage ?? ""}".`,
+      );
+    }
+    const scope = getField(content, "Scope");
+    if (!scope) {
+      error(
+        "State file has no Scope field. Refusing to route skip - fix the state file first.",
+      );
+    }
+    if (!validScopes().has(scope)) {
+      error(
+        `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
+      );
+    }
+
+    const wasSkipped = getSlugState(content, slug) === "skipped";
+    const skipAuditTail = wasSkipped
+      ? currentRoutedSkipAuditTail(pd, slug)
+      : null;
+    const skipAlreadyAudited = skipAuditTail !== null;
     content = setCheckbox(content, slug, "skipped");
     const timestamp = isoTimestamp();
+    const nextStage = nextInScopeStage(slug, scope, content);
+    const crossesPhaseBoundary =
+      nextStage !== null && stage.phase !== nextStage.phase;
+    const boundaryTarget = nextStage?.phase ?? "(end)";
+    const boundary = `${stage.phase} → ${nextStage?.phase ?? "end"}`;
+    const phaseCompletedAlreadyAudited =
+      skipAuditTail !== null &&
+      auditTailHasFields(skipAuditTail, "PHASE_COMPLETED", {
+        "From phase": stage.phase,
+        "To phase": boundaryTarget,
+      });
+    const phaseVerifiedAlreadyAudited =
+      skipAuditTail !== null &&
+      auditTailHasFields(skipAuditTail, "PHASE_VERIFIED", {
+        "Phase boundary": boundary,
+      });
+    const phaseStartedAlreadyAudited = nextStage
+      ? skipAuditTail !== null &&
+        auditTailHasFields(skipAuditTail, "PHASE_STARTED", {
+          Phase: nextStage.phase,
+          Scope: scope,
+        })
+      : false;
+    const stageStartedAlreadyAudited = nextStage
+      ? skipAuditTail !== null &&
+        auditTailHasFields(skipAuditTail, "STAGE_STARTED", {
+          Stage: nextStage.slug,
+        })
+      : false;
+    const workflowCompletedAlreadyAudited =
+      nextStage === null
+        ? skipAuditTail !== null &&
+          auditTailHasFields(skipAuditTail, "WORKFLOW_COMPLETED", {
+            Scope: scope,
+            Details: `Scope: ${scope}, final stage ${slug} skipped`,
+          })
+        : false;
+
+    if (nextStage) {
+      content = setCheckbox(content, nextStage.slug, "in-progress");
+      const nextAfterNext = nextInScopeStage(nextStage.slug, scope, content);
+      content = setField(content, "Current Stage", nextStage.slug);
+      content = setField(
+        content,
+        "Lifecycle Phase",
+        nextStage.phase.toUpperCase(),
+      );
+      content = setField(
+        content,
+        "Next Stage",
+        nextAfterNext ? nextAfterNext.slug : "none",
+      );
+      content = setField(content, "In Progress", nextStage.slug);
+      content = setField(content, "Active Agent", nextStage.lead_agent);
+      content = setField(content, "Status", "Running");
+      content = setField(content, "Next Action", `Execute ${nextStage.name}`);
+      if (crossesPhaseBoundary) {
+        content = setPhaseProgress(content, stage.phase, "Verified");
+        content = setPhaseProgress(content, nextStage.phase, "Active");
+      }
+    } else {
+      content = setField(content, "Status", "Completed");
+      content = setField(content, "In Progress", "none");
+      content = setField(content, "Next Stage", "none");
+      content = setField(content, "Next Action", "Workflow complete");
+      content = setPhaseProgress(content, stage.phase, "Verified");
+    }
+    content = setField(
+      content,
+      "Completed",
+      String(countCheckboxes(content, "completed")),
+    );
     content = setField(content, "Last Updated", timestamp);
 
     try {
-      const fields: Record<string, string> = { Stage: slug };
-      if (reason) fields.Reason = reason;
-      emitAudit(pd, "STAGE_SKIPPED", fields);
-    } catch (e) {
-      error(`Audit emission failed: ${errorMessage(e)}`);
-    }
-
-    writeStateFile(pd, content);
-    console.log(JSON.stringify({ slug, new_state: "skipped", timestamp }));
-    return;
-  }
-
-  if (!reason) {
-    error("aidlc-state.ts skip --route requires a nonblank --reason <text>.");
-  }
-  validateSlugInState(content, slug, [
-    "in-progress",
-    "revising",
-    "skipped",
-  ]);
-  const currentStage = getField(content, "Current Stage");
-  if (currentStage !== slug) {
-    error(
-      `Cannot route skipped stage "${slug}": Current Stage is "${currentStage ?? ""}".`,
-    );
-  }
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      "State file has no Scope field. Refusing to route skip - fix the state file first.",
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
-    );
-  }
-
-  const wasSkipped = getSlugState(content, slug) === "skipped";
-  const skipAuditTail = wasSkipped
-    ? currentRoutedSkipAuditTail(pd, slug)
-    : null;
-  const skipAlreadyAudited = skipAuditTail !== null;
-  content = setCheckbox(content, slug, "skipped");
-  const timestamp = isoTimestamp();
-  const nextStage = nextInScopeStage(slug, scope, content);
-  const crossesPhaseBoundary =
-    nextStage !== null && stage.phase !== nextStage.phase;
-  const boundaryTarget = nextStage?.phase ?? "(end)";
-  const boundary = `${stage.phase} → ${nextStage?.phase ?? "end"}`;
-  const phaseCompletedAlreadyAudited = skipAuditTail !== null && auditTailHasFields(
-    skipAuditTail,
-    "PHASE_COMPLETED",
-    {
-      "From phase": stage.phase,
-      "To phase": boundaryTarget,
-    },
-  );
-  const phaseVerifiedAlreadyAudited = skipAuditTail !== null && auditTailHasFields(
-    skipAuditTail,
-    "PHASE_VERIFIED",
-    { "Phase boundary": boundary },
-  );
-  const phaseStartedAlreadyAudited = nextStage
-    ? skipAuditTail !== null && auditTailHasFields(skipAuditTail, "PHASE_STARTED", {
-        Phase: nextStage.phase,
-        Scope: scope,
-      })
-    : false;
-  const stageStartedAlreadyAudited = nextStage
-    ? skipAuditTail !== null && auditTailHasFields(skipAuditTail, "STAGE_STARTED", {
-        Stage: nextStage.slug,
-      })
-    : false;
-  const workflowCompletedAlreadyAudited = nextStage === null
-    ? skipAuditTail !== null && auditTailHasFields(skipAuditTail, "WORKFLOW_COMPLETED", {
-        Scope: scope,
-        Details: `Scope: ${scope}, final stage ${slug} skipped`,
-      })
-    : false;
-
-  if (nextStage) {
-    content = setCheckbox(content, nextStage.slug, "in-progress");
-    const nextAfterNext = nextInScopeStage(nextStage.slug, scope, content);
-    content = setField(content, "Current Stage", nextStage.slug);
-    content = setField(content, "Lifecycle Phase", nextStage.phase.toUpperCase());
-    content = setField(
-      content,
-      "Next Stage",
-      nextAfterNext ? nextAfterNext.slug : "none",
-    );
-    content = setField(content, "In Progress", nextStage.slug);
-    content = setField(content, "Active Agent", nextStage.lead_agent);
-    content = setField(content, "Status", "Running");
-    content = setField(content, "Next Action", `Execute ${nextStage.name}`);
-    if (crossesPhaseBoundary) {
-      content = setPhaseProgress(content, stage.phase, "Verified");
-      content = setPhaseProgress(content, nextStage.phase, "Active");
-    }
-  } else {
-    content = setField(content, "Status", "Completed");
-    content = setField(content, "In Progress", "none");
-    content = setField(content, "Next Stage", "none");
-    content = setField(content, "Next Action", "Workflow complete");
-    content = setPhaseProgress(content, stage.phase, "Verified");
-  }
-  content = setField(
-    content,
-    "Completed",
-    String(countCheckboxes(content, "completed")),
-  );
-  content = setField(content, "Last Updated", timestamp);
-
-  try {
-    if (!skipAlreadyAudited) {
-      emitAudit(pd, "STAGE_SKIPPED", {
-        Stage: slug,
-        Reason: reason,
-        "Skip Kind": "conditional-runtime",
-      });
-    }
-    if (nextStage) {
-      if (crossesPhaseBoundary) {
+      if (!skipAlreadyAudited) {
+        emitAudit(pd, "STAGE_SKIPPED", {
+          Stage: slug,
+          Reason: reason,
+          "Skip Kind": "conditional-runtime",
+        });
+      }
+      if (nextStage) {
+        if (crossesPhaseBoundary) {
+          if (!phaseCompletedAlreadyAudited) {
+            emitAudit(pd, "PHASE_COMPLETED", {
+              "From phase": stage.phase,
+              "To phase": nextStage.phase,
+              "Stages completed": String(countCheckboxes(content, "completed")),
+            });
+          }
+          if (!phaseVerifiedAlreadyAudited) {
+            emitAudit(pd, "PHASE_VERIFIED", {
+              "Phase boundary": boundary,
+            });
+          }
+          if (!phaseStartedAlreadyAudited) {
+            emitAudit(pd, "PHASE_STARTED", {
+              Phase: nextStage.phase,
+              Scope: scope,
+            });
+          }
+        }
+        if (!stageStartedAlreadyAudited) {
+          emitAudit(pd, "STAGE_STARTED", {
+            Stage: nextStage.slug,
+            Agent: nextStage.lead_agent,
+            ...(nextStage.workspace_requires
+              ? sourceBaselineAuditFields(pd, nextStage.slug)
+              : {}),
+          });
+        }
+      } else {
         if (!phaseCompletedAlreadyAudited) {
           emitAudit(pd, "PHASE_COMPLETED", {
             "From phase": stage.phase,
-            "To phase": nextStage.phase,
+            "To phase": "(end)",
             "Stages completed": String(countCheckboxes(content, "completed")),
           });
         }
@@ -6326,69 +6541,42 @@ function handleSkip(args: string[]): void {
             "Phase boundary": boundary,
           });
         }
-        if (!phaseStartedAlreadyAudited) {
-          emitAudit(pd, "PHASE_STARTED", {
-            Phase: nextStage.phase,
+        if (!workflowCompletedAlreadyAudited) {
+          emitAudit(pd, "WORKFLOW_COMPLETED", {
             Scope: scope,
+            Details: `Scope: ${scope}, final stage ${slug} skipped`,
+            Reason: reason,
+            ...workflowUsageFields,
           });
         }
       }
-      if (!stageStartedAlreadyAudited) {
-        emitAudit(pd, "STAGE_STARTED", {
-          Stage: nextStage.slug,
-          Agent: nextStage.lead_agent,
-          ...(nextStage.workspace_requires
-            ? sourceBaselineAuditFields(pd, nextStage.slug)
-            : {}),
-        });
-      }
-    } else {
-      if (!phaseCompletedAlreadyAudited) {
-        emitAudit(pd, "PHASE_COMPLETED", {
-          "From phase": stage.phase,
-          "To phase": "(end)",
-          "Stages completed": String(countCheckboxes(content, "completed")),
-        });
-      }
-      if (!phaseVerifiedAlreadyAudited) {
-        emitAudit(pd, "PHASE_VERIFIED", {
-          "Phase boundary": boundary,
-        });
-      }
-      if (!workflowCompletedAlreadyAudited) {
-        emitAudit(pd, "WORKFLOW_COMPLETED", {
-          Scope: scope,
-          Details: `Scope: ${scope}, final stage ${slug} skipped`,
-          Reason: reason,
-          ...workflowUsageFields,
-        });
-      }
+    } catch (e) {
+      error(`Audit emission failed: ${errorMessage(e)}`);
     }
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
 
-  writeStateFile(pd, content);
-  if (!nextStage) {
-    const completedSelection = resolveWorkflowSelection(pd);
-    const completedIntentDir = completedSelection.intent;
-    if (completedIntentDir) {
-      updateIntentStatus(
-        pd,
-        completedIntentDir,
-        "complete",
-        completedSelection.space,
-      );
+    writeStateFile(pd, content);
+    if (!nextStage) {
+      const completedSelection = resolveWorkflowSelection(pd);
+      const completedIntentDir = completedSelection.intent;
+      if (completedIntentDir) {
+        updateIntentStatus(
+          pd,
+          completedIntentDir,
+          "complete",
+          completedSelection.space,
+        );
+      }
     }
-  }
-  console.log(JSON.stringify({
-    slug,
-    new_state: "skipped",
-    started: nextStage?.slug ?? null,
-    workflow_completed: nextStage === null,
-    recovered: wasSkipped || skipAlreadyAudited,
-    timestamp,
-  }));
+    console.log(
+      JSON.stringify({
+        slug,
+        new_state: "skipped",
+        started: nextStage?.slug ?? null,
+        workflow_completed: nextStage === null,
+        recovered: wasSkipped || skipAlreadyAudited,
+        timestamp,
+      }),
+    );
   });
 }
 
@@ -6434,7 +6622,7 @@ function handleResume(_args: string[]): void {
         // the compaction prompt and chose how to proceed" signal.
         const hasActivity =
           /\*\*Event\*\*: (STAGE_STARTED|STAGE_COMPLETED|GATE_APPROVED|SESSION_RESUMED|RECOVERY_COMPLETED)/.test(
-            after
+            after,
           );
         compactionPending = !hasActivity;
       }
@@ -6465,11 +6653,13 @@ function handleResume(_args: string[]): void {
         ? {
             active_unit: activeUnit,
             unit_state: unitState ?? "in-progress",
-            unit_pause_reason: getField(content, "Unit Pause Reason") ?? undefined,
-            unit_next_action: getField(content, "Unit Next Action") ?? undefined,
+            unit_pause_reason:
+              getField(content, "Unit Pause Reason") ?? undefined,
+            unit_next_action:
+              getField(content, "Unit Next Action") ?? undefined,
           }
         : {}),
-    })
+    }),
   );
 }
 
@@ -6492,7 +6682,7 @@ function handleAcknowledgeCompaction(args: string[]): void {
   }
   if (!choice) {
     error(
-      "Usage: aidlc-state.ts acknowledge-compaction --choice <continue|review|restart>"
+      "Usage: aidlc-state.ts acknowledge-compaction --choice <continue|review|restart>",
     );
   }
   if (!["continue", "review", "restart"].includes(choice)) {
@@ -6514,7 +6704,7 @@ function handleAcknowledgeCompaction(args: string[]): void {
         const after = tail.slice(lastCompactIdx);
         compactionPending =
           !/\*\*Event\*\*: (STAGE_STARTED|STAGE_COMPLETED|GATE_APPROVED|SESSION_RESUMED|RECOVERY_COMPLETED)/.test(
-            after
+            after,
           );
       }
     }
@@ -6524,7 +6714,7 @@ function handleAcknowledgeCompaction(args: string[]): void {
 
   if (!compactionPending) {
     error(
-      "No pending compaction to acknowledge (latest SESSION_COMPACTED already followed by stage activity or recovery)."
+      "No pending compaction to acknowledge (latest SESSION_COMPACTED already followed by stage activity or recovery).",
     );
   }
 
@@ -6534,7 +6724,7 @@ function handleAcknowledgeCompaction(args: string[]): void {
   });
 
   console.log(
-    JSON.stringify({ acknowledged: true, choice, current_stage: currentStage })
+    JSON.stringify({ acknowledged: true, choice, current_stage: currentStage }),
   );
 }
 
@@ -6566,7 +6756,7 @@ function handlePracticesEvent(args: string[]): void {
   }
   if (!eventTypeArg) {
     error(
-      'Usage: aidlc-state.ts practices-event --type <discovered|override|empty> [--field "Key: Value"]...'
+      'Usage: aidlc-state.ts practices-event --type <discovered|override|empty> [--field "Key: Value"]...',
     );
   }
   // Explicit literal-string emitAudit calls per --type so t48's
@@ -6591,7 +6781,7 @@ function handlePracticesEvent(args: string[]): void {
       break;
     case "affirmed":
       error(
-        "PRACTICES_AFFIRMED is reserved for practices-promote so the audit receipt cannot be minted without successful memory promotion."
+        "PRACTICES_AFFIRMED is reserved for practices-promote so the audit receipt cannot be minted without successful memory promotion.",
       );
       return;
     case "override":
@@ -6604,12 +6794,15 @@ function handlePracticesEvent(args: string[]): void {
       break;
     default:
       error(
-        `Invalid --type: ${eventTypeArg}. Must be discovered, override, or empty.`
+        `Invalid --type: ${eventTypeArg}. Must be discovered, override, or empty.`,
       );
       return;
   }
   console.log(
-    JSON.stringify({ emitted: emittedEvent, fields_count: Object.keys(fields).length })
+    JSON.stringify({
+      emitted: emittedEvent,
+      fields_count: Object.keys(fields).length,
+    }),
   );
 }
 
@@ -6658,7 +6851,7 @@ function handlePracticesPromote(args: string[]): void {
   }
   if (!flags["team-practices"] || !flags["discovered-rules"]) {
     error(
-      'Usage: aidlc-state.ts practices-promote --team-practices <path> --discovered-rules <path> [--affirming-user <name>] [--target-dir <path>]'
+      "Usage: aidlc-state.ts practices-promote --team-practices <path> --discovered-rules <path> [--affirming-user <name>] [--target-dir <path>]",
     );
   }
 
@@ -6702,7 +6895,9 @@ function handlePracticesPromote(args: string[]): void {
   }
   const draftDir = dirname(teamPracticesPath);
   if (dirname(discoveredRulesPath) !== draftDir) {
-    fail("team-practices and discovered-rules drafts must share one stage directory");
+    fail(
+      "team-practices and discovered-rules drafts must share one stage directory",
+    );
   }
   const missingContributions: string[] = [];
   for (const agent of practicesStage!.support_agents ?? []) {
@@ -6715,13 +6910,13 @@ function handlePracticesPromote(args: string[]): void {
       continue;
     }
     if (firstLine !== `**Collaborator:** ${agent}`) {
-      missingContributions.push(`${agent} (missing identity-marker first line)`);
+      missingContributions.push(
+        `${agent} (missing identity-marker first line)`,
+      );
     }
   }
   if (missingContributions.length > 0) {
-    fail(
-      "ensemble evidence is incomplete: " + missingContributions.join("; "),
-    );
+    fail("ensemble evidence is incomplete: " + missingContributions.join("; "));
   }
 
   // Step 2: Read both drafts.
@@ -6778,7 +6973,7 @@ function handlePracticesPromote(args: string[]): void {
       sectionsWritten.push(heading.slice(3));
     } catch (e) {
       fail(
-        `replaceSection failed on team.md for "${heading}": ${errorMessage(e)}`
+        `replaceSection failed on team.md for "${heading}": ${errorMessage(e)}`,
       );
       return;
     }
@@ -6791,15 +6986,17 @@ function handlePracticesPromote(args: string[]): void {
     return sectionContent
       .split("\n")
       .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith("<!--") && !l.startsWith("#"));
+      .filter(
+        (l) => l.length > 0 && !l.startsWith("<!--") && !l.startsWith("#"),
+      );
   };
   const mandatedDraft = extractMarkdownSection(
     discoveredRulesDraft,
-    "## Mandated"
+    "## Mandated",
   );
   const forbiddenDraft = extractMarkdownSection(
     discoveredRulesDraft,
-    "## Forbidden"
+    "## Forbidden",
   );
   const mandatedRules = parseRules(mandatedDraft);
   const forbiddenRules = parseRules(forbiddenDraft);
@@ -6815,7 +7012,7 @@ function handlePracticesPromote(args: string[]): void {
       newGuardrailsMd = appendUnderHeading(
         newGuardrailsMd,
         "## Mandated",
-        `${stampedLine}\n`
+        `${stampedLine}\n`,
       );
       existingGuardrailLines.add(stampedLine);
       rulesAppended.mandated++;
@@ -6831,7 +7028,7 @@ function handlePracticesPromote(args: string[]): void {
       newGuardrailsMd = appendUnderHeading(
         newGuardrailsMd,
         "## Forbidden",
-        `${stampedLine}\n`
+        `${stampedLine}\n`,
       );
       existingGuardrailLines.add(stampedLine);
       rulesAppended.forbidden++;
@@ -6856,7 +7053,7 @@ function handlePracticesPromote(args: string[]): void {
     writeFileSync(teamMdPath, newTeamMd, "utf-8");
   } catch (e) {
     fail(
-      `writing team.md failed AFTER project.md was written: ${errorMessage(e)}`
+      `writing team.md failed AFTER project.md was written: ${errorMessage(e)}`,
     );
     return;
   }
@@ -6890,7 +7087,7 @@ function handlePracticesPromote(args: string[]): void {
     });
   } catch (e) {
     fail(
-      `audit/state commit failed AFTER both files were written: ${errorMessage(e)}`
+      `audit/state commit failed AFTER both files were written: ${errorMessage(e)}`,
     );
     return;
   }
@@ -6904,7 +7101,7 @@ function handlePracticesPromote(args: string[]): void {
       affirmed_at: affirmedAt,
       team_md: teamMdPath,
       project_guardrails: guardrailsPath,
-    })
+    }),
   );
 }
 
@@ -6912,7 +7109,9 @@ function handlePracticesPromote(args: string[]): void {
 //   [--repo <repo>] [--single]
 function handleReuseArtifact(args: string[]): void {
   if (args.length < 1)
-    error("Usage: aidlc-state.ts reuse-artifact <slug> --decision <keep|modify|redo> --artifacts <csv> [--repo <repo>] [--single]");
+    error(
+      "Usage: aidlc-state.ts reuse-artifact <slug> --decision <keep|modify|redo> --artifacts <csv> [--repo <repo>] [--single]",
+    );
   const slug = args[0];
   const rest = args.slice(1);
   const decision = getFlagValue(rest, "--decision");
@@ -6939,10 +7138,7 @@ function handleReuseArtifact(args: string[]): void {
         `Cannot record isolated reuse for "${slug}": run next --stage ${slug} --single first.`,
       );
     }
-    if (
-      slug === "reverse-engineering" &&
-      decision === "keep"
-    ) {
+    if (slug === "reverse-engineering" && decision === "keep") {
       const repos = intentRepos(pd);
       if (repos.length > 0) {
         if (!repo) {
@@ -6972,11 +7168,9 @@ function handleReuseArtifact(args: string[]): void {
           `Cannot record isolated reverse-engineering reuse for "${resolvedRepo}": the CodeKB store is not CURRENT. Rescan it instead.`,
         );
       }
-      const artifactInspection = inspectRequiredArtifactInstances(
-        pd,
-        stage,
-        { codekbRepos: [resolvedRepo] },
-      );
+      const artifactInspection = inspectRequiredArtifactInstances(pd, stage, {
+        codekbRepos: [resolvedRepo],
+      });
       if (!artifactInspection.ok) {
         error(
           `Cannot record isolated reverse-engineering reuse for "${resolvedRepo}": ` +
@@ -6999,18 +7193,21 @@ function handleReuseArtifact(args: string[]): void {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
-  console.log(JSON.stringify({
-    slug,
-    decision,
-    artifacts,
-    ...(repo ? { repo } : {}),
-    ...(singleRun ? { single: true } : {}),
-    emitted: "ARTIFACT_REUSED",
-  }));
+  console.log(
+    JSON.stringify({
+      slug,
+      decision,
+      artifacts,
+      ...(repo ? { repo } : {}),
+      ...(singleRun ? { single: true } : {}),
+      emitted: "ARTIFACT_REUSED",
+    }),
+  );
 }
 
 function handleLookup(args: string[]): void {
-  if (args.length < 1) error("Usage: aidlc-state.ts lookup <subcommand> [args...]");
+  if (args.length < 1)
+    error("Usage: aidlc-state.ts lookup <subcommand> [args...]");
   const sub = args[0];
   const subArgs = args.slice(1);
 
@@ -7061,13 +7258,15 @@ function handleLookup(args: string[]): void {
       break;
     }
     case "first-in-phase": {
-      if (subArgs.length < 2) error("Usage: lookup first-in-phase <phase> <scope>");
+      if (subArgs.length < 2)
+        error("Usage: lookup first-in-phase <phase> <scope>");
       const stage = firstInScopeStageOfPhase(subArgs[0], subArgs[1]);
       console.log(stage ? stage.slug : "none");
       break;
     }
     case "validate-stage": {
-      if (subArgs.length < 1) error("Usage: lookup validate-stage <slug-or-number>");
+      if (subArgs.length < 1)
+        error("Usage: lookup validate-stage <slug-or-number>");
       const stage = resolveStage(subArgs[0]);
       if (!stage) {
         console.log(JSON.stringify({ valid: false, input: subArgs[0] }));
@@ -7080,13 +7279,14 @@ function handleLookup(args: string[]): void {
             name: stage.name,
             phase: stage.phase,
             lead_agent: stage.lead_agent,
-          })
+          }),
         );
       }
       break;
     }
     case "validate-phase": {
-      if (subArgs.length < 1) error("Usage: lookup validate-phase <phase-or-number>");
+      if (subArgs.length < 1)
+        error("Usage: lookup validate-phase <phase-or-number>");
       const input = subArgs[0].toLowerCase();
       const phase =
         PHASE_NUMBERS[input] ||
@@ -7094,21 +7294,23 @@ function handleLookup(args: string[]): void {
       if (!phase) {
         console.log(JSON.stringify({ valid: false, input: subArgs[0] }));
       } else {
-        const phaseNumber = Object.entries(PHASE_NUMBERS).find(([_, v]) => v === phase)?.[0];
+        const phaseNumber = Object.entries(PHASE_NUMBERS).find(
+          ([_, v]) => v === phase,
+        )?.[0];
         console.log(
           JSON.stringify({
             valid: true,
             canonical: phase,
             number: phaseNumber,
             display: phase.toUpperCase(),
-          })
+          }),
         );
       }
       break;
     }
     default:
       error(
-        `Unknown lookup subcommand: ${sub}. Valid: phase-of, next-stage, agent-for, number-of, stages-in-scope, first-in-phase, validate-stage, validate-phase`
+        `Unknown lookup subcommand: ${sub}. Valid: phase-of, next-stage, agent-for, number-of, stages-in-scope, first-in-phase, validate-stage, validate-phase`,
       );
   }
 }
@@ -7189,7 +7391,10 @@ function handleFork(args: string[]): void {
   const wtPath = flags["target-dir"] ?? worktreePath(pd, slug);
 
   if (!existsSync(wtPath)) {
-    errorWithSlug(slug, `worktree directory does not exist: ${wtPath}. Run aidlc-worktree create first.`);
+    errorWithSlug(
+      slug,
+      `worktree directory does not exist: ${wtPath}. Run aidlc-worktree create first.`,
+    );
   }
 
   // mkdir BEFORE acquiring the lock. A read-only-fs mkdir failure must not
@@ -7218,81 +7423,115 @@ function handleFork(args: string[]): void {
     // (the P3 shared-lock cliff) and intent-create/migration would block unrelated
     // forks. resolvedIntent (not raw flags.intent) makes LOCK == WRITE even when
     // --intent is omitted (both resolve to the active record).
-    srcSha = withAuditLock(pd, () => {
-    let mainContent: string;
-    try {
-      mainContent = readStateFile(pd, resolvedIntent, space);
-    } catch (e) {
-      errorWithSlug(slug, `failed to read main state: ${errorMessage(e)}`);
-      return ""; // unreachable
-    }
-    assertWorkflowNotArchived(mainContent, "fork");
-    const sha = sha256(mainContent);
+    srcSha = withAuditLock(
+      pd,
+      () => {
+        let mainContent: string;
+        try {
+          mainContent = readStateFile(pd, resolvedIntent, space);
+        } catch (e) {
+          errorWithSlug(slug, `failed to read main state: ${errorMessage(e)}`);
+          return ""; // unreachable
+        }
+        assertWorkflowNotArchived(mainContent, "fork");
+        const sha = sha256(mainContent);
 
-    // Dedup BEFORE emit: if the slug is already in Bolt Refs, fail without
-    // emitting a phantom audit row. Recovery from a stale ref entry is the
-    // caller's responsibility (see SKILL.md Step 0.6 recovery seam — discard
-    // + re-fork is supported because the next fork sees the slug already
-    // present and exits without poisoning audit).
-    const currentRefs = getField(mainContent, "Bolt Refs") ?? "";
-    if (parseRefsList(currentRefs).includes(slug)) {
-      errorWithSlug(slug, `slug already in Bolt Refs (current: ${currentRefs.trim()}). If a prior fork failed mid-operation, run 'aidlc-worktree discard --slug ${slug}' and 'aidlc-state.ts merge --slug ${slug}' (which will exit "already merged" cleanly) or remove the stale entry from main state, then retry.`);
-    }
+        // Dedup BEFORE emit: if the slug is already in Bolt Refs, fail without
+        // emitting a phantom audit row. Recovery from a stale ref entry is the
+        // caller's responsibility (see SKILL.md Step 0.6 recovery seam — discard
+        // + re-fork is supported because the next fork sees the slug already
+        // present and exits without poisoning audit).
+        const currentRefs = getField(mainContent, "Bolt Refs") ?? "";
+        if (parseRefsList(currentRefs).includes(slug)) {
+          errorWithSlug(
+            slug,
+            `slug already in Bolt Refs (current: ${currentRefs.trim()}). If a prior fork failed mid-operation, run 'aidlc-worktree discard --slug ${slug}' and 'aidlc-state.ts merge --slug ${slug}' (which will exit "already merged" cleanly) or remove the stale entry from main state, then retry.`,
+          );
+        }
 
-    // Append slug to main's Bolt Refs first (the side effect that "registers"
-    // the fork). If this fails, no audit, no worktree state — clean recovery.
-    let mainNow = mainContent;
-    try {
-      mainNow = setFieldStrict(mainNow, "Bolt Refs", appendSlug(currentRefs, slug));
-    } catch (e) {
-      errorWithSlug(slug, `failed to compute updated Bolt Refs: ${errorMessage(e)}`);
-    }
+        // Append slug to main's Bolt Refs first (the side effect that "registers"
+        // the fork). If this fails, no audit, no worktree state — clean recovery.
+        let mainNow = mainContent;
+        try {
+          mainNow = setFieldStrict(
+            mainNow,
+            "Bolt Refs",
+            appendSlug(currentRefs, slug),
+          );
+        } catch (e) {
+          errorWithSlug(
+            slug,
+            `failed to compute updated Bolt Refs: ${errorMessage(e)}`,
+          );
+        }
 
-    // Audit-first within the locked critical section. Use the unlocked
-    // variant since we already hold the lock.
-    try {
-      appendAuditEntryUnlocked("STATE_FORKED", {
-        "Bolt slug": slug,
-        "Worktree path": relative(pd, wtPath).replaceAll("\\", "/"),
-        "Source state hash": sha,
-        "Target state hash": sha, // fork = byte-identical copy
-        ...claimAttemptFields(pd, slug),
-      }, pd, resolvedIntent, space);
-    } catch (e) {
-      errorWithSlug(slug, `audit emission failed: ${errorMessage(e)}`);
-    }
+        // Audit-first within the locked critical section. Use the unlocked
+        // variant since we already hold the lock.
+        try {
+          appendAuditEntryUnlocked(
+            "STATE_FORKED",
+            {
+              "Bolt slug": slug,
+              "Worktree path": relative(pd, wtPath).replaceAll("\\", "/"),
+              "Source state hash": sha,
+              "Target state hash": sha, // fork = byte-identical copy
+              ...claimAttemptFields(pd, slug),
+            },
+            pd,
+            resolvedIntent,
+            space,
+          );
+        } catch (e) {
+          errorWithSlug(slug, `audit emission failed: ${errorMessage(e)}`);
+        }
 
-    // Write main state with updated Bolt Refs.
-    try {
-      writeStateFile(pd, mainNow, resolvedIntent, space);
-    } catch (e) {
-      errorWithSlug(slug, `failed to write main state with updated Bolt Refs: ${errorMessage(e)}`);
-    }
+        // Write main state with updated Bolt Refs.
+        try {
+          writeStateFile(pd, mainNow, resolvedIntent, space);
+        } catch (e) {
+          errorWithSlug(
+            slug,
+            `failed to write main state with updated Bolt Refs: ${errorMessage(e)}`,
+          );
+        }
 
-    // Write worktree state with the decorative Worktree Path breadcrumb.
-    // Done last so a write failure here leaves a recoverable surface: main's
-    // Bolt Refs has the slug, audit has the row, but the worktree's state
-    // file is missing — doctor reconciles by checking
-    // `<worktreePath>/aidlc-docs/aidlc-state.md` existence against Bolt Refs.
-    let wtContent = mainContent;
-    try {
-      wtContent = setFieldStrict(wtContent, "Worktree Path", relative(pd, wtPath).replaceAll("\\", "/"));
-    } catch (e) {
-      errorWithSlug(slug, `failed to set Worktree Path on worktree state: ${errorMessage(e)}`);
-    }
-    try {
-      // The worktree mirror lives under the SAME record (wtRecord/space) the
-      // main side resolved — NOT the worktree's own cursor — so fork and merge
-      // read/write one file. wtRecord===undefined -> the flat legacy mirror.
-      writeStateFile(wtPath, wtContent, wtRecord, space);
-      const scopeStamp = readUnitScopeStamp(pd);
-      if (scopeStamp) writeUnitScopeStamp(wtPath, scopeStamp);
-    } catch (e) {
-      errorWithSlug(slug, `failed to write worktree state at ${wtPath}: ${errorMessage(e)}`);
-    }
+        // Write worktree state with the decorative Worktree Path breadcrumb.
+        // Done last so a write failure here leaves a recoverable surface: main's
+        // Bolt Refs has the slug, audit has the row, but the worktree's state
+        // file is missing — doctor reconciles by checking
+        // `<worktreePath>/aidlc-docs/aidlc-state.md` existence against Bolt Refs.
+        let wtContent = mainContent;
+        try {
+          wtContent = setFieldStrict(
+            wtContent,
+            "Worktree Path",
+            relative(pd, wtPath).replaceAll("\\", "/"),
+          );
+        } catch (e) {
+          errorWithSlug(
+            slug,
+            `failed to set Worktree Path on worktree state: ${errorMessage(e)}`,
+          );
+        }
+        try {
+          // The worktree mirror lives under the SAME record (wtRecord/space) the
+          // main side resolved — NOT the worktree's own cursor — so fork and merge
+          // read/write one file. wtRecord===undefined -> the flat legacy mirror.
+          writeStateFile(wtPath, wtContent, wtRecord, space);
+          const scopeStamp = readUnitScopeStamp(pd);
+          if (scopeStamp) writeUnitScopeStamp(wtPath, scopeStamp);
+        } catch (e) {
+          errorWithSlug(
+            slug,
+            `failed to write worktree state at ${wtPath}: ${errorMessage(e)}`,
+          );
+        }
 
-    return sha;
-    }, resolvedIntent, space);
+        return sha;
+      },
+      resolvedIntent,
+      space,
+    );
   } catch (e) {
     // Slug-tag any error from the locked block (most commonly: lock-acquire
     // timeout when a peer tool holds the lock across the retry budget).
@@ -7310,7 +7549,7 @@ function handleFork(args: string[]): void {
       slug,
       worktree_path: wtPath,
       source_state_hash: srcSha,
-    })}\n`
+    })}\n`,
   );
 }
 
@@ -7359,7 +7598,10 @@ function handleMerge(args: string[]): void {
   }
   const wtStatePath = worktreeStateFilePath(wtPath, recordPrefix);
   if (!existsSync(wtStatePath)) {
-    errorWithSlug(slug, `worktree state file does not exist: ${wtStatePath}. Was fork run?`);
+    errorWithSlug(
+      slug,
+      `worktree state file does not exist: ${wtStatePath}. Was fork run?`,
+    );
   }
 
   // Read worktree state outside the lock — its file isn't shared with peers
@@ -7383,80 +7625,102 @@ function handleMerge(args: string[]): void {
     // serialize all intents' merges and let intent-create block an unrelated
     // merge (P3 shared-lock cliff). resolvedIntent (not raw flags.intent) makes
     // LOCK == WRITE on the omitted-intent path.
-    result = withAuditLock(pd, () => {
-    const mainContent = readStateFile(pd, resolvedIntent, space);
-    assertWorkflowNotArchived(mainContent, "merge");
+    result = withAuditLock(
+      pd,
+      () => {
+        const mainContent = readStateFile(pd, resolvedIntent, space);
+        assertWorkflowNotArchived(mainContent, "merge");
 
-    // Idempotency: if slug is not in main's Bolt Refs, this is a re-run after
-    // a prior successful merge (or a never-forked slug). Either way, no work
-    // to do; emit no second audit row.
-    const currentRefs = getField(mainContent, "Bolt Refs") ?? "";
-    const refsList = parseRefsList(currentRefs);
-    if (!refsList.includes(slug)) {
-      errorWithSlug(slug, `already merged: not in Bolt Refs (current: ${currentRefs.trim()})`);
-    }
-
-    // Per-field merge rule, computed against the LOCKED snapshot:
-    //  - Workflow-level singletons (Project, Project Type, Scope, Start Date,
-    //    State Version, Active Agent, Practices Affirmed Timestamp): main
-    //    wins. These come straight from `mainContent` untouched.
-    //  - Construction Stage Progress checkboxes: take the worktree's value
-    //    when the worktree advanced past main's, IF this slug is the
-    //    alphabetically-lowest active ref. Workflow-level fields stay from
-    //    main automatically because we start from mainContent and only
-    //    overwrite the per-stage cells.
-    //  - Tiebreak (alphabetical-slug, defence-in-depth): if multiple slugs
-    //    in Bolt Refs would compete for the same cell, the lower
-    //    alphabetical slug wins.
-    let merged = mainContent;
-    const conflictResolution: string[] = [];
-    const mainCheckboxes = parseCheckboxes(mainContent);
-    const mainStateMap = new Map(mainCheckboxes.map((c) => [c.slug, c.state]));
-    const candidateSlugs = [...refsList].sort();
-    const winningSlug = candidateSlugs[0];
-
-    for (const wtCb of wtCheckboxes) {
-      const mainCbState = mainStateMap.get(wtCb.slug);
-      if (!mainCbState) continue;
-      if (mainCbState === wtCb.state) continue;
-
-      if (winningSlug === slug) {
-        merged = setCheckbox(merged, wtCb.slug, wtCb.state);
-        if (refsList.length > 1) {
-          conflictResolution.push(`${wtCb.slug}:slug-precedence:${slug}`);
+        // Idempotency: if slug is not in main's Bolt Refs, this is a re-run after
+        // a prior successful merge (or a never-forked slug). Either way, no work
+        // to do; emit no second audit row.
+        const currentRefs = getField(mainContent, "Bolt Refs") ?? "";
+        const refsList = parseRefsList(currentRefs);
+        if (!refsList.includes(slug)) {
+          errorWithSlug(
+            slug,
+            `already merged: not in Bolt Refs (current: ${currentRefs.trim()})`,
+          );
         }
-      } else {
-        conflictResolution.push(`${wtCb.slug}:deferred-to:${winningSlug}`);
-      }
-    }
 
-    // Remove slug from Bolt Refs.
-    merged = setFieldStrict(merged, "Bolt Refs", removeSlug(currentRefs, slug));
+        // Per-field merge rule, computed against the LOCKED snapshot:
+        //  - Workflow-level singletons (Project, Project Type, Scope, Start Date,
+        //    State Version, Active Agent, Practices Affirmed Timestamp): main
+        //    wins. These come straight from `mainContent` untouched.
+        //  - Construction Stage Progress checkboxes: take the worktree's value
+        //    when the worktree advanced past main's, IF this slug is the
+        //    alphabetically-lowest active ref. Workflow-level fields stay from
+        //    main automatically because we start from mainContent and only
+        //    overwrite the per-stage cells.
+        //  - Tiebreak (alphabetical-slug, defence-in-depth): if multiple slugs
+        //    in Bolt Refs would compete for the same cell, the lower
+        //    alphabetical slug wins.
+        let merged = mainContent;
+        const conflictResolution: string[] = [];
+        const mainCheckboxes = parseCheckboxes(mainContent);
+        const mainStateMap = new Map(
+          mainCheckboxes.map((c) => [c.slug, c.state]),
+        );
+        const candidateSlugs = [...refsList].sort();
+        const winningSlug = candidateSlugs[0];
 
-    const conflictResolutionField =
-      conflictResolution.length === 0 ? "clean" : conflictResolution.join("; ");
-    // Target hash matches the actual post-write content — computed inside the
-    // lock against the final `merged` value so doctor can verify by
-    // re-hashing the file at observation time.
-    const postMergeSha = sha256(merged);
+        for (const wtCb of wtCheckboxes) {
+          const mainCbState = mainStateMap.get(wtCb.slug);
+          if (!mainCbState) continue;
+          if (mainCbState === wtCb.state) continue;
 
-    // Strict audit-first within the locked critical section.
-    try {
-      appendAuditEntryUnlocked("STATE_MERGED", {
-        "Bolt slug": slug,
-        "Worktree path": relative(pd, wtPath).replaceAll("\\", "/"),
-        "Source state hash": wtSha,
-        "Target state hash": postMergeSha,
-        "Conflict resolution": conflictResolutionField,
-      }, pd, resolvedIntent, space);
-    } catch (e) {
-      errorWithSlug(slug, `audit emission failed: ${errorMessage(e)}`);
-    }
+          if (winningSlug === slug) {
+            merged = setCheckbox(merged, wtCb.slug, wtCb.state);
+            if (refsList.length > 1) {
+              conflictResolution.push(`${wtCb.slug}:slug-precedence:${slug}`);
+            }
+          } else {
+            conflictResolution.push(`${wtCb.slug}:deferred-to:${winningSlug}`);
+          }
+        }
 
-    writeStateFile(pd, merged, resolvedIntent, space);
+        // Remove slug from Bolt Refs.
+        merged = setFieldStrict(
+          merged,
+          "Bolt Refs",
+          removeSlug(currentRefs, slug),
+        );
 
-    return { postMergeSha, conflictResolutionField };
-    }, resolvedIntent, space);
+        const conflictResolutionField =
+          conflictResolution.length === 0
+            ? "clean"
+            : conflictResolution.join("; ");
+        // Target hash matches the actual post-write content — computed inside the
+        // lock against the final `merged` value so doctor can verify by
+        // re-hashing the file at observation time.
+        const postMergeSha = sha256(merged);
+
+        // Strict audit-first within the locked critical section.
+        try {
+          appendAuditEntryUnlocked(
+            "STATE_MERGED",
+            {
+              "Bolt slug": slug,
+              "Worktree path": relative(pd, wtPath).replaceAll("\\", "/"),
+              "Source state hash": wtSha,
+              "Target state hash": postMergeSha,
+              "Conflict resolution": conflictResolutionField,
+            },
+            pd,
+            resolvedIntent,
+            space,
+          );
+        } catch (e) {
+          errorWithSlug(slug, `audit emission failed: ${errorMessage(e)}`);
+        }
+
+        writeStateFile(pd, merged, resolvedIntent, space);
+
+        return { postMergeSha, conflictResolutionField };
+      },
+      resolvedIntent,
+      space,
+    );
   } catch (e) {
     // An already slug-tagged refusal from inside the locked block passes through;
     // anything else (most commonly a lock-acquire timeout when a peer tool holds
@@ -7477,7 +7741,7 @@ function handleMerge(args: string[]): void {
       source_state_hash: wtSha,
       target_state_hash: result.postMergeSha,
       conflict_resolution: result.conflictResolutionField,
-    })}\n`
+    })}\n`,
   );
 }
 

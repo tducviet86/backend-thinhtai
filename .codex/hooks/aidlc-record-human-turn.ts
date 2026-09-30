@@ -103,81 +103,92 @@ function extractResponseText(value: unknown): string {
 }
 
 export async function run(input: string): Promise<number> {
-try {
-  const projectDir = resolveProjectDirFromHook(import.meta.url);
-  if (existsSync(stateFilePath(projectDir))) {
-    if (humanTurnMintAllowed()) {
-      let sessionId = "";
-      let humanResponseText = "";
-      // The break-glass phrase counts only when the human TYPED it: the prompt
-      // text of a UserPromptSubmit payload that names no tool. A picked option
-      // (AskUserQuestion PostToolUse, Codex request_user_input, any adapter's
-      // picker payload) arrives under tool_response and never opens it.
-      let typedPrompt = "";
-      try {
-        const parsed = JSON.parse(input) as {
-          hook_event_name?: unknown;
-          tool_name?: unknown;
-          session_id?: unknown;
-          prompt?: unknown;
-          user_prompt?: unknown;
-          message?: unknown;
-          tool_response?: unknown;
-          toolResponse?: unknown;
-        };
-        if (typeof parsed.session_id === "string") sessionId = parsed.session_id.trim();
-        for (const candidate of [
-          parsed.prompt,
-          parsed.user_prompt,
-          parsed.message,
-          parsed.tool_response,
-          parsed.toolResponse,
-        ]) {
-          const extracted = extractResponseText(candidate);
-          if (extracted) {
-            humanResponseText = extracted;
-            break;
+  try {
+    const projectDir = resolveProjectDirFromHook(import.meta.url);
+    if (existsSync(stateFilePath(projectDir))) {
+      if (humanTurnMintAllowed()) {
+        let sessionId = "";
+        let humanResponseText = "";
+        // The break-glass phrase counts only when the human TYPED it: the prompt
+        // text of a UserPromptSubmit payload that names no tool. A picked option
+        // (AskUserQuestion PostToolUse, Codex request_user_input, any adapter's
+        // picker payload) arrives under tool_response and never opens it.
+        let typedPrompt = "";
+        try {
+          const parsed = JSON.parse(input) as {
+            hook_event_name?: unknown;
+            tool_name?: unknown;
+            session_id?: unknown;
+            prompt?: unknown;
+            user_prompt?: unknown;
+            message?: unknown;
+            tool_response?: unknown;
+            toolResponse?: unknown;
+          };
+          if (typeof parsed.session_id === "string")
+            sessionId = parsed.session_id.trim();
+          for (const candidate of [
+            parsed.prompt,
+            parsed.user_prompt,
+            parsed.message,
+            parsed.tool_response,
+            parsed.toolResponse,
+          ]) {
+            const extracted = extractResponseText(candidate);
+            if (extracted) {
+              humanResponseText = extracted;
+              break;
+            }
           }
+          if (
+            parsed.hook_event_name === "UserPromptSubmit" &&
+            typeof parsed.tool_name !== "string"
+          ) {
+            typedPrompt =
+              [parsed.prompt, parsed.user_prompt, parsed.message].find(
+                (value): value is string =>
+                  typeof value === "string" && value.trim().length > 0,
+              ) ?? "";
+          }
+        } catch {
+          /* presence still records without identity on legacy payloads */
         }
-        if (
-          parsed.hook_event_name === "UserPromptSubmit" &&
-          typeof parsed.tool_name !== "string"
-        ) {
-          typedPrompt =
-            [parsed.prompt, parsed.user_prompt, parsed.message].find(
-              (value): value is string =>
-                typeof value === "string" && value.trim().length > 0,
-            ) ?? "";
-        }
-      } catch { /* presence still records without identity on legacy payloads */ }
-      try {
-        appendAuditEntry("HUMAN_TURN", sessionId ? { Session: sessionId } : {}, projectDir);
-        if (sessionId && humanResponseText) {
-          recordPlanApprovalHumanResponse(
+        try {
+          appendAuditEntry(
+            "HUMAN_TURN",
+            sessionId ? { Session: sessionId } : {},
             projectDir,
-            sessionId,
-            humanResponseText,
           );
+          if (sessionId && humanResponseText) {
+            recordPlanApprovalHumanResponse(
+              projectDir,
+              sessionId,
+              humanResponseText,
+            );
+          }
+          if (sessionId && typedPrompt) {
+            recordPlanApprovalOverrideRequest(
+              projectDir,
+              sessionId,
+              typedPrompt,
+            );
+          }
+        } catch {
+          // Authority bookkeeping remains fail-open for the human's turn.
         }
-        if (sessionId && typedPrompt) {
-          recordPlanApprovalOverrideRequest(projectDir, sessionId, typedPrompt);
+        try {
+          consumeSharedDirectiveAsk(projectDir, humanResponseText);
+        } catch {
+          // Non-authority marker consumption is independently best-effort.
         }
-      } catch {
-        // Authority bookkeeping remains fail-open for the human's turn.
       }
-      try {
-        consumeSharedDirectiveAsk(projectDir, humanResponseText);
-      } catch {
-        // Non-authority marker consumption is independently best-effort.
-      }
+      markHumanTurn(projectDir);
     }
-    markHumanTurn(projectDir);
+  } catch {
+    // Non-fatal — a mint failure must never block the human's turn.
   }
-} catch {
-  // Non-fatal — a mint failure must never block the human's turn.
-}
 
-return 0;
+  return 0;
 }
 
 if (import.meta.main) {

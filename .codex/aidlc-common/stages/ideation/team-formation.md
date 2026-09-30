@@ -44,6 +44,7 @@ outputs: team-assessment.md, skill-matrix.md, mob-composition.md, team-formation
 ### Step 2: Generate Clarifying Questions
 
 Create `<record>/ideation/team-formation/team-formation-questions.md` with questions:
+
 - What teams and individuals are available?
 - What is the current capacity and utilization?
 - What skills are required vs. available?

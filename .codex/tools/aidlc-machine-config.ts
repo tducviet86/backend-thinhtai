@@ -16,10 +16,7 @@ import {
   success,
   usage,
 } from "./aidlc-command.ts";
-import {
-  installRoot,
-  machineTransactionRoot,
-} from "./aidlc-install-paths.ts";
+import { installRoot, machineTransactionRoot } from "./aidlc-install-paths.ts";
 import {
   executePlan,
   transactionState,
@@ -75,9 +72,9 @@ export function readMachineChannel(): ReleaseChannel {
   const value = readFileSync(path, "utf-8").trim();
   if (!isReleaseChannel(value)) {
     throw new Error(
-      `${path} must contain one release channel (${RELEASE_CHANNELS.join(" or ")}); found ${
-        JSON.stringify(value)
-      }`,
+      `${path} must contain one release channel (${RELEASE_CHANNELS.join(" or ")}); found ${JSON.stringify(
+        value,
+      )}`,
     );
   }
   return value;
@@ -90,12 +87,14 @@ export function writeMachineChannel(value: string): ReleaseChannel {
   executePlan({
     schemaVersion: 1,
     root,
-    operations: [writeOperation(
-      relative(root, path),
-      `${channel}\n`,
-      transactionState(path),
-      0o600,
-    )],
+    operations: [
+      writeOperation(
+        relative(root, path),
+        `${channel}\n`,
+        transactionState(path),
+        0o600,
+      ),
+    ],
   });
   return channel;
 }
@@ -103,15 +102,13 @@ export function writeMachineChannel(value: string): ReleaseChannel {
 function validReleaseUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
-    if (
-      parsed.username ||
-      parsed.password ||
-      parsed.search ||
-      parsed.hash
-    ) return false;
-    return parsed.protocol === "https:" ||
+    if (parsed.username || parsed.password || parsed.search || parsed.hash)
+      return false;
+    return (
+      parsed.protocol === "https:" ||
       (parsed.protocol === "http:" &&
-        (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost"));
+        (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost"))
+    );
   } catch {
     return false;
   }
@@ -125,10 +122,14 @@ function validateMachineConfig(value: unknown): MachineConfig {
   const allowed = new Set(["schemaVersion", ...CONFIG_KEYS]);
   const unknown = Object.keys(record).filter((key) => !allowed.has(key));
   if (unknown.length > 0) {
-    throw new Error(`machine config contains unknown key(s): ${unknown.join(", ")}`);
+    throw new Error(
+      `machine config contains unknown key(s): ${unknown.join(", ")}`,
+    );
   }
   if (record.schemaVersion !== 1) {
-    throw new Error(`unsupported machine config schema ${String(record.schemaVersion)}`);
+    throw new Error(
+      `unsupported machine config schema ${String(record.schemaVersion)}`,
+    );
   }
   for (const key of ["update-check", "offline"] as const) {
     if (record[key] !== undefined && typeof record[key] !== "boolean") {
@@ -194,21 +195,25 @@ export function writeMachineConfig(config: MachineConfig): void {
   executePlan({
     schemaVersion: 1,
     root,
-    operations: [writeOperation(
-      relative(root, path),
-      serializeAidlcSettings(settings),
-      transactionState(path),
-      0o600,
-    )],
+    operations: [
+      writeOperation(
+        relative(root, path),
+        serializeAidlcSettings(settings),
+        transactionState(path),
+        0o600,
+      ),
+    ],
   });
   invalidateSettingsCache(path);
 }
 
-export function resolvedReleaseSettings(options: {
-  offline?: boolean;
-  baseUrl?: string;
-  caBundle?: string;
-} = {}): {
+export function resolvedReleaseSettings(
+  options: {
+    offline?: boolean;
+    baseUrl?: string;
+    caBundle?: string;
+  } = {},
+): {
   offline: boolean;
   baseUrl?: string;
   caBundle?: string;
@@ -216,16 +221,17 @@ export function resolvedReleaseSettings(options: {
   const config = readMachineConfig();
   const envOffline = process.env.AIDLC_OFFLINE;
   return {
-    offline: options.offline ??
+    offline:
+      options.offline ??
       (envOffline === "1" ? true : envOffline === "0" ? false : undefined) ??
       config.offline ??
       false,
-    baseUrl: options.baseUrl ||
+    baseUrl:
+      options.baseUrl ||
       process.env.AIDLC_RELEASE_BASE_URL ||
       config["release-base-url"],
-    caBundle: options.caBundle ||
-      process.env.AIDLC_CA_BUNDLE ||
-      config["ca-bundle"],
+    caBundle:
+      options.caBundle || process.env.AIDLC_CA_BUNDLE || config["ca-bundle"],
   };
 }
 
@@ -272,15 +278,18 @@ function machineConfigCommand(argv: string[]): CommandResult {
   }
   if (verb === "list") {
     return success(
-      CONFIG_KEYS.map((key) =>
-        `${key}=${config[key] === undefined ? "<default>" : String(config[key])}`
+      CONFIG_KEYS.map(
+        (key) =>
+          `${key}=${config[key] === undefined ? "<default>" : String(config[key])}`,
       ).join("\n"),
       { config },
     );
   }
   const key = argv[2] as MachineConfigKey | undefined;
   if (!key || !CONFIG_KEYS.includes(key)) {
-    return usage(`config global ${verb ?? "<verb>"} requires one of: ${CONFIG_KEYS.join(", ")}`);
+    return usage(
+      `config global ${verb ?? "<verb>"} requires one of: ${CONFIG_KEYS.join(", ")}`,
+    );
   }
   if (verb === "get") {
     return success(
@@ -294,9 +303,7 @@ function machineConfigCommand(argv: string[]): CommandResult {
       writeMachineConfig(config);
       return success(`cleared machine config ${key}`, { key, value: null });
     } catch (error) {
-      return failure(
-        error instanceof Error ? error.message : String(error),
-      );
+      return failure(error instanceof Error ? error.message : String(error));
     }
   }
   if (verb !== "set") {
@@ -310,12 +317,12 @@ function machineConfigCommand(argv: string[]): CommandResult {
     const value = parseValue(key, raw);
     Object.assign(config, { [key]: value });
     writeMachineConfig(config);
-    return success(`set machine config ${key}=${String(value)}`, { key, value });
+    return success(`set machine config ${key}=${String(value)}`, {
+      key,
+      value,
+    });
   } catch (error) {
-    return failure(
-      error instanceof Error ? error.message : String(error),
-      2,
-    );
+    return failure(error instanceof Error ? error.message : String(error), 2);
   }
 }
 
@@ -330,7 +337,8 @@ export async function main(argv: string[]): Promise<void> {
     try {
       const { cachedUpdateNotice } = await import("./aidlc-update.ts");
       const notice = cachedUpdateNotice();
-      if (notice) result = { ...result, message: `${result.message}\n${notice}` };
+      if (notice)
+        result = { ...result, message: `${result.message}\n${notice}` };
     } catch {
       // Ambient config discovery is cache-only and never makes listing fail.
     }

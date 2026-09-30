@@ -302,9 +302,7 @@ export function createPluginScaffold(
   let removedEmptyTarget = false;
   try {
     mkdirSync(parent, { recursive: true });
-    staging = mkdtempSync(
-      join(parent, `.${basename(target)}.aidlc-create-`),
-    );
+    staging = mkdtempSync(join(parent, `.${basename(target)}.aidlc-create-`));
     for (const file of files) {
       const destination = join(staging, file.path);
       mkdirSync(dirname(destination), { recursive: true });

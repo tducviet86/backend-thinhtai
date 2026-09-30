@@ -12,11 +12,13 @@ This is a supplement to `stage-protocol.md` — the main protocol still applies.
 At each phase transition (Ideation→Inception (approval-handoff→reverse-engineering), Inception→Construction (delivery-planning→functional-design), Construction→Operation (ci-pipeline→deployment-pipeline)), run traceability verification.
 
 ### When to verify
+
 - After the last stage of each phase is approved
 - Before the first stage of the next phase begins
 - On demand if the user requests verification via `/aidlc --status`
 
 ### Verification process
+
 1. Read the verification methodology from `.codex/knowledge/aidlc-shared/verification.md`
 2. Run the phase-specific traceability checks
 3. Write results to `<record>/verification/[phase-boundary]-verification.md`
@@ -27,6 +29,7 @@ At each phase transition (Ideation→Inception (approval-handoff→reverse-engin
 5. Log a `PHASE_VERIFIED` event to `<record>/audit/<host>-<clone>.md`
 
 ### Phase boundary checks
+
 **Ideation → Inception**: Intent captured, scope defined, feasibility confirmed, initiative approved
 **Inception → Construction**: All requirements traced to designs, units defined, delivery plan approved
 **Construction → Operation**: All units built and tested, CI pipeline configured, infrastructure designed

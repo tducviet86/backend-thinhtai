@@ -45,6 +45,7 @@ The scanner checks top-level files plus known source directories (`src/`, `app/`
 Nested-project fallback: when NO top-level signal fires (the layout that would otherwise classify greenfield), the scanner performs a deterministic recursive walk of arbitrarily-named container directories, capped at three levels below the workspace root. At every level it skips the excluded directories above, sample/documentation directories, known source-directory names, hidden dirs, symlinks, and non-directories, then re-applies the same signal set at each visited directory (including that directory's own known-source-dir recursion). Every brownfield hit within the cap has its languages/frameworks/build system merged into the result and its slash-joined relative path recorded as the nested root; the walker does not descend below a hit. This catches layouts such as `services/api/src/main.py` while avoiding duplicate file counts. The fallback never runs when the root already has a source signal.
 
 Scan signals:
+
 - Directory structure (top-level and key subdirectories)
 - Configuration files (package.json, pom.xml, build.gradle, Cargo.toml, pyproject.toml, etc.)
 - Build system files (Makefile, Dockerfile, docker-compose, CI/CD configs)
@@ -55,6 +56,7 @@ Scan signals:
 - Documentation (README, docs/, wiki/)
 
 **Exclude from analysis** (framework scaffolding, not application code):
+
 - The harness directory (`.claude/`, `.kiro/`, `.codex/`, `.opencode/`, `.aidlc/`, or `.cursor/`) — AI-DLC framework files (skills, agents, hooks, tools, knowledge)
 - `aidlc/` — AI-DLC workspace root (the space tree at `aidlc/spaces/<space>/...`)
 - `node_modules/`, `.git/`
@@ -66,6 +68,7 @@ Classify based on the scanner's evidence:
 Signals are evaluated at the root first; if none fires, the nested-project fallback re-evaluates the same signals in candidate container directories up to three levels below the root (see Step 2).
 
 **Brownfield** — ANY of these indicators present:
+
 - Source code files exist (`.js`, `.ts`, `.jsx`, `.tsx`, `.py`, `.java`, `.go`, `.rs`, `.rb`, `.cs`, `.cpp`, `.c`, `.kt`, `.swift`, `.php`)
 - Application framework configuration detected (next.config, vite.config, angular.json, etc.)
 - Package manifest with application dependencies (package.json with non-dev deps, requirements.txt, Cargo.toml, go.mod, pom.xml, etc.)
@@ -73,6 +76,7 @@ Signals are evaluated at the root first; if none fires, the nested-project fallb
 - A parseable `.gitmodules` at the workspace root with at least one submodule path entry (repo metadata declares code even when the submodule dirs are not yet initialized)
 
 **Greenfield** — ALL of these must be true:
+
 - No source code files in any recognized language
 - No application framework configuration
 - No package manifest, OR manifest with only scaffolding/dev tooling
@@ -87,6 +91,7 @@ The deterministic scanner applies the rules in Step 3 directly — no override p
 ### Step 5: Identify Technology Stack
 
 From the scan results, identify:
+
 - **Languages**: Primary and secondary languages detected
 - **Frameworks**: Web frameworks, libraries, UI toolkits
 - **Build Systems**: Build tools, task runners, package managers

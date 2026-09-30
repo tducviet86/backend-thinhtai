@@ -48,11 +48,19 @@ export function metricPrefix(): string {
 
 // Resolved once at module load; failures fall back silently.
 const _user = (() => {
-  try { return userInfo().username || "unknown"; } catch { return "unknown"; }
+  try {
+    return userInfo().username || "unknown";
+  } catch {
+    return "unknown";
+  }
 })();
 
 const _host = (() => {
-  try { return hostname() || "unknown"; } catch { return "unknown"; }
+  try {
+    return hostname() || "unknown";
+  } catch {
+    return "unknown";
+  }
 })();
 
 // Safely read scope from state file. Returns null on any failure (pre-init,
@@ -95,7 +103,9 @@ function resolveContext(
   let space = "unknown";
   try {
     space = resolveWorkflowSelection(projectDir).space;
-  } catch { /* pre-init */ }
+  } catch {
+    /* pre-init */
+  }
 
   const stage = fields.Stage ?? null;
   const phase = fields.Phase ?? null;
@@ -212,7 +222,13 @@ function parseCompactTokens(s: string): number | null {
 // unparseable count skips the segment.
 function parseTokenBreakdown(
   v: string | undefined,
-): { key: string; input: number; output: number; cacheRead: number; cacheWrite: number }[] {
+): {
+  key: string;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}[] {
   if (typeof v !== "string" || !v.trim()) return [];
   const out: {
     key: string;
@@ -226,14 +242,23 @@ function parseTokenBreakdown(
     if (eq < 0) continue;
     const key = seg.slice(0, eq).trim();
     if (!key) continue;
-    const parts = seg.slice(eq + 1).trim().split("/");
+    const parts = seg
+      .slice(eq + 1)
+      .trim()
+      .split("/");
     if (parts.length !== 3 && parts.length !== 4) continue;
     const input = parseCompactTokens(parts[0]);
     const output = parseCompactTokens(parts[1]);
     const cacheRead = parseCompactTokens(parts[2]);
     // 3-part legacy triple => cacheWrite defaults to 0; 4-part quad parses it.
     const cacheWrite = parts.length === 4 ? parseCompactTokens(parts[3]) : 0;
-    if (input === null || output === null || cacheRead === null || cacheWrite === null) continue;
+    if (
+      input === null ||
+      output === null ||
+      cacheRead === null ||
+      cacheWrite === null
+    )
+      continue;
     out.push({ key, input, output, cacheRead, cacheWrite });
   }
   return out;
@@ -277,38 +302,58 @@ export function buildMagnitudeLines(
 
   const lines: string[] = [];
   const suffix = tags ? `|#${tags}` : "";
-  if (tokensIn !== null) lines.push(`${prefix}.tokens.input:${tokensIn}|c${suffix}`);
-  if (tokensOut !== null) lines.push(`${prefix}.tokens.output:${tokensOut}|c${suffix}`);
-  if (cacheRead !== null) lines.push(`${prefix}.cache.read:${cacheRead}|c${suffix}`);
-  if (cacheWrite !== null) lines.push(`${prefix}.cache.write:${cacheWrite}|c${suffix}`);
+  if (tokensIn !== null)
+    lines.push(`${prefix}.tokens.input:${tokensIn}|c${suffix}`);
+  if (tokensOut !== null)
+    lines.push(`${prefix}.tokens.output:${tokensOut}|c${suffix}`);
+  if (cacheRead !== null)
+    lines.push(`${prefix}.cache.read:${cacheRead}|c${suffix}`);
+  if (cacheWrite !== null)
+    lines.push(`${prefix}.cache.write:${cacheWrite}|c${suffix}`);
   if (costUsd !== null) lines.push(`${prefix}.cost.usd:${costUsd}|g${suffix}`);
 
   // Per-model / per-agent COST gauges, tagged with the extra dimension.
   for (const { key, usd } of parseBreakdown(fields["By Model"])) {
-    const t = tags ? `${tags},model:${sanitizeTag(key)}` : `model:${sanitizeTag(key)}`;
+    const t = tags
+      ? `${tags},model:${sanitizeTag(key)}`
+      : `model:${sanitizeTag(key)}`;
     lines.push(`${prefix}.cost.usd:${usd}|g|#${t}`);
   }
   for (const { key, usd } of parseBreakdown(fields["By Agent"])) {
-    const t = tags ? `${tags},agent:${sanitizeTag(key)}` : `agent:${sanitizeTag(key)}`;
+    const t = tags
+      ? `${tags},agent:${sanitizeTag(key)}`
+      : `agent:${sanitizeTag(key)}`;
     lines.push(`${prefix}.cost.usd:${usd}|g|#${t}`);
   }
 
   // Per-model / per-agent TOKEN counters, tagged with the extra dimension.
   // Emitted from the token-breakdown fields, so tokens - not only cost - are
   // visible per model and per agent.
-  for (const { key, input, output, cacheRead: cr, cacheWrite: cw } of parseTokenBreakdown(
-    fields["Tokens By Model"],
-  )) {
-    const t = tags ? `${tags},model:${sanitizeTag(key)}` : `model:${sanitizeTag(key)}`;
+  for (const {
+    key,
+    input,
+    output,
+    cacheRead: cr,
+    cacheWrite: cw,
+  } of parseTokenBreakdown(fields["Tokens By Model"])) {
+    const t = tags
+      ? `${tags},model:${sanitizeTag(key)}`
+      : `model:${sanitizeTag(key)}`;
     lines.push(`${prefix}.tokens.input:${input}|c|#${t}`);
     lines.push(`${prefix}.tokens.output:${output}|c|#${t}`);
     lines.push(`${prefix}.cache.read:${cr}|c|#${t}`);
     lines.push(`${prefix}.cache.write:${cw}|c|#${t}`);
   }
-  for (const { key, input, output, cacheRead: cr, cacheWrite: cw } of parseTokenBreakdown(
-    fields["Tokens By Agent"],
-  )) {
-    const t = tags ? `${tags},agent:${sanitizeTag(key)}` : `agent:${sanitizeTag(key)}`;
+  for (const {
+    key,
+    input,
+    output,
+    cacheRead: cr,
+    cacheWrite: cw,
+  } of parseTokenBreakdown(fields["Tokens By Agent"])) {
+    const t = tags
+      ? `${tags},agent:${sanitizeTag(key)}`
+      : `agent:${sanitizeTag(key)}`;
     lines.push(`${prefix}.tokens.input:${input}|c|#${t}`);
     lines.push(`${prefix}.tokens.output:${output}|c|#${t}`);
     lines.push(`${prefix}.cache.read:${cr}|c|#${t}`);
@@ -362,7 +407,9 @@ function extraHeaderLines(): string[] {
   return lines;
 }
 
-function isMetricDispatchEnvelope(value: unknown): value is MetricDispatchEnvelope {
+function isMetricDispatchEnvelope(
+  value: unknown,
+): value is MetricDispatchEnvelope {
   if (value === null || typeof value !== "object") return false;
   const obj = value as Record<string, unknown>;
   return (
@@ -456,7 +503,9 @@ export function emitMetricForAuditEvent(
     // newline-separated StatsD body keeps this one detached spawn, still
     // microsecond-cheap under the audit lock (string parsing only, no I/O).
     const lines = [buildStatsdLine(toMetricName(eventType, prefix), ctx)];
-    lines.push(...buildMagnitudeLines(eventType, fields, buildTagString(ctx), prefix));
+    lines.push(
+      ...buildMagnitudeLines(eventType, fields, buildTagString(ctx), prefix),
+    );
     postMetric(metricsEndpoint, lines.join("\n"));
   } catch {
     // Never propagate - metric loss must not affect audit writes.

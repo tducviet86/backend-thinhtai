@@ -13,7 +13,13 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { appendAuditEntry } from "./aidlc-audit.ts";
@@ -87,7 +93,9 @@ function parseFlags(args: string[]): Record<string, string> {
     }
     const val = args[i + 1];
     if (val.startsWith("--")) {
-      error(`${a} expects a value, got another flag: "${val}". Did you forget the value?`);
+      error(
+        `${a} expects a value, got another flag: "${val}". Did you forget the value?`,
+      );
     }
     flags[a.slice(2)] = val;
     i++;
@@ -102,7 +110,7 @@ function emitAudit(
   eventType: string,
   fields: Record<string, string>,
   intent?: string,
-  space?: string
+  space?: string,
 ): string {
   const result = appendAuditEntry(eventType, fields, pd, intent, space);
   return result.timestamp;
@@ -136,7 +144,10 @@ interface RetainedSourceRef {
   oid: string;
 }
 
-function retainedSourceRefs(repoCwd: string, slug: string): RetainedSourceRef[] | null {
+function retainedSourceRefs(
+  repoCwd: string,
+  slug: string,
+): RetainedSourceRef[] | null {
   const prefix = reviewedSourceRefPrefix(slug);
   const listed = runGit(
     ["for-each-ref", "--format=%(refname)%09%(objectname)", prefix],
@@ -173,9 +184,7 @@ function recordedWorktreeSelector(
     };
     const matched =
       typeof parsed.intentRecord === "string"
-        ? /^aidlc\/spaces\/([^/]+)\/intents\/([^/]+)$/.exec(
-            parsed.intentRecord,
-          )
+        ? /^aidlc\/spaces\/([^/]+)\/intents\/([^/]+)$/.exec(parsed.intentRecord)
         : null;
     if (
       "repoSelector" in parsed &&
@@ -205,11 +214,21 @@ function recordedWorktreeSelector(
 
 // Compare-and-delete each ref: if another process moved one after enumeration,
 // preserve it and report a cleanup failure instead of deleting newer evidence.
-function deleteRetainedSourceRefs(repoCwd: string, refs: RetainedSourceRef[]): string | null {
+function deleteRetainedSourceRefs(
+  repoCwd: string,
+  refs: RetainedSourceRef[],
+): string | null {
   for (const retained of refs) {
-    const deleted = runGit(["update-ref", "-d", retained.ref, retained.oid], repoCwd);
+    const deleted = runGit(
+      ["update-ref", "-d", retained.ref, retained.oid],
+      repoCwd,
+    );
     if (!deleted.ok) {
-      return deleted.stderr.trim() || deleted.stdout.trim() || `cannot delete ${retained.ref}`;
+      return (
+        deleted.stderr.trim() ||
+        deleted.stdout.trim() ||
+        `cannot delete ${retained.ref}`
+      );
     }
   }
   return null;
@@ -245,7 +264,7 @@ function assertNotSiblingWorktree(repoCwd?: string): void {
 
   if (cwdTop !== mainCheckout) {
     error(
-      `aidlc-worktree must run from the main repo checkout, not from a sibling worktree at ${cwdTop}. Bolt worktrees are siblings of the main checkout, not nested.`
+      `aidlc-worktree must run from the main repo checkout, not from a sibling worktree at ${cwdTop}. Bolt worktrees are siblings of the main checkout, not nested.`,
     );
   }
 }
@@ -288,7 +307,7 @@ function validateSlug(slug: string | undefined): string {
   if (!slug) error("Missing --slug <slug>");
   if (!SLUG_RE.test(slug)) {
     error(
-      `Invalid --slug: "${slug}". Must be kebab-case (lowercase letter then [a-z0-9-]).`
+      `Invalid --slug: "${slug}". Must be kebab-case (lowercase letter then [a-z0-9-]).`,
     );
   }
   return slug;
@@ -298,7 +317,7 @@ function validateStrategy(strategy: string | undefined): string {
   if (!strategy) error("Missing --strategy <squash|merge|rebase>");
   if (!VALID_STRATEGIES.has(strategy)) {
     error(
-      `Invalid --strategy: "${strategy}". Must be one of: squash, merge, rebase.`
+      `Invalid --strategy: "${strategy}". Must be one of: squash, merge, rebase.`,
     );
   }
   return strategy;
@@ -374,15 +393,14 @@ function handleCreate(args: string[]): void {
       "Swarm worktree creation requires --swarm-unit, --swarm-batch, --swarm-stage, and --swarm-floor together",
     );
   }
-  const swarm =
-    hasSwarmValue
-      ? {
-          unit: flags["swarm-unit"],
-          batch: flags["swarm-batch"],
-          stage: flags["swarm-stage"],
-          floor: flags["swarm-floor"],
-        }
-      : null;
+  const swarm = hasSwarmValue
+    ? {
+        unit: flags["swarm-unit"],
+        batch: flags["swarm-batch"],
+        stage: flags["swarm-stage"],
+        floor: flags["swarm-floor"],
+      }
+    : null;
   if (swarm !== null) {
     const unitError = validateUnitName(swarm.unit);
     if (unitError !== null) errorWithSlug(slug, unitError);
@@ -425,11 +443,17 @@ function handleCreate(args: string[]): void {
     repoCwd,
   );
   if (!baseCommitResult.ok) {
-    errorWithSlug(slug, `Base branch does not resolve to a commit: ${flags.base}`);
+    errorWithSlug(
+      slug,
+      `Base branch does not resolve to a commit: ${flags.base}`,
+    );
   }
   const baseCommit = baseCommitResult.stdout.trim();
   if (!/^[0-9a-f]{40,64}$/.test(baseCommit)) {
-    errorWithSlug(slug, `Base branch resolved to an invalid commit id: ${flags.base}`);
+    errorWithSlug(
+      slug,
+      `Base branch resolved to an invalid commit id: ${flags.base}`,
+    );
   }
   const rawBase = rawBaseSourceListing(
     repoCwd,
@@ -437,7 +461,10 @@ function handleCreate(args: string[]): void {
     repoTarget.repo === null,
   );
   if (rawBase === null) {
-    errorWithSlug(slug, `Base source listing could not be computed for: ${flags.base}`);
+    errorWithSlug(
+      slug,
+      `Base source listing could not be computed for: ${flags.base}`,
+    );
   }
 
   const wtPath = worktreePath(pd, slug);
@@ -451,7 +478,10 @@ function handleCreate(args: string[]): void {
   }
 
   const branchName = `bolt-${slug}`;
-  const branchExists = runGit(["rev-parse", "--verify", `refs/heads/${branchName}`], repoCwd);
+  const branchExists = runGit(
+    ["rev-parse", "--verify", `refs/heads/${branchName}`],
+    repoCwd,
+  );
   if (branchExists.ok) {
     errorWithSlug(slug, `Branch already exists: ${branchName}`);
   }
@@ -461,24 +491,30 @@ function handleCreate(args: string[]): void {
   // semantics — see docs/reference/12-state-machine.md).
   let auditTs: string;
   try {
-    auditTs = emitAudit(pd, "WORKTREE_CREATED", {
-      "Bolt slug": slug,
-      "Worktree path": auditWorktreePath(pd, wtPath),
-      "Branch name": branchName,
-      "Base branch": flags.base,
-      "Base commit": baseCommit,
-      "Base Source Listing": rawBase.hash,
-      Repo: repoTarget.repo ?? "-",
-      ...(intentRecord ? { "Intent record": intentRecord } : {}),
-      ...(swarm
-        ? {
-            "Swarm Unit": swarm.unit,
-            "Swarm Batch": swarm.batch,
-            "Swarm Stage": swarm.stage,
-            "Swarm Run floor": swarm.floor,
-          }
-        : {}),
-    }, flags.intent, flags.space);
+    auditTs = emitAudit(
+      pd,
+      "WORKTREE_CREATED",
+      {
+        "Bolt slug": slug,
+        "Worktree path": auditWorktreePath(pd, wtPath),
+        "Branch name": branchName,
+        "Base branch": flags.base,
+        "Base commit": baseCommit,
+        "Base Source Listing": rawBase.hash,
+        Repo: repoTarget.repo ?? "-",
+        ...(intentRecord ? { "Intent record": intentRecord } : {}),
+        ...(swarm
+          ? {
+              "Swarm Unit": swarm.unit,
+              "Swarm Batch": swarm.batch,
+              "Swarm Stage": swarm.stage,
+              "Swarm Run floor": swarm.floor,
+            }
+          : {}),
+      },
+      flags.intent,
+      flags.space,
+    );
   } catch (e) {
     errorWithSlug(slug, `Audit emission failed: ${errorMessage(e)}`);
   }
@@ -486,7 +522,10 @@ function handleCreate(args: string[]): void {
   // Create from the immutable object just attested above. Keeping flags.base
   // here would allow a concurrently-moved branch to fork a different tree than
   // WORKTREE_CREATED/worktree-meta.json record.
-  const add = runGit(["worktree", "add", wtPath, "-b", branchName, baseCommit], repoCwd);
+  const add = runGit(
+    ["worktree", "add", wtPath, "-b", branchName, baseCommit],
+    repoCwd,
+  );
   if (!add.ok) {
     if (
       existsSync(wtPath) ||
@@ -506,7 +545,7 @@ function handleCreate(args: string[]): void {
     }
     errorWithSlug(
       slug,
-      `git worktree add failed: ${add.stderr.trim() || add.stdout.trim() || `exit ${add.code}`}`
+      `git worktree add failed: ${add.stderr.trim() || add.stdout.trim() || `exit ${add.code}`}`,
     );
   }
 
@@ -554,7 +593,7 @@ function handleCreate(args: string[]): void {
       base_commit: baseCommit,
       base_source_listing: rawBase.hash,
       audit_timestamp: auditTs,
-    })
+    }),
   );
 }
 
@@ -589,8 +628,7 @@ interface BypassedConvergedSourceRecord {
 }
 
 type ConvergedSourceRecord =
-  | BoundConvergedSourceRecord
-  | BypassedConvergedSourceRecord;
+  BoundConvergedSourceRecord | BypassedConvergedSourceRecord;
 
 function convergedUnitName(
   pd: string,
@@ -641,9 +679,10 @@ function latestUnambiguousRow(
   return latest.at(-1) ?? null;
 }
 
-function allWorktreeAuditRows(
-  pd: string,
-): { rows: ScopedWorktreeAuditRow[]; unreadableShards: string[] } {
+function allWorktreeAuditRows(pd: string): {
+  rows: ScopedWorktreeAuditRow[];
+  unreadableShards: string[];
+} {
   const rows: ScopedWorktreeAuditRow[] = [];
   const unreadable = new Set<string>();
   const seenRows = new Set<string>();
@@ -671,15 +710,15 @@ function allWorktreeAuditRows(
         const key = `${row.shard}\0${row.pos}`;
         if (seenRows.has(key)) continue;
         seenRows.add(key);
-        const shardRelative = relative(intentsDir(pd, space), row.shard)
-          .replaceAll("\\", "/");
+        const shardRelative = relative(
+          intentsDir(pd, space),
+          row.shard,
+        ).replaceAll("\\", "/");
         const parts = shardRelative.split("/");
         rows.push({
           ...row,
           authoritySpace: space,
-          ...(parts.length >= 3 &&
-          parts[0] !== ".." &&
-          parts[1] === "audit"
+          ...(parts.length >= 3 && parts[0] !== ".." && parts[1] === "audit"
             ? { authorityIntent: parts[0] }
             : {}),
         });
@@ -881,18 +920,18 @@ function discardCreationAuthority(
 
   let authority: ScopedWorktreeAuditRow | undefined;
   if (corroborated.length > 0) {
-    authority = [...corroborated].sort((a, b) => {
-      if (a.timestamp !== b.timestamp) {
-        return a.timestamp < b.timestamp ? -1 : 1;
-      }
-      if (a.shard !== b.shard) return a.shard < b.shard ? -1 : 1;
-      return a.pos - b.pos;
-    }).at(-1);
+    authority = [...corroborated]
+      .sort((a, b) => {
+        if (a.timestamp !== b.timestamp) {
+          return a.timestamp < b.timestamp ? -1 : 1;
+        }
+        if (a.shard !== b.shard) return a.shard < b.shard ? -1 : 1;
+        return a.pos - b.pos;
+      })
+      .at(-1);
   }
   const repoField =
-    authority === undefined
-      ? null
-      : auditBlockField(authority.block, "Repo");
+    authority === undefined ? null : auditBlockField(authority.block, "Repo");
   const auditRepo =
     repoField === "-"
       ? null
@@ -926,10 +965,7 @@ function discardCreationAuthority(
     hasRepoRow ||
     retainedEvidence ||
     audit.unreadableShards.length > 0;
-  if (
-    auditRepo === undefined &&
-    modernAuthority
-  ) {
+  if (auditRepo === undefined && modernAuthority) {
     if (audit.unreadableShards.length > 0) {
       errorWithSlug(
         slug,
@@ -958,13 +994,9 @@ function discardCreationAuthority(
         .map(([key]) => repoSelectorLabel(selectors.get(key) ?? null))
         .sort();
       const selectedKey =
-        explicitRepo === undefined
-          ? undefined
-          : repoSelectorKey(explicitRepo);
+        explicitRepo === undefined ? undefined : repoSelectorKey(explicitRepo);
       const selectedEvidence =
-        selectedKey === undefined
-          ? undefined
-          : evidence.get(selectedKey);
+        selectedKey === undefined ? undefined : evidence.get(selectedKey);
       const creatingCandidates = durableRepoEntries.filter(
         ([, value]) => value.registered || value.retained,
       );
@@ -1017,7 +1049,10 @@ function discardCreationAuthority(
   };
 }
 
-function rowAfter(candidate: WorktreeAuditRow, boundary: WorktreeAuditRow): boolean {
+function rowAfter(
+  candidate: WorktreeAuditRow,
+  boundary: WorktreeAuditRow,
+): boolean {
   if (candidate.timestamp !== boundary.timestamp) {
     return candidate.timestamp > boundary.timestamp;
   }
@@ -1079,14 +1114,15 @@ function convergedSourceRecord(
         : {}),
       ...("repoSelector" in (parsed as Record<string, unknown>)
         ? {
-            repoSelector: (parsed as Record<string, unknown>)
-              .repoSelector as string | null,
+            repoSelector: (parsed as Record<string, unknown>).repoSelector as
+              string | null,
           }
         : {}),
       ...(typeof (parsed as Record<string, unknown>).gitCommonDir === "string"
         ? { gitCommonDir: (parsed as Record<string, string>).gitCommonDir }
         : {}),
-      ...(typeof (parsed as Record<string, unknown>).gitCommonDirHash === "string"
+      ...(typeof (parsed as Record<string, unknown>).gitCommonDirHash ===
+      "string"
         ? {
             gitCommonDirHash: (parsed as Record<string, string>)
               .gitCommonDirHash,
@@ -1119,8 +1155,8 @@ function convergedSourceRecord(
       const recovery =
         typeof expected?.space === "string" &&
         typeof expected.intent === "string"
-        ? ` Retry with --space ${expected.space} --intent ${expected.intent}.`
-        : "";
+          ? ` Retry with --space ${expected.space} --intent ${expected.intent}.`
+          : "";
       errorWithSlug(
         slug,
         `refusing to merge: selected intent ${JSON.stringify(relativeRecordDir(pd, intent, space))} does not match worktree provenance ${JSON.stringify(worktreeMeta.intentRecord)}.${recovery}`,
@@ -1143,7 +1179,10 @@ function convergedSourceRecord(
   }
   const retained = retainedSourceRefs(repoCwd, slug);
   if (retained === null) {
-    errorWithSlug(slug, "refusing to merge: reviewed-source ref enumeration failed");
+    errorWithSlug(
+      slug,
+      "refusing to merge: reviewed-source ref enumeration failed",
+    );
   }
   let requiresSwarmAuthority =
     retained.length > 0 || worktreeMeta?.swarmUnit !== undefined;
@@ -1201,7 +1240,10 @@ function convergedSourceRecord(
   const creationSwarmCount = creationSwarmFields.filter(
     (value) => value !== null,
   ).length;
-  if (creationSwarmCount !== 0 && creationSwarmCount !== creationSwarmFields.length) {
+  if (
+    creationSwarmCount !== 0 &&
+    creationSwarmCount !== creationSwarmFields.length
+  ) {
     errorWithSlug(
       slug,
       "refusing to merge: WORKTREE_CREATED carries incomplete swarm provenance",
@@ -1273,10 +1315,8 @@ function convergedSourceRecord(
     }
     if (
       !("repoSelector" in worktreeMeta) ||
-      (
-        typeof worktreeMeta.gitCommonDir !== "string" &&
-        typeof worktreeMeta.gitCommonDirHash !== "string"
-      )
+      (typeof worktreeMeta.gitCommonDir !== "string" &&
+        typeof worktreeMeta.gitCommonDirHash !== "string")
     ) {
       errorWithSlug(
         slug,
@@ -1335,10 +1375,10 @@ function convergedSourceRecord(
       (worktreeMeta.intentRecord !== undefined &&
         auditBlockField(creation.block, "Intent record") !==
           worktreeMeta.intentRecord) ||
-      (worktreeMeta.swarmUnit !== creationSwarmUnit ||
-        worktreeMeta.swarmBatch !== creationSwarmBatch ||
-        worktreeMeta.swarmStage !== creationSwarmStage ||
-        worktreeMeta.swarmFloor !== creationSwarmFloor)
+      worktreeMeta.swarmUnit !== creationSwarmUnit ||
+      worktreeMeta.swarmBatch !== creationSwarmBatch ||
+      worktreeMeta.swarmStage !== creationSwarmStage ||
+      worktreeMeta.swarmFloor !== creationSwarmFloor
     ) {
       errorWithSlug(
         slug,
@@ -1520,7 +1560,10 @@ function convergedSourceRecord(
   const commit = auditBlockField(latest.block, "Source Commit") ?? undefined;
   if (bypass !== undefined) {
     if (bypass !== "true") {
-      errorWithSlug(slug, `refusing to merge: invalid Source Freshness Bypass marker "${bypass}"`);
+      errorWithSlug(
+        slug,
+        `refusing to merge: invalid Source Freshness Bypass marker "${bypass}"`,
+      );
     }
     if (fingerprint || commit) {
       errorWithSlug(
@@ -1547,9 +1590,15 @@ function convergedSourceRecord(
     );
   }
   if (fingerprint === UNBINDABLE_FINGERPRINT) {
-    errorWithSlug(slug, "refusing to merge: this convergence receipt is unbindable; re-run review and finalize with Git available");
+    errorWithSlug(
+      slug,
+      "refusing to merge: this convergence receipt is unbindable; re-run review and finalize with Git available",
+    );
   }
-  if (!/^[0-9a-f]{40,64}$/.test(fingerprint) || !/^[0-9a-f]{40,64}$/.test(commit)) {
+  if (
+    !/^[0-9a-f]{40,64}$/.test(fingerprint) ||
+    !/^[0-9a-f]{40,64}$/.test(commit)
+  ) {
     errorWithSlug(
       slug,
       "refusing to merge: the current convergence source authority is malformed",
@@ -1587,9 +1636,15 @@ function assertConvergedSourceUnchanged(
         `check for "${slug}" against the current worktree, or discard the worktree.`,
     );
   }
-  const object = runGit(["cat-file", "-e", `${record.commit}^{commit}`], wtPath);
+  const object = runGit(
+    ["cat-file", "-e", `${record.commit}^{commit}`],
+    wtPath,
+  );
   if (!object.ok) {
-    errorWithSlug(slug, `refusing to merge: reviewed Source Commit ${record.commit} is unavailable`);
+    errorWithSlug(
+      slug,
+      `refusing to merge: reviewed Source Commit ${record.commit} is unavailable`,
+    );
   }
   return record.commit;
 }
@@ -1652,12 +1707,7 @@ function assertAggregateSourceBeforeMerge(
       `refusing to merge: the main checkout source aggregate is unbindable${workspaceSourceFailureSuffix()}`,
     );
   }
-  const chain = currentSwarmSourceMergeChain(
-    pd,
-    record.stage,
-    intent,
-    space,
-  );
+  const chain = currentSwarmSourceMergeChain(pd, record.stage, intent, space);
   if (chain.state === "invalid") {
     errorWithSlug(
       slug,
@@ -1700,10 +1750,7 @@ function assertAggregateSourceBeforeMerge(
     opening.listing !== undefined &&
     !sourceListingsEqual(current.listing, opening.listing)
   ) {
-    const changed = changedSourceListingPaths(
-      current.listing,
-      opening.listing,
-    );
+    const changed = changedSourceListingPaths(current.listing, opening.listing);
     errorWithSlug(
       slug,
       `refusing to merge: the main checkout source changed since the stage-entry baseline (${changed.join(", ") || "unknown paths"})`,
@@ -1764,8 +1811,7 @@ function assertLandedMergeCommit(
     expectedSecondParent === undefined ||
     (expectedSecondParent === null
       ? !secondParent.ok
-      : secondParent.ok &&
-        secondParent.stdout.trim() === expectedSecondParent);
+      : secondParent.ok && secondParent.stdout.trim() === expectedSecondParent);
   if (
     !parent.ok ||
     parent.stdout.trim() !== priorHead ||
@@ -1827,16 +1873,14 @@ function currentSwarmWorktreeIdentity(
     const batch = parsed.swarmBatch;
     const stage = parsed.swarmStage;
     const floor = parsed.swarmFloor;
-    return (
-        typeof unit === "string" &&
-        boltSlugForUnit(unit) === slug &&
-        typeof batch === "string" &&
-        /^[1-9][0-9]*$/.test(batch) &&
-        typeof stage === "string" &&
-        stage.length > 0 &&
-        typeof floor === "string" &&
-        floor.length > 0
-      )
+    return typeof unit === "string" &&
+      boltSlugForUnit(unit) === slug &&
+      typeof batch === "string" &&
+      /^[1-9][0-9]*$/.test(batch) &&
+      typeof stage === "string" &&
+      stage.length > 0 &&
+      typeof floor === "string" &&
+      floor.length > 0
       ? { unit, batch, stage, floor }
       : null;
   } catch {
@@ -1893,14 +1937,16 @@ function mergedSwarmCleanupAuthority(
       !/^[0-9a-f]{40,64}$/.test(sourceCommit) ||
       !mergeCommit ||
       !/^[0-9a-f]{40,64}$/.test(mergeCommit)
-    ) continue;
+    )
+      continue;
     if (
       identity !== undefined &&
       (unit !== identity.unit ||
         batch !== identity.batch ||
         stage !== identity.stage ||
         floor !== identity.floor)
-    ) continue;
+    )
+      continue;
     matchedSlugAuthority = true;
     const convergence = audit.rows.find(
       (candidate) =>
@@ -1919,7 +1965,8 @@ function mergedSwarmCleanupAuthority(
     if (
       !runGit(["cat-file", "-e", `${sourceCommit}^{commit}`], repoCwd).ok ||
       !runGit(["merge-base", "--is-ancestor", mergeCommit, target], repoCwd).ok
-    ) continue;
+    )
+      continue;
     const branch = runGit(
       ["rev-parse", "--verify", `refs/heads/bolt-${slug}`],
       repoCwd,
@@ -2078,13 +2125,7 @@ function refuseConfiguredMergeDrivers(
     return;
   }
   const configured = runGit(
-    [
-      "config",
-      "-z",
-      "--name-only",
-      "--get-regexp",
-      "^merge\\..*\\.driver$",
-    ],
+    ["config", "-z", "--name-only", "--get-regexp", "^merge\\..*\\.driver$"],
     repoCwd,
   );
   if (!configured.ok && configured.code === 1) return;
@@ -2169,10 +2210,7 @@ function handleMerge(args: string[]): void {
       flags.space = recorded.space;
     }
   }
-  if (
-    flags.repo === undefined &&
-    typeof recorded?.repoSelector === "string"
-  ) {
+  if (flags.repo === undefined && typeof recorded?.repoSelector === "string") {
     flags.repo = recorded.repoSelector;
   }
   const worktreeIdentity = currentSwarmWorktreeIdentity(pd, slug);
@@ -2222,16 +2260,10 @@ function handleMerge(args: string[]): void {
   }
   const actual = head.stdout.trim();
   if (actual === "HEAD") {
-    errorWithSlug(
-      slug,
-      `expected branch ${flags.target}, found detached HEAD`
-    );
+    errorWithSlug(slug, `expected branch ${flags.target}, found detached HEAD`);
   }
   if (actual !== flags.target) {
-    errorWithSlug(
-      slug,
-      `expected branch ${flags.target}, found ${actual}`
-    );
+    errorWithSlug(slug, `expected branch ${flags.target}, found ${actual}`);
   }
 
   const wtPath = worktreePath(pd, slug);
@@ -2265,12 +2297,15 @@ function handleMerge(args: string[]): void {
     );
   }
   if (sourceRecord?.kind === "bypass") {
-    const applicationStatus = runGit([
-      "status",
-      "--porcelain=v1",
-      "--untracked-files=all",
-      "--ignored=matching",
-    ], wtPath);
+    const applicationStatus = runGit(
+      [
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all",
+        "--ignored=matching",
+      ],
+      wtPath,
+    );
     if (!applicationStatus.ok) {
       errorWithSlug(
         slug,
@@ -2306,7 +2341,7 @@ function handleMerge(args: string[]): void {
     if (!remote.ok || !remote.stdout.trim()) {
       errorWithSlug(
         slug,
-        `rebase strategy requires a remote for ${flags.target}; got none`
+        `rebase strategy requires a remote for ${flags.target}; got none`,
       );
     }
     rebaseRemote = remote.stdout.trim();
@@ -2316,12 +2351,18 @@ function handleMerge(args: string[]): void {
   // rebase pre-fetch).
   let auditTs: string;
   try {
-    auditTs = emitAudit(pd, "WORKTREE_MERGED", {
-      "Bolt slug": slug,
-      "Worktree path": auditWorktreePath(pd, wtPath),
-      "Target branch": flags.target,
-      Strategy: strategy,
-    }, flags.intent, flags.space);
+    auditTs = emitAudit(
+      pd,
+      "WORKTREE_MERGED",
+      {
+        "Bolt slug": slug,
+        "Worktree path": auditWorktreePath(pd, wtPath),
+        "Target branch": flags.target,
+        Strategy: strategy,
+      },
+      flags.intent,
+      flags.space,
+    );
   } catch (e) {
     errorWithSlug(slug, `Audit emission failed: ${errorMessage(e)}`);
   }
@@ -2331,7 +2372,7 @@ function handleMerge(args: string[]): void {
     if (!fetch.ok) {
       errorWithSlug(
         slug,
-        `git fetch failed: ${fetch.stderr.trim() || fetch.stdout.trim() || `exit ${fetch.code}`}`
+        `git fetch failed: ${fetch.stderr.trim() || fetch.stdout.trim() || `exit ${fetch.code}`}`,
       );
     }
   }
@@ -2339,7 +2380,8 @@ function handleMerge(args: string[]): void {
   // This is the last guard before source mutation. The convergence selector is
   // the requested intent/space, and the returned target is an immutable commit
   // object rather than the movable bolt-<slug> branch.
-  let mergeTarget = assertConvergedSourceUnchanged(slug, wtPath, sourceRecord) ?? branchName;
+  let mergeTarget =
+    assertConvergedSourceUnchanged(slug, wtPath, sourceRecord) ?? branchName;
   let bypassBranchOid = "";
   if (sourceRecord?.kind === "bypass" && strategy !== "rebase") {
     const branchOid = runGit(["rev-parse", `${branchName}^{commit}`], repoCwd);
@@ -2381,7 +2423,7 @@ function handleMerge(args: string[]): void {
         }
         errorWithSlug(
           slug,
-          `git merge --squash failed: ${m.stderr.trim() || `exit ${m.code}`}`
+          `git merge --squash failed: ${m.stderr.trim() || `exit ${m.code}`}`,
         );
       }
       const expectedTree = stagedTreeOid(repoCwd);
@@ -2395,7 +2437,7 @@ function handleMerge(args: string[]): void {
       if (!c.ok) {
         errorWithSlug(
           slug,
-          `git commit failed: ${c.stderr.trim() || `exit ${c.code}`}`
+          `git commit failed: ${c.stderr.trim() || `exit ${c.code}`}`,
         );
       }
       commitSha = currentSha(repoCwd);
@@ -2427,7 +2469,7 @@ function handleMerge(args: string[]): void {
         }
         errorWithSlug(
           slug,
-          `git merge --no-ff failed: ${m.stderr.trim() || `exit ${m.code}`}`
+          `git merge --no-ff failed: ${m.stderr.trim() || `exit ${m.code}`}`,
         );
       }
       const expectedTree = stagedTreeOid(repoCwd);
@@ -2435,12 +2477,7 @@ function handleMerge(args: string[]): void {
         errorWithSlug(slug, "cannot resolve the staged merge tree");
       }
       const c = runGit(
-        mutationArgs([
-          "commit",
-          "--no-verify",
-          "-m",
-          `Merge bolt ${slug}`,
-        ]),
+        mutationArgs(["commit", "--no-verify", "-m", `Merge bolt ${slug}`]),
         repoCwd,
       );
       if (!c.ok) {
@@ -2456,9 +2493,7 @@ function handleMerge(args: string[]): void {
         priorTargetHead,
         commitSha,
         expectedTree,
-        sourceRecord?.kind === "bound"
-          ? sourceRecord.commit
-          : undefined,
+        sourceRecord?.kind === "bound" ? sourceRecord.commit : undefined,
       );
       break;
     }
@@ -2472,19 +2507,17 @@ function handleMerge(args: string[]): void {
         }
         errorWithSlug(
           slug,
-          `git rebase failed: ${r.stderr.trim() || `exit ${r.code}`}`
+          `git rebase failed: ${r.stderr.trim() || `exit ${r.code}`}`,
         );
       }
       const ffTarget =
-        sourceRecord?.kind === "bypass"
-          ? currentSha(wtPath)
-          : mergeTarget;
+        sourceRecord?.kind === "bypass" ? currentSha(wtPath) : mergeTarget;
       if (sourceRecord?.kind === "bypass") bypassBranchOid = ffTarget;
       const ff = runGit(["merge", "--ff-only", ffTarget], repoCwd);
       if (!ff.ok) {
         errorWithSlug(
           slug,
-          `git merge --ff-only failed: ${ff.stderr.trim() || `exit ${ff.code}`}`
+          `git merge --ff-only failed: ${ff.stderr.trim() || `exit ${ff.code}`}`,
         );
       }
       commitSha = currentSha(repoCwd);
@@ -2501,7 +2534,7 @@ function handleMerge(args: string[]): void {
         worktree_path: wtPath,
         conflict_files: files,
         detail: `Merge produced conflicts in worktree at ${wtPath}. Worktree preserved for inspection.`,
-      })}\n`
+      })}\n`,
     );
     process.exit(1);
   }
@@ -2585,7 +2618,10 @@ function handleMerge(args: string[]): void {
     }
   }
   if (sourceRecord?.kind === "bypass") {
-    const currentBranchOid = runGit(["rev-parse", `${branchName}^{commit}`], repoCwd);
+    const currentBranchOid = runGit(
+      ["rev-parse", `${branchName}^{commit}`],
+      repoCwd,
+    );
     if (
       !bypassBranchOid ||
       !currentBranchOid.ok ||
@@ -2643,12 +2679,15 @@ function handleMerge(args: string[]): void {
         `${cleanupTag} bypass cleanup failed: ${clean.stderr.trim() || `exit ${clean.code}`}`,
       );
     }
-    const remainingApplicationStatus = runGit([
-      "status",
-      "--porcelain=v1",
-      "--untracked-files=all",
-      "--ignored=matching",
-    ], wtPath);
+    const remainingApplicationStatus = runGit(
+      [
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all",
+        "--ignored=matching",
+      ],
+      wtPath,
+    );
     if (!remainingApplicationStatus.ok) {
       errorWithSlug(
         slug,
@@ -2698,7 +2737,7 @@ function handleMerge(args: string[]): void {
   if (!rm.ok) {
     errorWithSlug(
       slug,
-      `${cleanupTag} worktree remove failed: ${rm.stderr.trim() || `exit ${rm.code}`}`
+      `${cleanupTag} worktree remove failed: ${rm.stderr.trim() || `exit ${rm.code}`}`,
     );
   }
   const del =
@@ -2711,7 +2750,7 @@ function handleMerge(args: string[]): void {
   if (!del.ok) {
     errorWithSlug(
       slug,
-      `${cleanupTag} branch -D ${branchName} failed: ${del.stderr.trim() || `exit ${del.code}`}`
+      `${cleanupTag} branch -D ${branchName} failed: ${del.stderr.trim() || `exit ${del.code}`}`,
     );
   }
   const retained = retainedSourceRefs(repoCwd, slug);
@@ -2720,7 +2759,10 @@ function handleMerge(args: string[]): void {
   }
   const refCleanupError = deleteRetainedSourceRefs(repoCwd, retained);
   if (refCleanupError) {
-    errorWithSlug(slug, `${cleanupTag} reviewed-source ref cleanup failed: ${refCleanupError}`);
+    errorWithSlug(
+      slug,
+      `${cleanupTag} reviewed-source ref cleanup failed: ${refCleanupError}`,
+    );
   }
 
   console.log(
@@ -2732,7 +2774,7 @@ function handleMerge(args: string[]): void {
       strategy,
       commit_sha: commitSha,
       audit_timestamp: auditTs,
-    })
+    }),
   );
 }
 
@@ -2787,12 +2829,7 @@ function handleDiscard(args: string[]): void {
     flags.intent = recorded.intent;
     flags.space = recorded.space;
   }
-  const authority = discardCreationAuthority(
-    pd,
-    slug,
-    recorded,
-    flags.repo,
-  );
+  const authority = discardCreationAuthority(pd, slug, recorded, flags.repo);
   const wtPath = worktreePath(pd, slug);
   if (!authority.evidenceExists) {
     console.log(
@@ -2825,9 +2862,7 @@ function handleDiscard(args: string[]): void {
     }
   }
   const creatingRepo =
-    authority.repo !== undefined
-      ? authority.repo
-      : recorded?.repoSelector;
+    authority.repo !== undefined ? authority.repo : recorded?.repoSelector;
   if (flags.repo === undefined && typeof creatingRepo === "string") {
     flags.repo = creatingRepo;
   }
@@ -2842,18 +2877,16 @@ function handleDiscard(args: string[]): void {
     );
   }
   // P7: anchor every git op to the target sibling repo (or projectDir for legacy).
-  const repoCwd =
-    creatingRepo === null ? pd : resolveRepoCwd(pd, flags, slug);
+  const repoCwd = creatingRepo === null ? pd : resolveRepoCwd(pd, flags, slug);
   assertNotSiblingWorktree(repoCwd);
 
   const branchName = `bolt-${slug}`;
   const dirExists = existsSync(wtPath);
   const registered = repositoryRegistersBoltWorktree(pd, repoCwd, slug);
-  const branchExists = runGit([
-    "rev-parse",
-    "--verify",
-    `refs/heads/${branchName}`,
-  ], repoCwd).ok;
+  const branchExists = runGit(
+    ["rev-parse", "--verify", `refs/heads/${branchName}`],
+    repoCwd,
+  ).ok;
   const retained = retainedSourceRefs(repoCwd, slug);
   if (retained === null) {
     errorWithSlug(slug, "reviewed-source ref enumeration failed");
@@ -2866,18 +2899,24 @@ function handleDiscard(args: string[]): void {
         slug,
         worktree_path: wtPath,
         reason: "already-discarded",
-      })
+      }),
     );
     return;
   }
 
   let auditTs: string;
   try {
-    auditTs = emitAudit(pd, "WORKTREE_DISCARDED", {
-      "Bolt slug": slug,
-      "Worktree path": auditWorktreePath(pd, wtPath),
-      Reason: "agent-discard",
-    }, flags.intent, flags.space);
+    auditTs = emitAudit(
+      pd,
+      "WORKTREE_DISCARDED",
+      {
+        "Bolt slug": slug,
+        "Worktree path": auditWorktreePath(pd, wtPath),
+        Reason: "agent-discard",
+      },
+      flags.intent,
+      flags.space,
+    );
   } catch (e) {
     errorWithSlug(slug, `Audit emission failed: ${errorMessage(e)}`);
   }
@@ -2887,7 +2926,7 @@ function handleDiscard(args: string[]): void {
     if (!rm.ok) {
       errorWithSlug(
         slug,
-        `git worktree remove failed: ${rm.stderr.trim() || `exit ${rm.code}`}`
+        `git worktree remove failed: ${rm.stderr.trim() || `exit ${rm.code}`}`,
       );
     }
   }
@@ -2896,13 +2935,16 @@ function handleDiscard(args: string[]): void {
     if (!del.ok) {
       errorWithSlug(
         slug,
-        `branch -D ${branchName} failed: ${del.stderr.trim() || `exit ${del.code}`}`
+        `branch -D ${branchName} failed: ${del.stderr.trim() || `exit ${del.code}`}`,
       );
     }
   }
   const refCleanupError = deleteRetainedSourceRefs(repoCwd, retained);
   if (refCleanupError) {
-    errorWithSlug(slug, `reviewed-source ref cleanup failed: ${refCleanupError}`);
+    errorWithSlug(
+      slug,
+      `reviewed-source ref cleanup failed: ${refCleanupError}`,
+    );
   }
 
   console.log(
@@ -2912,7 +2954,7 @@ function handleDiscard(args: string[]): void {
       worktree_path: wtPath,
       reason: "agent-discard",
       audit_timestamp: auditTs,
-    })
+    }),
   );
 }
 
@@ -2971,7 +3013,9 @@ function handleList(_args: string[]): void {
       return parent === boltsDir;
     })
     .map((w) => ({
-      slug: (w.path.split(/[\\/]/).filter(Boolean).pop() ?? "").slice("bolt-".length),
+      slug: (w.path.split(/[\\/]/).filter(Boolean).pop() ?? "").slice(
+        "bolt-".length,
+      ),
       worktree_path: w.path,
       branch: w.branch,
     }));
@@ -2989,10 +3033,13 @@ function handleList(_args: string[]): void {
 // emission. The orchestrator's deterministic post-dispatch backstop.
 function handleVerify(args: string[]): void {
   const flags = parseFlags(args);
-  if (!flags.event) error("Missing --event <WORKTREE_CREATED|WORKTREE_MERGED|WORKTREE_DISCARDED>");
+  if (!flags.event)
+    error(
+      "Missing --event <WORKTREE_CREATED|WORKTREE_MERGED|WORKTREE_DISCARDED>",
+    );
   if (!VALID_VERIFY_EVENTS.has(flags.event)) {
     error(
-      `Invalid --event: "${flags.event}". Must be one of: WORKTREE_CREATED, WORKTREE_MERGED, WORKTREE_DISCARDED.`
+      `Invalid --event: "${flags.event}". Must be one of: WORKTREE_CREATED, WORKTREE_MERGED, WORKTREE_DISCARDED.`,
     );
   }
   const slug = validateSlug(flags.slug);
@@ -3013,7 +3060,7 @@ function handleVerify(args: string[]): void {
         event: flags.event,
         slug,
         reason: "absent",
-      })}\n`
+      })}\n`,
     );
     process.exit(1);
   }
@@ -3026,7 +3073,7 @@ function handleVerify(args: string[]): void {
         event: flags.event,
         slug,
         reason: "absent",
-      })}\n`
+      })}\n`,
     );
     process.exit(1);
   }
@@ -3039,7 +3086,7 @@ function handleVerify(args: string[]): void {
         event: flags.event,
         slug,
         reason: `stale (last seen ${match.timestamp})`,
-      })}\n`
+      })}\n`,
     );
     process.exit(1);
   }
@@ -3050,7 +3097,7 @@ function handleVerify(args: string[]): void {
       event: flags.event,
       slug,
       audit_timestamp: match.timestamp,
-    })
+    }),
   );
 }
 
@@ -3074,7 +3121,7 @@ function handleInfo(args: string[]): void {
   const audit = readAllAuditShards(pd, flags.intent, flags.space);
   if (audit.length === 0) {
     process.stderr.write(
-      `error: no WORKTREE_CREATED audit entry for slug ${slug} (audit log absent)\n`
+      `error: no WORKTREE_CREATED audit entry for slug ${slug} (audit log absent)\n`,
     );
     process.exit(1);
   }
@@ -3082,7 +3129,7 @@ function handleInfo(args: string[]): void {
   const match = findLatestEvent(audit, "WORKTREE_CREATED", slug);
   if (!match) {
     process.stderr.write(
-      `error: no WORKTREE_CREATED audit entry for slug ${slug}\n`
+      `error: no WORKTREE_CREATED audit entry for slug ${slug}\n`,
     );
     process.exit(1);
   }
@@ -3091,7 +3138,7 @@ function handleInfo(args: string[]): void {
   const branchMatch = match.block.match(/^\*\*Branch name\*\*:\s*(.+?)\s*$/m);
   if (!pathMatch || !branchMatch) {
     process.stderr.write(
-      `error: malformed WORKTREE_CREATED block at ${match.timestamp} (missing Worktree path or Branch name field)\n`
+      `error: malformed WORKTREE_CREATED block at ${match.timestamp} (missing Worktree path or Branch name field)\n`,
     );
     process.exit(1);
   }
@@ -3115,7 +3162,7 @@ function handleInfo(args: string[]): void {
       branch_name: branchMatch[1],
       audit_timestamp: match.timestamp,
       merge_held: mergeHeld,
-    })
+    }),
   );
 }
 
@@ -3127,7 +3174,7 @@ interface AuditMatch {
 function findLatestEvent(
   audit: string,
   event: string,
-  slug: string
+  slug: string,
 ): AuditMatch | null {
   // Select the CHRONOLOGICALLY-newest matching block (max **Timestamp**), NOT
   // the last block by buffer position. The audit string is a readAllAuditShards
@@ -3187,7 +3234,7 @@ export function main(argv: string[]): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: create, merge, discard, list, verify, info`
+          `Unknown subcommand: ${subcommand}. Valid: create, merge, discard, list, verify, info`,
         );
     }
   } catch (e) {

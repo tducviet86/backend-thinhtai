@@ -512,7 +512,7 @@ function refuseProtectedEvent(eventType: string): never {
     `Direct emission of ${eventType} is blocked: it is an authority-bearing receipt owned by its ` +
       "emitting tool or hook (gate resolutions and approvals come from aidlc-orchestrate.ts report, " +
       "interview answers and reviews from aidlc-log.ts, human presence from the prompt-submit hook). " +
-      "The audit CLI appends diagnostic events only."
+      "The audit CLI appends diagnostic events only.",
   );
 }
 
@@ -538,20 +538,20 @@ const AUDIT_FIELD_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9 ._()/-]*$/;
 function validateAuditEntry(entry: AuditEntryInput): void {
   if (!VALID_EVENT_TYPES.has(entry.eventType)) {
     throw new Error(
-      `Invalid event type: ${entry.eventType}. Must be one of: ${[...VALID_EVENT_TYPES].join(", ")}`
+      `Invalid event type: ${entry.eventType}. Must be one of: ${[...VALID_EVENT_TYPES].join(", ")}`,
     );
   }
   for (const key of Object.keys(entry.fields)) {
     if (RESERVED_FIELD_KEYS.has(key)) {
       throw new Error(
         `Reserved field key: ${key}. The emitter writes **${key}**: itself; a caller-supplied ` +
-          "value would forge a second matching line and spoof multiline event queries."
+          "value would forge a second matching line and spoof multiline event queries.",
       );
     }
     if (!AUDIT_FIELD_KEY_PATTERN.test(key)) {
       throw new Error(
         `Invalid audit field key: ${JSON.stringify(key)}. Field keys must match ` +
-          `${AUDIT_FIELD_KEY_PATTERN} so they remain one Markdown label on one physical line.`
+          `${AUDIT_FIELD_KEY_PATTERN} so they remain one Markdown label on one physical line.`,
       );
     }
   }
@@ -572,10 +572,10 @@ function renderAuditBlock(
     if (EMITTER_OWNED_FIELD_KEYS.has(key)) continue;
     // Escape every JavaScript line terminator in values so a malicious or
     // malformed input cannot forge a second audit field or event line.
-    const safeValue = redactProjectDirPrefix(
-      String(value),
-      projectDir,
-    ).replace(/\r\n?|\n|\u2028|\u2029/g, "\\n");
+    const safeValue = redactProjectDirPrefix(String(value), projectDir).replace(
+      /\r\n?|\n|\u2028|\u2029/g,
+      "\\n",
+    );
     block += `**${key}**: ${safeValue}\n`;
   }
   return `${block}\n---\n`;
@@ -612,7 +612,7 @@ export function appendAuditEntry(
   fields: Record<string, string>,
   projectDir: string,
   intent?: string,
-  space?: string
+  space?: string,
 ): { appended: true; event: string; timestamp: string } {
   validateAuditEntry({ eventType, fields });
 
@@ -623,7 +623,13 @@ export function appendAuditEntry(
   }
 
   try {
-    return appendAuditEntryUnlocked(eventType, fields, projectDir, intent, space);
+    return appendAuditEntryUnlocked(
+      eventType,
+      fields,
+      projectDir,
+      intent,
+      space,
+    );
   } finally {
     releaseAuditLock(projectDir, intent, space);
   }
@@ -641,7 +647,7 @@ export function appendAuditEntryUnlocked(
   fields: Record<string, string>,
   projectDir: string,
   intent?: string,
-  space?: string
+  space?: string,
 ): { appended: true; event: string; timestamp: string } {
   const entry = { eventType, fields };
   validateAuditEntry(entry);
@@ -685,7 +691,10 @@ function writeAll(fd: number, content: string): void {
   }
 }
 
-interface AuditFileIdentity { dev: number; ino: number }
+interface AuditFileIdentity {
+  dev: number;
+  ino: number;
+}
 interface AuditAppendExpectation extends AuditFileIdentity {
   prefixLength: number;
   prefixHash: string;
@@ -706,13 +715,19 @@ function appendAuditBlockAtPath(
   const projectAbs = resolve(projectDir);
   const projectReal = realpathSync(projectAbs);
   const rel = relative(projectAbs, resolve(shardPath));
-  if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+  if (
+    rel === "" ||
+    rel === ".." ||
+    rel.startsWith(`..${sep}`) ||
+    isAbsolute(rel)
+  ) {
     throw new Error(`Refusing audit shard outside project: ${shardPath}`);
   }
   assertNoSymlinkInChainOrThrow(projectReal, rel);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   assertNoSymlinkInChainOrThrow(projectReal, rel);
-  const noFollow = typeof fsConstants.O_NOFOLLOW === "number" ? fsConstants.O_NOFOLLOW : 0;
+  const noFollow =
+    typeof fsConstants.O_NOFOLLOW === "number" ? fsConstants.O_NOFOLLOW : 0;
   let fd: number | undefined;
   try {
     fd = openSync(
@@ -725,7 +740,8 @@ function appendAuditBlockAtPath(
       0o666,
     );
     const opened = fstatSync(fd);
-    if (!opened.isFile()) throw new Error(`Refusing non-regular audit shard: ${shardPath}`);
+    if (!opened.isFile())
+      throw new Error(`Refusing non-regular audit shard: ${shardPath}`);
     // No nlink refusal on the ORDINARY append path: rsync --link-dest and
     // cp -al backup snapshots leave a live shard at nlink 2, and refusing it
     // here bricked every later gate/hook append framework-wide. A hardlink
@@ -734,24 +750,41 @@ function appendAuditBlockAtPath(
     // fork/merge path stays strict: readAuditSnapshot refuses a
     // multiply-linked main shard, and verifyExpectedPrefix below re-checks
     // during a merge append.
-    if (expectedIdentity &&
-        (opened.dev !== expectedIdentity.dev || opened.ino !== expectedIdentity.ino)) {
+    if (
+      expectedIdentity &&
+      (opened.dev !== expectedIdentity.dev ||
+        opened.ino !== expectedIdentity.ino)
+    ) {
       throw new Error(`Audit shard changed after validation: ${shardPath}`);
     }
     const verifyExpectedPrefix = (): void => {
       if (!expectedIdentity) return;
       const current = fstatSync(fd as number);
-      if (current.nlink !== 1) throw new Error(`Audit shard became multiply linked: ${shardPath}`);
+      if (current.nlink !== 1)
+        throw new Error(`Audit shard became multiply linked: ${shardPath}`);
       const prefix = Buffer.alloc(expectedIdentity.prefixLength);
       let offset = 0;
       while (offset < prefix.length) {
-        const count = readSync(fd as number, prefix, offset, prefix.length - offset, offset);
+        const count = readSync(
+          fd as number,
+          prefix,
+          offset,
+          prefix.length - offset,
+          offset,
+        );
         if (count === 0) break;
         offset += count;
       }
-      const hash = createHash("sha256").update(prefix.subarray(0, offset)).digest("hex");
-      if (offset !== expectedIdentity.prefixLength || hash !== expectedIdentity.prefixHash) {
-        throw new Error(`Audit shard prefix changed after validation: ${shardPath}`);
+      const hash = createHash("sha256")
+        .update(prefix.subarray(0, offset))
+        .digest("hex");
+      if (
+        offset !== expectedIdentity.prefixLength ||
+        hash !== expectedIdentity.prefixHash
+      ) {
+        throw new Error(
+          `Audit shard prefix changed after validation: ${shardPath}`,
+        );
       }
     };
 
@@ -764,7 +797,10 @@ function appendAuditBlockAtPath(
         throw new Error(`Refusing symlinked audit shard: ${shardPath}`);
       }
       const currentReal = realpathSync(shardPath);
-      if (currentReal !== projectReal && !currentReal.startsWith(`${projectReal}${sep}`)) {
+      if (
+        currentReal !== projectReal &&
+        !currentReal.startsWith(`${projectReal}${sep}`)
+      ) {
         throw new Error(`Refusing audit shard outside project: ${shardPath}`);
       }
       const current = statSync(currentReal);
@@ -786,22 +822,36 @@ function appendAuditBlockAtPath(
   }
 }
 
-function readAuditSnapshot(projectDir: string, shardPath: string): {
+function readAuditSnapshot(
+  projectDir: string,
+  shardPath: string,
+): {
   bytes: Buffer;
   identity: AuditFileIdentity;
 } {
   const projectReal = realpathSync(projectDir);
   const rel = relative(resolve(projectDir), resolve(shardPath));
-  if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+  if (
+    rel === "" ||
+    rel === ".." ||
+    rel.startsWith(`..${sep}`) ||
+    isAbsolute(rel)
+  ) {
     throw new Error(`Refusing audit shard outside project: ${shardPath}`);
   }
   assertNoSymlinkInChainOrThrow(projectReal, rel);
-  const noFollow = typeof fsConstants.O_NOFOLLOW === "number" ? fsConstants.O_NOFOLLOW : 0;
-  const fd = openSync(shardPath, fsConstants.O_RDONLY | noFollow | fsConstants.O_NONBLOCK);
+  const noFollow =
+    typeof fsConstants.O_NOFOLLOW === "number" ? fsConstants.O_NOFOLLOW : 0;
+  const fd = openSync(
+    shardPath,
+    fsConstants.O_RDONLY | noFollow | fsConstants.O_NONBLOCK,
+  );
   try {
     const opened = fstatSync(fd);
     if (!opened.isFile() || opened.nlink !== 1) {
-      throw new Error(`Refusing non-regular or multiply-linked audit shard: ${shardPath}`);
+      throw new Error(
+        `Refusing non-regular or multiply-linked audit shard: ${shardPath}`,
+      );
     }
     const verify = (): void => {
       assertNoSymlinkInChainOrThrow(projectReal, rel);
@@ -821,9 +871,13 @@ function readAuditSnapshot(projectDir: string, shardPath: string): {
     const bytes = readFileSync(fd);
     verify();
     const after = fstatSync(fd);
-    if (after.nlink !== 1 || after.size !== opened.size ||
-        after.mtimeMs !== opened.mtimeMs || after.ctimeMs !== opened.ctimeMs ||
-        bytes.length !== opened.size) {
+    if (
+      after.nlink !== 1 ||
+      after.size !== opened.size ||
+      after.mtimeMs !== opened.mtimeMs ||
+      after.ctimeMs !== opened.ctimeMs ||
+      bytes.length !== opened.size
+    ) {
       throw new Error(`Audit shard changed while reading: ${shardPath}`);
     }
     return { bytes, identity: { dev: opened.dev, ino: opened.ino } };
@@ -866,14 +920,22 @@ export function appendAuditEntries(
   }
   for (const entry of entries) validateAuditEntry(entry);
 
-  const append = (): { appended: true; events: string[]; timestamps: string[] } => {
+  const append = (): {
+    appended: true;
+    events: string[];
+    timestamps: string[];
+  } => {
     const timestamps = entries.map(() => isoTimestamp());
     const payload = entries
       .map((entry, index) =>
-        renderAuditBlock(entry, timestamps[index], projectDir)
+        renderAuditBlock(entry, timestamps[index], projectDir),
       )
       .join("");
-    appendAuditBlockAtPath(projectDir, auditFilePath(projectDir, intent, space), payload);
+    appendAuditBlockAtPath(
+      projectDir,
+      auditFilePath(projectDir, intent, space),
+      payload,
+    );
     for (const entry of entries) {
       tapAuditMetric(entry.eventType, entry.fields, projectDir);
     }
@@ -905,7 +967,7 @@ export function appendAuditEntries(
 export function handleAppend(
   eventType: string,
   fields: Record<string, string>,
-  projectDir: string
+  projectDir: string,
 ): void {
   if (CLI_PROTECTED_EVENT_TYPES.has(eventType) && !directAuditEventsAllowed()) {
     refuseProtectedEvent(eventType);
@@ -935,12 +997,14 @@ function handleAppendBatch(rawEntries: string, projectDir: string): void {
       Array.isArray((raw as { fields?: unknown }).fields)
     ) {
       throw new Error(
-        `append-batch entry ${index} must contain string eventType and object fields`
+        `append-batch entry ${index} must contain string eventType and object fields`,
       );
     }
     const fields = (raw as { fields: Record<string, unknown> }).fields;
     if (Object.values(fields).some((value) => typeof value !== "string")) {
-      throw new Error(`append-batch entry ${index} field values must be strings`);
+      throw new Error(
+        `append-batch entry ${index} field values must be strings`,
+      );
     }
     return {
       eventType: (raw as { eventType: string }).eventType,
@@ -953,7 +1017,10 @@ function handleAppendBatch(rawEntries: string, projectDir: string): void {
   // synthetic single-stage owner uses appendAuditEntries directly instead of
   // crossing this public CLI boundary.
   for (const entry of entries) {
-    if (CLI_PROTECTED_EVENT_TYPES.has(entry.eventType) && !directAuditEventsAllowed()) {
+    if (
+      CLI_PROTECTED_EVENT_TYPES.has(entry.eventType) &&
+      !directAuditEventsAllowed()
+    ) {
       refuseProtectedEvent(entry.eventType);
     }
   }
@@ -965,7 +1032,7 @@ function handleAppendBatch(rawEntries: string, projectDir: string): void {
 function handleAppendRaw(
   heading: string,
   body: string,
-  projectDir: string
+  projectDir: string,
 ): void {
   if (hasUnsafeSingleLineCharacter(heading)) {
     jsonError("append-raw heading must be printable text on one physical line");
@@ -989,7 +1056,7 @@ function handleAppendRaw(
       jsonError(
         `append-raw refuses a body carrying **Event**: ${value} — that line would register as a ` +
           "canonical audit event to every reader. Emit taxonomy events through their owning tool " +
-          "(or `append` for diagnostic types); append-raw is for free-form notes only."
+          "(or `append` for diagnostic types); append-raw is for free-form notes only.",
       );
     }
   }
@@ -1041,7 +1108,10 @@ function handleAppendRaw(
 // (vision §5). Omitted -> default-resolution (the active cursor), which is what
 // the orchestrator threads today. Returns undefined when a flag is absent so the
 // helpers default-resolve.
-function parseSelectorFlags(args: string[]): { intent?: string; space?: string } {
+function parseSelectorFlags(args: string[]): {
+  intent?: string;
+  space?: string;
+} {
   let intent: string | undefined;
   let space: string | undefined;
   for (let i = 0; i < args.length; i++) {
@@ -1065,7 +1135,9 @@ function parseSlugFlag(args: string[], subcommand: string): string {
     }
   }
   if (!slug) {
-    jsonError(`Usage: aidlc-audit ${subcommand} --slug <slug> [--project-dir <path>]`);
+    jsonError(
+      `Usage: aidlc-audit ${subcommand} --slug <slug> [--project-dir <path>]`,
+    );
   }
   const err = validateBoltSlug(slug);
   if (err) {
@@ -1078,27 +1150,43 @@ function validateMergeDelta(delta: string): void {
   if (delta !== "" && !delta.endsWith("\n---\n")) {
     throw new Error("worktree audit delta ends with an incomplete block");
   }
-  for (const block of delta.split(/\n---\n/).filter((part) => part.trim() !== "")) {
-    const eventMatches = [...block.matchAll(/^(?:-\s*)?\*\*Event\*\*:\s*(.+)$/gm)];
-    const timestampMatches = [...block.matchAll(/^(?:-\s*)?\*\*Timestamp\*\*:\s*(.+)$/gm)];
+  for (const block of delta
+    .split(/\n---\n/)
+    .filter((part) => part.trim() !== "")) {
+    const eventMatches = [
+      ...block.matchAll(/^(?:-\s*)?\*\*Event\*\*:\s*(.+)$/gm),
+    ];
+    const timestampMatches = [
+      ...block.matchAll(/^(?:-\s*)?\*\*Timestamp\*\*:\s*(.+)$/gm),
+    ];
     if (eventMatches.length === 0) {
       const timestamps = block.match(/^(?:-\s*)?\*\*Timestamp\*\*:/gm) ?? [];
-      if (timestamps.length !== 1) throw new Error("worktree audit delta has malformed note block");
+      if (timestamps.length !== 1)
+        throw new Error("worktree audit delta has malformed note block");
       continue; // complete append-raw diagnostic note
     }
-    if (eventMatches.length !== 1) throw new Error("worktree audit delta has duplicate Event fields");
+    if (eventMatches.length !== 1)
+      throw new Error("worktree audit delta has duplicate Event fields");
     if (timestampMatches.length !== 1) {
-      throw new Error("worktree audit delta must contain exactly one Timestamp field");
+      throw new Error(
+        "worktree audit delta must contain exactly one Timestamp field",
+      );
     }
     const eventType = eventMatches[0][1].trim();
     if (!VALID_EVENT_TYPES.has(eventType)) {
-      throw new Error(`worktree audit delta contains unknown event ${eventType}`);
+      throw new Error(
+        `worktree audit delta contains unknown event ${eventType}`,
+      );
     }
     if (mergeEventIsProtected(eventType)) {
-      throw new Error(`worktree audit delta contains protected authority event ${eventType}`);
+      throw new Error(
+        `worktree audit delta contains protected authority event ${eventType}`,
+      );
     }
     const fields: Record<string, string> = {};
-    for (const match of block.matchAll(/^(?:-\s*)?\*\*([^*]+)\*\*:\s*(.*)$/gm)) {
+    for (const match of block.matchAll(
+      /^(?:-\s*)?\*\*([^*]+)\*\*:\s*(.*)$/gm,
+    )) {
       const key = match[1].trim();
       if (key !== "Event" && key !== "Timestamp") fields[key] = match[2];
     }
@@ -1108,9 +1196,11 @@ function validateMergeDelta(delta: string): void {
 
 function exactAuditField(block: string, name: string): string | null {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const matches = [...block.matchAll(
-    new RegExp(`^(?:-\\s*)?\\*\\*${escaped}\\*\\*:\\s*(.*)$`, "gm"),
-  )];
+  const matches = [
+    ...block.matchAll(
+      new RegExp(`^(?:-\\s*)?\\*\\*${escaped}\\*\\*:\\s*(.*)$`, "gm"),
+    ),
+  ];
   return matches.length === 1 ? matches[0][1].trim() : null;
 }
 
@@ -1140,7 +1230,10 @@ function completeAuditBlocks(content: string): CompleteAuditBlock[] {
   return blocks;
 }
 
-function parseAuditForkBlock(block: CompleteAuditBlock, slug: string): AuditForkRecord | null {
+function parseAuditForkBlock(
+  block: CompleteAuditBlock,
+  slug: string,
+): AuditForkRecord | null {
   if (
     exactAuditField(block.block, "Event") !== "AUDIT_FORKED" ||
     exactAuditField(block.block, "Bolt slug") !== slug
@@ -1164,7 +1257,10 @@ function parseAuditForkBlock(block: CompleteAuditBlock, slug: string): AuditFork
   return { ...block, boundary, sourceHash, timestamp };
 }
 
-function latestAuditFork(content: string, slug: string): AuditForkRecord | null {
+function latestAuditFork(
+  content: string,
+  slug: string,
+): AuditForkRecord | null {
   const blocks = completeAuditBlocks(content);
   for (let i = blocks.length - 1; i >= 0; i--) {
     const fork = parseAuditForkBlock(blocks[i], slug);
@@ -1173,7 +1269,10 @@ function latestAuditFork(content: string, slug: string): AuditForkRecord | null 
   return null;
 }
 
-function forksCorrelate(left: AuditForkRecord, right: AuditForkRecord): boolean {
+function forksCorrelate(
+  left: AuditForkRecord,
+  right: AuditForkRecord,
+): boolean {
   return (
     left.boundary === right.boundary &&
     left.sourceHash === right.sourceHash &&
@@ -1211,11 +1310,18 @@ function matchingAuditMerge(
   return null;
 }
 
-function containsDeltaAtBlockBoundary(content: string, delta: string, after: number): boolean {
+function containsDeltaAtBlockBoundary(
+  content: string,
+  delta: string,
+  after: number,
+): boolean {
   if (delta === "") return false;
   let position = content.indexOf(delta, after);
   while (position >= 0) {
-    if (position === after || content.slice(Math.max(0, position - 5), position) === "\n---\n") {
+    if (
+      position === after ||
+      content.slice(Math.max(0, position - 5), position) === "\n---\n"
+    ) {
       return true;
     }
     position = content.indexOf(delta, position + 1);
@@ -1251,11 +1357,13 @@ function handleAuditFork(args: string[], projectDir: string): void {
 
   // Pre-emit guards (fail clean before any audit side-effect).
   if (!existsSync(mainAuditPath)) {
-    jsonError(`main audit not found at ${mainAuditPath}; start a workflow first (describe what to build, e.g. /aidlc "build the auth service")`);
+    jsonError(
+      `main audit not found at ${mainAuditPath}; start a workflow first (describe what to build, e.g. /aidlc "build the auth service")`,
+    );
   }
   if (!existsSync(wtPath)) {
     jsonError(
-      `worktree directory not found at ${wtPath}; run aidlc-worktree create first`
+      `worktree directory not found at ${wtPath}; run aidlc-worktree create first`,
     );
   }
 
@@ -1270,7 +1378,12 @@ function handleAuditFork(args: string[], projectDir: string): void {
   try {
     const projectReal = realpathSync(projectDir);
     const wtRel = relative(resolve(projectDir), resolve(wtPath));
-    if (wtRel === "" || wtRel === ".." || wtRel.startsWith(`..${sep}`) || isAbsolute(wtRel)) {
+    if (
+      wtRel === "" ||
+      wtRel === ".." ||
+      wtRel.startsWith(`..${sep}`) ||
+      isAbsolute(wtRel)
+    ) {
       throw new Error(`worktree path is outside project: ${wtPath}`);
     }
     assertNoSymlinkInChainOrThrow(projectReal, wtRel);
@@ -1412,16 +1525,27 @@ function handleAuditFork(args: string[], projectDir: string): void {
       assertNoSymlinkInChainOrThrow(wtReal, relative(wtPath, wtCloneIdPath));
       writeBufferAtomic(wtCloneIdPath, cloneBytes);
       verifyWorktreeIdentity();
-      const mainAfterForkSnapshot = readAuditSnapshot(projectDir, mainAuditPath);
-      if (mainAfterForkSnapshot.identity.dev !== before.identity.dev ||
-          mainAfterForkSnapshot.identity.ino !== before.identity.ino) {
+      const mainAfterForkSnapshot = readAuditSnapshot(
+        projectDir,
+        mainAuditPath,
+      );
+      if (
+        mainAfterForkSnapshot.identity.dev !== before.identity.dev ||
+        mainAfterForkSnapshot.identity.ino !== before.identity.ino
+      ) {
         throw new Error("main audit changed identity during audit-fork");
       }
       const mainAfterFork = mainAfterForkSnapshot.bytes;
       const worktreeForkBytes = scopeStamp
         ? (() => {
-            const mainFork = latestAuditFork(mainAfterFork.toString("utf-8"), slug);
-            if (!mainFork) throw new Error("main audit is missing the emitted AUDIT_FORKED row");
+            const mainFork = latestAuditFork(
+              mainAfterFork.toString("utf-8"),
+              slug,
+            );
+            if (!mainFork)
+              throw new Error(
+                "main audit is missing the emitted AUDIT_FORKED row",
+              );
             return mainAfterFork.subarray(mainFork.start, mainFork.end);
           })()
         : mainAfterFork;
@@ -1522,7 +1646,9 @@ function handleAuditMerge(args: string[], projectDir: string): void {
     jsonError(`worktree audit not found at ${wtAuditPath}; nothing to merge`);
   }
   if (!existsSync(mainAuditPath)) {
-    jsonError(`main audit not found at ${mainAuditPath}; start a workflow first (describe what to build, e.g. /aidlc "build the auth service")`);
+    jsonError(
+      `main audit not found at ${mainAuditPath}; start a workflow first (describe what to build, e.g. /aidlc "build the auth service")`,
+    );
   }
 
   const wtSnapshot = readAuditSnapshot(projectDir, wtAuditPath);
@@ -1544,7 +1670,9 @@ function handleAuditMerge(args: string[], projectDir: string): void {
   try {
     validateMergeDelta(delta);
   } catch (error) {
-    jsonError(`refusing malformed or unauthorized worktree audit delta: ${errorMessage(error)}`);
+    jsonError(
+      `refusing malformed or unauthorized worktree audit delta: ${errorMessage(error)}`,
+    );
   }
 
   // Acquire outer lock with extended budget for parallel-Bolt contention.
@@ -1561,7 +1689,7 @@ function handleAuditMerge(args: string[], projectDir: string): void {
   );
   if (!acquireAuditLock(projectDir, lockRetries, lockRetryMs, intent, space)) {
     jsonError(
-      `Failed to acquire audit lock after ${lockRetries} × ${lockRetryMs}ms = ${(lockRetries * lockRetryMs / 1000).toFixed(1)}s retries; another merge in flight?`
+      `Failed to acquire audit lock after ${lockRetries} × ${lockRetryMs}ms = ${((lockRetries * lockRetryMs) / 1000).toFixed(1)}s retries; another merge in flight?`,
     );
   }
 
@@ -1584,10 +1712,14 @@ function handleAuditMerge(args: string[], projectDir: string): void {
     const mainSnapshot = readAuditSnapshot(projectDir, mainAuditPath);
     const mainBuf = mainSnapshot.bytes;
     const wtCurrent = readAuditSnapshot(projectDir, wtAuditPath);
-    if (wtCurrent.identity.dev !== wtSnapshot.identity.dev ||
-        wtCurrent.identity.ino !== wtSnapshot.identity.ino ||
-        !wtCurrent.bytes.equals(wtSnapshot.bytes)) {
-      throw new Error("worktree audit changed while merge was preparing; retry the merge");
+    if (
+      wtCurrent.identity.dev !== wtSnapshot.identity.dev ||
+      wtCurrent.identity.ino !== wtSnapshot.identity.ino ||
+      !wtCurrent.bytes.equals(wtSnapshot.bytes)
+    ) {
+      throw new Error(
+        "worktree audit changed while merge was preparing; retry the merge",
+      );
     }
 
     // The worktree copy is writable and cannot authoritatively choose how much
@@ -1595,12 +1727,21 @@ function handleAuditMerge(args: string[], projectDir: string): void {
     // every correlation field to agree before trusting the boundary.
     const mainContent = mainBuf.toString("utf-8");
     const mainFork = latestAuditFork(mainContent, slug);
-    if (!mainFork) throw new Error(`main audit is missing AUDIT_FORKED for slug ${slug}`);
+    if (!mainFork)
+      throw new Error(`main audit is missing AUDIT_FORKED for slug ${slug}`);
     if (!forksCorrelate(fork, mainFork)) {
-      throw new Error("worktree AUDIT_FORKED metadata does not match the authoritative main row");
+      throw new Error(
+        "worktree AUDIT_FORKED metadata does not match the authoritative main row",
+      );
     }
-    if (!Number.isSafeInteger(boundary) || boundary < 0 || boundary > mainBuf.length) {
-      throw new Error(`invalid Fork Boundary ${boundary} for ${mainBuf.length}-byte main audit`);
+    if (
+      !Number.isSafeInteger(boundary) ||
+      boundary < 0 ||
+      boundary > mainBuf.length
+    ) {
+      throw new Error(
+        `invalid Fork Boundary ${boundary} for ${mainBuf.length}-byte main audit`,
+      );
     }
     const prefixLen = boundary;
     const prefixHash = createHash("sha256")
@@ -1620,7 +1761,8 @@ function handleAuditMerge(args: string[], projectDir: string): void {
       );
     }
     const trimmed = delta.trim();
-    if (trimmed !== "") entriesMerged = delta.split(/\n---\n/).filter((b) => b.trim()).length;
+    if (trimmed !== "")
+      entriesMerged = delta.split(/\n---\n/).filter((b) => b.trim()).length;
     const existingMerge = matchingAuditMerge(mainContent, slug, mainFork);
     const deltaAlreadyPresent = containsDeltaAtBlockBoundary(
       mainContent,
@@ -1634,7 +1776,7 @@ function handleAuditMerge(args: string[], projectDir: string): void {
       alreadyMerged = true;
       result = {
         timestamp: existingMerge
-          ? exactAuditField(existingMerge.block, "Timestamp") ?? forkTs
+          ? (exactAuditField(existingMerge.block, "Timestamp") ?? forkTs)
           : forkTs,
       };
     } else {
@@ -1737,14 +1879,18 @@ export function main(argv: string[]): void {
   const subcommand = filteredArgs[0];
 
   if (!subcommand) {
-    jsonError("Usage: aidlc-audit <append|append-batch|append-raw|audit-fork|audit-merge> [args...]");
+    jsonError(
+      "Usage: aidlc-audit <append|append-batch|append-raw|audit-fork|audit-merge> [args...]",
+    );
   }
 
   switch (subcommand) {
     case "append": {
       const eventType = filteredArgs[1];
       if (!eventType) {
-        jsonError("Usage: aidlc-audit append <event-type> [--field key=value ...]");
+        jsonError(
+          "Usage: aidlc-audit append <event-type> [--field key=value ...]",
+        );
       }
       refuseReservedCliEvent(eventType);
       const fields = parseFieldArgs(rawArgs);
@@ -1766,9 +1912,7 @@ export function main(argv: string[]): void {
       const heading = filteredArgs[1];
       const body = filteredArgs[2];
       if (!heading || !body) {
-        jsonError(
-          "Usage: aidlc-audit append-raw <heading> <body>"
-        );
+        jsonError("Usage: aidlc-audit append-raw <heading> <body>");
       }
       handleAppendRaw(heading, body, projectDir);
       break;
@@ -1783,7 +1927,9 @@ export function main(argv: string[]): void {
       break;
 
     default:
-      jsonError(`Unknown subcommand: ${subcommand}. Expected: append, append-batch, append-raw, audit-fork, audit-merge`);
+      jsonError(
+        `Unknown subcommand: ${subcommand}. Expected: append, append-batch, append-raw, audit-fork, audit-merge`,
+      );
   }
 }
 

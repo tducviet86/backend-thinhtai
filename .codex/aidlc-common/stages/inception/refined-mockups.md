@@ -59,6 +59,7 @@ The classic scope skips rough-mockups by design (no Ideation phase); when the wi
 ### Step 2: Generate Clarifying Questions
 
 Create `<record>/inception/refined-mockups/refined-mockups-questions.md` with questions:
+
 - How should each user story be represented in the UI?
 - What interaction patterns are needed (modals, inline edits, wizards, progressive disclosure)?
 - What states must each screen handle (loading, empty, error, success, partial)?

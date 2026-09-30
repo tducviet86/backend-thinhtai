@@ -27,14 +27,21 @@ if (trustedNamespaces.length !== 1) {
 
 export const TRUSTED_ROUTE_NAMESPACE = trustedNamespaces[0];
 export const TRUSTED_COMMAND_PREFIX = `aidlc ${TRUSTED_ROUTE_NAMESPACE}`;
-export const TRUSTED_COMMAND_TOKENS = ["aidlc", TRUSTED_ROUTE_NAMESPACE] as const;
-export const UNTRUSTED_ROUTE_NAMESPACES = Object.keys(ROUTE_NAMESPACE_DECLARATIONS)
-  .filter((namespace) =>
-    namespace !== "public" && namespace !== TRUSTED_ROUTE_NAMESPACE
-  ) as RouteNamespaceName[];
+export const TRUSTED_COMMAND_TOKENS = [
+  "aidlc",
+  TRUSTED_ROUTE_NAMESPACE,
+] as const;
+export const UNTRUSTED_ROUTE_NAMESPACES = Object.keys(
+  ROUTE_NAMESPACE_DECLARATIONS,
+).filter(
+  (namespace) =>
+    namespace !== "public" && namespace !== TRUSTED_ROUTE_NAMESPACE,
+) as RouteNamespaceName[];
 
 export function trustedCommand(suffix = ""): string {
-  return suffix ? `${TRUSTED_COMMAND_PREFIX} ${suffix}` : TRUSTED_COMMAND_PREFIX;
+  return suffix
+    ? `${TRUSTED_COMMAND_PREFIX} ${suffix}`
+    : TRUSTED_COMMAND_PREFIX;
 }
 
 // Lightweight dispatcher grammar. aidlc-lib.ts retains the same public
@@ -102,11 +109,7 @@ const DISPATCHER_INTENT_VERBS = new Set([
   "unarchive",
 ]);
 const DISPATCHER_SPACE_VERBS = new Set(["list", "switch", "create"]);
-const DISPATCHER_RESERVED_FUTURE = new Set([
-  "rename",
-  "show",
-  "birth",
-]);
+const DISPATCHER_RESERVED_FUTURE = new Set(["rename", "show", "birth"]);
 
 type DispatcherIntentLifecycleVerb = "archive" | "unarchive";
 
@@ -138,9 +141,8 @@ function missingDispatcherWorkspaceName(
   noun: DispatcherWorkspaceNoun,
   verb: "switch" | "create" | "space-create" | DispatcherIntentLifecycleVerb,
 ): DispatcherWorkspaceCommand {
-  const usage = verb === "space-create"
-    ? "space-create <name>"
-    : `${noun} ${verb} <name>`;
+  const usage =
+    verb === "space-create" ? "space-create <name>" : `${noun} ${verb} <name>`;
   return {
     kind: "error",
     noun,
@@ -191,8 +193,15 @@ export function parseDispatcherWorkspaceCommand(
   const noun = head;
   const verbOrName = tokens[1];
   if (verbOrName === undefined) return { kind: "list", noun, json: false };
-  if (verbOrName === "--json" || (noun === "intent" && verbOrName === "--all")) {
-    return dispatcherWorkspaceList(noun, [tokens[0], "list", ...tokens.slice(1)]);
+  if (
+    verbOrName === "--json" ||
+    (noun === "intent" && verbOrName === "--all")
+  ) {
+    return dispatcherWorkspaceList(noun, [
+      tokens[0],
+      "list",
+      ...tokens.slice(1),
+    ]);
   }
   if (verbOrName === "help" || verbOrName === "-h") {
     return { kind: "help", noun };
@@ -293,17 +302,18 @@ export function parseDispatcherPluginCommand(
   if (verb === "help" || verb === "-h" || verb === "--help") {
     return { kind: "help" };
   }
-  const target = verb === "select"
-    ? "select-plugins"
-    : verb === "list"
-    ? "plugin-list"
-    : verb === "sync"
-    ? "plugin-sync"
-    : verb === "validate"
-    ? "plugin-validate"
-    : verb === "build"
-    ? "plugin-build"
-    : undefined;
+  const target =
+    verb === "select"
+      ? "select-plugins"
+      : verb === "list"
+        ? "plugin-list"
+        : verb === "sync"
+          ? "plugin-sync"
+          : verb === "validate"
+            ? "plugin-validate"
+            : verb === "build"
+              ? "plugin-build"
+              : undefined;
   if (target !== undefined) {
     return { kind: "run", argv: [target, ...args.slice(2)] };
   }
@@ -333,9 +343,7 @@ export type NamespaceInvocation = {
 };
 
 function cleanInvocationToken(token: string | undefined): string | undefined {
-  return token
-    ?.replace(/^[([`"']+/, "")
-    .replace(/[\]),.:;\\`"']+$/, "");
+  return token?.replace(/^[([`"']+/, "").replace(/[\]),.:;\\`"']+$/, "");
 }
 
 export function namespaceInvocationResolves(
@@ -355,10 +363,12 @@ export function namespaceInvocationResolves(
   ) {
     return true;
   }
-  const namespaceRoutes = routes.filter((route) => route.namespace === namespace);
+  const namespaceRoutes = routes.filter(
+    (route) => route.namespace === namespace,
+  );
   if (
-    namespaceRoutes.some((route) =>
-      route.group === "top" && route.verbs.includes(noun)
+    namespaceRoutes.some(
+      (route) => route.group === "top" && route.verbs.includes(noun),
     )
   ) {
     return true;
@@ -370,13 +380,15 @@ export function namespaceInvocationResolves(
   if (verb.startsWith("--")) {
     return grouped.some((route) => route.kind === "routing-only");
   }
-  return grouped.some((route) =>
-    route.kind === "routing-only" ||
-    route.verbs.some((candidate) =>
-      candidate === verb ||
-      candidate.startsWith(`${verb} `) ||
-      candidate.startsWith("<")
-    )
+  return grouped.some(
+    (route) =>
+      route.kind === "routing-only" ||
+      route.verbs.some(
+        (candidate) =>
+          candidate === verb ||
+          candidate.startsWith(`${verb} `) ||
+          candidate.startsWith("<"),
+      ),
   );
 }
 
@@ -440,7 +452,11 @@ export type GlobalOptions = {
 export function globalOptions(argv: readonly string[]): GlobalOptions {
   configureColor(argv);
   return {
-    mode: argv.includes("--json") ? "json" : argv.includes("--quiet") ? "quiet" : "human",
+    mode: argv.includes("--json")
+      ? "json"
+      : argv.includes("--quiet")
+        ? "quiet"
+        : "human",
     color: colorEnabled(process.stdout),
     yes: argv.includes("--yes"),
     offline: argv.includes("--offline") || process.env.AIDLC_OFFLINE === "1",
@@ -448,7 +464,10 @@ export function globalOptions(argv: readonly string[]): GlobalOptions {
   };
 }
 
-export function valueAfter(argv: readonly string[], flag: string): string | undefined {
+export function valueAfter(
+  argv: readonly string[],
+  flag: string,
+): string | undefined {
   const index = argv.indexOf(flag);
   const value = index >= 0 ? argv[index + 1] : undefined;
   return value && !value.startsWith("--") ? value : undefined;
@@ -464,11 +483,18 @@ export function valuesAfter(argv: readonly string[], flag: string): string[] {
   return values;
 }
 
-export function emitResult(result: CommandResult, options: GlobalOptions): void {
+export function emitResult(
+  result: CommandResult,
+  options: GlobalOptions,
+): void {
   if (options.mode === "json") {
-    process.stdout.write(`${JSON.stringify({ schemaVersion: 1, ...result })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ schemaVersion: 1, ...result })}\n`,
+    );
   } else if (options.mode === "quiet") {
-    const output = result.ok ? result.message : (result.remediation ?? result.message);
+    const output = result.ok
+      ? result.message
+      : (result.remediation ?? result.message);
     if (output) process.stdout.write(`${output}\n`);
   } else {
     if (result.ok) {
@@ -476,7 +502,9 @@ export function emitResult(result: CommandResult, options: GlobalOptions): void 
     } else if (result.code === EXIT.actionNeeded) {
       process.stdout.write(`action: ${result.message}\n`);
     } else {
-      process.stdout.write(`${errorLabel("error:", process.stdout)} ${result.message}\n`);
+      process.stdout.write(
+        `${errorLabel("error:", process.stdout)} ${result.message}\n`,
+      );
     }
     if (result.remediation) {
       process.stdout.write(

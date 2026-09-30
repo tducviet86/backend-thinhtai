@@ -15,14 +15,7 @@ import {
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import {
-  basename,
-  dirname,
-  join,
-  relative,
-  resolve,
-  sep,
-} from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import {
   bundledPluginHookTemplatesDir,
   bundledPluginTargetsPath,
@@ -158,10 +151,7 @@ function snapshotPaths(root: string, paths: string[]): Snapshot {
 }
 
 function snapshotWholeTree(root: string): Snapshot {
-  return snapshotPaths(
-    root,
-    existsSync(root) ? readdirSync(root).sort() : [],
-  );
+  return snapshotPaths(root, existsSync(root) ? readdirSync(root).sort() : []);
 }
 
 function snapshotDiff(
@@ -202,9 +192,7 @@ function copyInstallRoots(
   }
 }
 
-function directComposeEnv(
-  options: PluginComposeRunOptions,
-): NodeJS.ProcessEnv {
+function directComposeEnv(options: PluginComposeRunOptions): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...candidateProcessEnv(),
     AIDLC_HARNESS_DIR: options.harnessLeaf,
@@ -240,11 +228,7 @@ export function runPluginCompose(
     const result = spawnSync(
       process.execPath,
       [
-        join(
-          options.pluginBuilt,
-          "hooks",
-          "aidlc-plugin-compose.ts",
-        ),
+        join(options.pluginBuilt, "hooks", "aidlc-plugin-compose.ts"),
         options.harnessLeaf,
       ],
       {
@@ -310,9 +294,7 @@ export function readPluginDropEntries(
       for (const raw of readFileSync(path, "utf-8")
         .split(/\r?\n/)
         .filter(Boolean)) {
-        const match = raw.match(
-          /^[^\t]*\t\[(degraded|advisory)\]\s*(.*)$/,
-        );
+        const match = raw.match(/^[^\t]*\t\[(degraded|advisory)\]\s*(.*)$/);
         entries.push({
           file: posixRelative(projectDir, path),
           severity:
@@ -415,10 +397,7 @@ function expectedPluginContent(pluginRoot: string): {
 function pluginName(pluginRoot: string): string {
   try {
     const manifest = JSON.parse(
-      readFileSync(
-        join(pluginRoot, ".aidlc-plugin", "plugin.json"),
-        "utf-8",
-      ),
+      readFileSync(join(pluginRoot, ".aidlc-plugin", "plugin.json"), "utf-8"),
     ) as { name?: unknown };
     if (typeof manifest.name === "string" && manifest.name.trim()) {
       return manifest.name.trim();
@@ -435,11 +414,7 @@ function runGraphCompile(
 ): PluginComposeRunResult {
   const harnessRoot = join(candidateRoot, target.harnessLeaf);
   const dataRoot = join(harnessRoot, "tools", "data");
-  const graph = join(
-    harnessRoot,
-    "tools",
-    "aidlc-graph.ts",
-  );
+  const graph = join(harnessRoot, "tools", "aidlc-graph.ts");
   const result = spawnSync(process.execPath, [graph, "compile"], {
     cwd: candidateRoot,
     encoding: "utf-8",
@@ -495,9 +470,10 @@ function readGraphResult(
     slug?: unknown;
     plugin?: unknown;
   }>;
-  const scopes = JSON.parse(
-    readFileSync(gridPath, "utf-8"),
-  ) as Record<string, unknown>;
+  const scopes = JSON.parse(readFileSync(gridPath, "utf-8")) as Record<
+    string,
+    unknown
+  >;
   const stageSet = new Set(
     graph
       .filter((stage) => stage.plugin === plugin)
@@ -505,24 +481,16 @@ function readGraphResult(
       .filter((slug): slug is string => typeof slug === "string"),
   );
   const scopeSet = new Set(Object.keys(scopes));
-  const presentStages = expected.stages.filter((slug) =>
-    stageSet.has(slug),
-  );
-  const presentScopes = expected.scopes.filter((scope) =>
-    scopeSet.has(scope),
-  );
+  const presentStages = expected.stages.filter((slug) => stageSet.has(slug));
+  const presentScopes = expected.scopes.filter((scope) => scopeSet.has(scope));
   return {
     compiled: true,
     expectedStages: expected.stages,
     presentStages,
-    missingStages: expected.stages.filter(
-      (slug) => !stageSet.has(slug),
-    ),
+    missingStages: expected.stages.filter((slug) => !stageSet.has(slug)),
     expectedScopes: expected.scopes,
     presentScopes,
-    missingScopes: expected.scopes.filter(
-      (scope) => !scopeSet.has(scope),
-    ),
+    missingScopes: expected.scopes.filter((scope) => !scopeSet.has(scope)),
   };
 }
 
@@ -562,9 +530,7 @@ export function testPluginComposition(
     targets,
     options.harness,
   );
-  const workRoot = mkdtempSync(
-    join(tmpdir(), "aidlc-plugin-test-"),
-  );
+  const workRoot = mkdtempSync(join(tmpdir(), "aidlc-plugin-test-"));
   const candidateRoot = join(workRoot, "candidate");
   const projectionRoot = join(workRoot, "projection");
   const liveBefore = snapshotPaths(installRoot, target.installRoots);
@@ -591,8 +557,7 @@ export function testPluginComposition(
         target,
         outDir: projectionRoot,
         templateHooksDir:
-          options.templateHooksDir ??
-          bundledPluginHookTemplatesDir(),
+          options.templateHooksDir ?? bundledPluginHookTemplatesDir(),
       });
       const beforeCompose = snapshotWholeTree(candidateRoot);
       const first = runPluginCompose({
@@ -610,10 +575,7 @@ export function testPluginComposition(
           "Fix the compose failure and rerun the plugin test.",
         );
       }
-      drops = readPluginDropEntries(
-        candidateRoot,
-        logicalPluginName,
-      );
+      drops = readPluginDropEntries(candidateRoot, logicalPluginName);
       for (const drop of drops) {
         addTestError(
           validation,
@@ -690,7 +652,9 @@ export function testPluginComposition(
             ...secondDiff.added,
             ...secondDiff.changed,
             ...secondDiff.removed,
-          ].join(", ")}], emitted ${secondDrops.length} drop(s), status ${second.status}`,
+          ].join(
+            ", ",
+          )}], emitted ${secondDrops.length} drop(s), status ${second.status}`,
           "Make compose compare-before-write and self-clear resolved drops.",
         );
       }
@@ -704,10 +668,7 @@ export function testPluginComposition(
       "Fix the plugin or install candidate inputs and rerun.",
     );
   } finally {
-    const liveAfter = snapshotPaths(
-      installRoot,
-      target.installRoots,
-    );
+    const liveAfter = snapshotPaths(installRoot, target.installRoots);
     const liveDiff = snapshotDiff(liveBefore, liveAfter);
     if (
       liveDiff.added.length > 0 ||
@@ -764,8 +725,7 @@ function formatPluginTest(
       formatPluginValidation(pluginRoot, result).replace(
         "Plugin validation: INVALID",
         "Plugin test: FAILED",
-      ) +
-      `Install: ${installRoot}\nHarness: ${result.harness}\n`
+      ) + `Install: ${installRoot}\nHarness: ${result.harness}\n`
     );
   }
   return [
@@ -821,9 +781,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       throw new PluginTestUsageError(`unknown option "${arg}"`);
     }
     if (pluginRoot) {
-      throw new PluginTestUsageError(
-        `unexpected positional argument "${arg}"`,
-      );
+      throw new PluginTestUsageError(`unexpected positional argument "${arg}"`);
     }
     pluginRoot = arg;
   }

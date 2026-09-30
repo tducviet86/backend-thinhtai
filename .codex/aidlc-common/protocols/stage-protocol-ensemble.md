@@ -44,26 +44,32 @@ When a subagent completes its work, it MUST return a structured summary to the o
 If the dispatch returns before that summary exists (a harness that runs agents in the background), do not write a shell loop or a sleep. Run `aidlc engine orchestrate wait --stage <directive.stage> --for collaborators` after dispatching support agents, or `--for artifacts` after dispatching the lead (add `--unit <directive.unit>` on a per-unit stage), and re-run that same command while it answers `status: waiting`. It returns within its bound and lists exactly what is still missing.
 
 ### Required return format:
+
 ```markdown
 ## Subagent Summary: [Stage Name]
 
 ### Produced
+
 - [file path 1]: [brief description of content]
 - [file path 2]: [brief description of content]
 
 ### Key Decisions
+
 - [Decision 1]: [rationale]
 - [Decision 2]: [rationale]
 
 ### Issues / Concerns
+
 - [Any problems encountered, edge cases found, or risks identified]
 - "None" if no issues
 
 ### Next Steps
+
 - [What the orchestrator should do next based on this output]
 ```
 
 ### Rules:
+
 - The orchestrator MUST read this summary before proceeding to the next stage
 - If the "Issues / Concerns" section is non-empty, the orchestrator MUST present them to the user before continuing
 - If the "Produced" section lists fewer files than expected for the stage, the orchestrator MUST investigate before marking the stage complete
@@ -83,10 +89,12 @@ file listed under "Produced". The file's shape:
 **Collaborator:** [agent-slug]
 
 ## Contribution
+
 [The substantive content: findings, additions, corrections — written so the
 lead can integrate it into the artifacts directly]
 
 ## Positions
+
 - AGREE: [aspect of the draft endorsed] — [one-line rationale]
 - OBJECT: [aspect disputed or missing] — [one-line rationale]
 ```
@@ -103,14 +111,18 @@ the artifacts directly per the stage body, and the conductor records each
 returned link with `aidlc-log.ts link` before continuing.
 
 ### Context budget for subagent prompts
+
 To prevent context overflow in subagent calls:
+
 - **Current-unit only**: Pass only the design artifacts for the unit being implemented, not all units
 - **Summarize inception artifacts**: For CONSTRUCTION subagents, provide a 1-2 line summary of each inception artifact with its file path, rather than embedding full content. The subagent can Read specific files if needed.
 - **Always include**: The specific task instructions and relevant state/artifact paths. The harness agent config loads persona and knowledge context; do not paste either into the prompt.
 - **Large knowledge sets**: Name any especially relevant file paths in the brief, but let the dispatched agent read them through its configured resources.
 
 ### Subagent failure recovery
+
 If a Task tool call fails (timeout, error, or returns truncated/incomplete output):
+
 1. **Retry once** with a reduced context prompt — summarize inception-phase artifacts instead of including full content, pass only the current unit's design artifacts
 2. If the retry also fails, **tell the user plainly what failed** and offer two options via a structured question:
    - "Run it here": do the stage's work in this conversation instead of handing it off; slower, but it sidesteps whatever is failing

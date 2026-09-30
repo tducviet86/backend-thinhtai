@@ -43,7 +43,13 @@
 // REVIEWER_SCOPE_BLOCKED audit event so the run's record shows when the
 // bound bit; audit failures never change the decision.
 
-import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { appendAuditEntryUnlocked } from "../tools/aidlc-audit.ts";
 import {
@@ -123,8 +129,14 @@ function candidateStrings(
   toolInput: Record<string, unknown> | undefined,
 ): Array<{ text: string; kind: "path" | "command" | "glob" | "search-root" }> {
   const ti = toolInput ?? {};
-  const out: Array<{ text: string; kind: "path" | "command" | "glob" | "search-root" }> = [];
-  const push = (v: unknown, kind: "path" | "command" | "glob" | "search-root") => {
+  const out: Array<{
+    text: string;
+    kind: "path" | "command" | "glob" | "search-root";
+  }> = [];
+  const push = (
+    v: unknown,
+    kind: "path" | "command" | "glob" | "search-root",
+  ) => {
     if (typeof v === "string" && v.length > 0) out.push({ text: v, kind });
   };
   switch (toolName) {
@@ -204,8 +216,10 @@ function globComponentMatchesConstruction(component: string): boolean {
 }
 
 function constructionIndex(comps: string[], allowGlob = false): number {
-  return comps.findIndex((c) =>
-    fold(c) === "construction" || (allowGlob && globComponentMatchesConstruction(c))
+  return comps.findIndex(
+    (c) =>
+      fold(c) === "construction" ||
+      (allowGlob && globComponentMatchesConstruction(c)),
   );
 }
 
@@ -269,15 +283,24 @@ function resolvePathStrings(text: string, bases: readonly string[]): string[] {
 }
 
 function normalizeResolved(text: string, bases: readonly string[]): string[] {
-  return uniqueStrings(resolvePathStrings(text, bases).map(normalizeForCompare));
+  return uniqueStrings(
+    resolvePathStrings(text, bases).map(normalizeForCompare),
+  );
 }
 
 function containsPath(root: string, candidate: string): boolean {
   return candidate === root || candidate.startsWith(`${root}/`);
 }
 
-function isExactExempt(path: string, suffixComps: string[], scope: PreparedScope): boolean {
-  return scope.exemptPaths.has(path) || scope.exemptSuffixes.has(canonicalSuffix(suffixComps));
+function isExactExempt(
+  path: string,
+  suffixComps: string[],
+  scope: PreparedScope,
+): boolean {
+  return (
+    scope.exemptPaths.has(path) ||
+    scope.exemptSuffixes.has(canonicalSuffix(suffixComps))
+  );
 }
 
 function prepareScope(
@@ -287,9 +310,15 @@ function prepareScope(
   const exemptSuffixes = new Set<string>();
   const exemptPaths = new Set<string>();
 
-  const recordRoot = context?.recordRoot ? resolve(context.recordRoot) : undefined;
-  const constructionRoot = recordRoot ? resolve(recordRoot, "construction") : undefined;
-  const unitRoot = constructionRoot ? resolve(constructionRoot, dispatch.unit) : undefined;
+  const recordRoot = context?.recordRoot
+    ? resolve(context.recordRoot)
+    : undefined;
+  const constructionRoot = recordRoot
+    ? resolve(recordRoot, "construction")
+    : undefined;
+  const unitRoot = constructionRoot
+    ? resolve(constructionRoot, dispatch.unit)
+    : undefined;
   const cwd = context?.cwd ? resolve(context.cwd) : undefined;
   const bases = uniqueStrings([cwd ?? "", recordRoot ?? "", unitRoot ?? ""]);
 
@@ -304,7 +333,9 @@ function prepareScope(
     exemptSuffixes,
     exemptPaths,
     recordRoot: recordRoot ? normalizeForCompare(recordRoot) : undefined,
-    constructionRoot: constructionRoot ? normalizeForCompare(constructionRoot) : undefined,
+    constructionRoot: constructionRoot
+      ? normalizeForCompare(constructionRoot)
+      : undefined,
     unitRoot: unitRoot ? normalizeForCompare(unitRoot) : undefined,
     bases,
   };
@@ -322,11 +353,16 @@ function markDefaulted(v: ScopeVerdict | null): ScopeVerdict | null {
   return v?.block ? { ...v, defaulted: true } : v;
 }
 
-function judgeLexicalPath(text: string, scope: PreparedScope): ScopeVerdict | null {
+function judgeLexicalPath(
+  text: string,
+  scope: PreparedScope,
+): ScopeVerdict | null {
   const comps = normalizedComps(text);
   for (let i = 0; i < comps.length; i++) {
     if (constructionIndex([comps[i]], true) !== 0) continue;
-    if (judgeOccurrence(comps.slice(i), scope.unitFolded, scope.exemptSuffixes)) {
+    if (
+      judgeOccurrence(comps.slice(i), scope.unitFolded, scope.exemptSuffixes)
+    ) {
       return verdict(text);
     }
   }
@@ -343,12 +379,15 @@ function judgeResolvedPath(
 
   for (const path of normalizeResolved(text, bases)) {
     if (containsPath(scope.constructionRoot, path)) {
-      const rest = path === scope.constructionRoot
-        ? []
-        : path.slice(scope.constructionRoot.length + 1).split("/");
+      const rest =
+        path === scope.constructionRoot
+          ? []
+          : path.slice(scope.constructionRoot.length + 1).split("/");
       const suffixComps = ["construction", ...rest];
       if (isExactExempt(path, suffixComps, scope)) continue;
-      if (judgeOccurrence(suffixComps, scope.unitFolded, scope.exemptSuffixes)) {
+      if (
+        judgeOccurrence(suffixComps, scope.unitFolded, scope.exemptSuffixes)
+      ) {
         return verdict(text);
       }
     }
@@ -368,10 +407,15 @@ function judgePathAccess(
   scope: PreparedScope,
   bases: readonly string[] = scope.bases,
 ): ScopeVerdict | null {
-  return judgeLexicalPath(text, scope) ?? judgeResolvedPath(text, mode, scope, bases);
+  return (
+    judgeLexicalPath(text, scope) ?? judgeResolvedPath(text, mode, scope, bases)
+  );
 }
 
-function patternLimitsToCurrentUnit(text: string, scope: PreparedScope): boolean {
+function patternLimitsToCurrentUnit(
+  text: string,
+  scope: PreparedScope,
+): boolean {
   const comps = normalizedComps(text);
   let sawConstruction = false;
   for (let i = 0; i < comps.length; i++) {
@@ -380,7 +424,10 @@ function patternLimitsToCurrentUnit(text: string, scope: PreparedScope): boolean
     const suffix = comps.slice(i);
     const seg = suffix[1];
     if (seg === undefined || WILDCARD_RE.test(seg)) return false;
-    if (fold(seg) !== scope.unitFolded && !scope.exemptSuffixes.has(canonicalSuffix(suffix))) {
+    if (
+      fold(seg) !== scope.unitFolded &&
+      !scope.exemptSuffixes.has(canonicalSuffix(suffix))
+    ) {
       return false;
     }
   }
@@ -488,26 +535,69 @@ function firstOperand(words: ShellWord[]): number {
 }
 
 const GREP_VALUE_OPTIONS = new Set([
-  "--after-context", "--before-context", "--binary-files", "--context",
-  "--devices", "--directories", "--exclude", "--exclude-dir", "--exclude-from",
-  "--file", "--group-separator", "--include", "--include-dir", "--label",
-  "--max-count", "--regexp",
+  "--after-context",
+  "--before-context",
+  "--binary-files",
+  "--context",
+  "--devices",
+  "--directories",
+  "--exclude",
+  "--exclude-dir",
+  "--exclude-from",
+  "--file",
+  "--group-separator",
+  "--include",
+  "--include-dir",
+  "--label",
+  "--max-count",
+  "--regexp",
 ]);
 const RG_VALUE_OPTIONS = new Set([
-  "--after-context", "--before-context", "--color", "--colors", "--context",
-  "--context-separator", "--dfa-size-limit", "--encoding", "--engine",
-  "--field-context-separator", "--field-match-separator", "--file", "--generate",
-  "--glob", "--hostname-bin", "--hyperlink-format", "--iglob", "--ignore-file",
-  "--max-columns", "--max-count", "--max-depth", "--max-filesize", "--path-separator",
-  "--pre", "--pre-glob", "--regex-size-limit", "--regexp", "--replace", "--sort",
-  "--sortr", "--threads", "--type", "--type-add", "--type-clear", "--type-not",
+  "--after-context",
+  "--before-context",
+  "--color",
+  "--colors",
+  "--context",
+  "--context-separator",
+  "--dfa-size-limit",
+  "--encoding",
+  "--engine",
+  "--field-context-separator",
+  "--field-match-separator",
+  "--file",
+  "--generate",
+  "--glob",
+  "--hostname-bin",
+  "--hyperlink-format",
+  "--iglob",
+  "--ignore-file",
+  "--max-columns",
+  "--max-count",
+  "--max-depth",
+  "--max-filesize",
+  "--path-separator",
+  "--pre",
+  "--pre-glob",
+  "--regex-size-limit",
+  "--regexp",
+  "--replace",
+  "--sort",
+  "--sortr",
+  "--threads",
+  "--type",
+  "--type-add",
+  "--type-clear",
+  "--type-not",
 ]);
 
 // Parse options before deciding which positional word is a content pattern.
 // With -e/-f (even after an operand), every positional word names a file.
 // Short options may be bundled, and the rest of an argument-taking option's
 // word is its value: `-nefoo` is -n plus the pattern "foo", not more flags.
-function searchArguments(words: ShellWord[], ripgrep: boolean): {
+function searchArguments(
+  words: ShellWord[],
+  ripgrep: boolean,
+): {
   paths: string[];
   inputFiles: string[];
   globs: string[];
@@ -532,12 +622,17 @@ function searchArguments(words: ShellWord[], ripgrep: boolean): {
       stdinPatterns ||= value === "-";
     } else if (name === "--exclude-from" || name === "--ignore-file") {
       inputFiles.push(value);
-    } else if (ripgrep && (name === "-g" || name === "--glob" || name === "--iglob")) {
+    } else if (
+      ripgrep &&
+      (name === "-g" || name === "--glob" || name === "--iglob")
+    ) {
       globs.push(value);
     } else if (ripgrep && name === "--files") {
       listsFiles = true;
     } else if (!ripgrep) {
-      if (["-r", "-R", "--recursive", "--dereference-recursive"].includes(name)) {
+      if (
+        ["-r", "-R", "--recursive", "--dereference-recursive"].includes(name)
+      ) {
         recursive = true;
       } else if (name === "-d" || name === "--directories") {
         recursive = value === "recurse";
@@ -552,14 +647,19 @@ function searchArguments(words: ShellWord[], ripgrep: boolean): {
     } else if (!optionsEnded && w.startsWith("--")) {
       const equals = w.indexOf("=");
       const name = equals === -1 ? w : w.slice(0, equals);
-      const value = equals !== -1
-        ? w.slice(equals + 1)
-        : valueOptions.has(name) ? (words[++i]?.text ?? "") : "";
+      const value =
+        equals !== -1
+          ? w.slice(equals + 1)
+          : valueOptions.has(name)
+            ? (words[++i]?.text ?? "")
+            : "";
       option(name, value);
     } else if (!optionsEnded && isOption(w)) {
       for (let j = 1; j < w.length; j++) {
         const takesValue = shortValueOptions.includes(w[j]);
-        const value = takesValue ? (w.slice(j + 1) || words[++i]?.text || "") : "";
+        const value = takesValue
+          ? w.slice(j + 1) || words[++i]?.text || ""
+          : "";
         option(`-${w[j]}`, value);
         if (takesValue) break;
       }
@@ -625,7 +725,12 @@ function judgeRipgrep(
   }
   // --files traverses directories; -f - consumes the pipe as patterns and then
   // searches files. Preserve the explicit current-unit glob exception.
-  if (args.paths.length > 0 || constrainedToCurrent || (readsStdin && !args.searchesFiles)) return null;
+  if (
+    args.paths.length > 0 ||
+    constrainedToCurrent ||
+    (readsStdin && !args.searchesFiles)
+  )
+    return null;
   return markDefaulted(judgePathAccess(".", "search-root", scope, bases));
 }
 
@@ -642,7 +747,8 @@ function judgeFind(
     const v = judgePathAccess(w, "search-root", scope, bases);
     if (v !== null) return v;
   }
-  if (!rootSeen) return markDefaulted(judgePathAccess(".", "search-root", scope, bases));
+  if (!rootSeen)
+    return markDefaulted(judgePathAccess(".", "search-root", scope, bases));
   return null;
 }
 
@@ -691,7 +797,10 @@ function judgeGenericCommand(
   return null;
 }
 
-function judgeCommandText(text: string, scope: PreparedScope): ScopeVerdict | null {
+function judgeCommandText(
+  text: string,
+  scope: PreparedScope,
+): ScopeVerdict | null {
   let bases = scope.bases;
   for (const { words: segment, pipedFrom } of shellSegments(text)) {
     if (segment.length === 0) continue;
@@ -715,7 +824,11 @@ function judgeCommandText(text: string, scope: PreparedScope): ScopeVerdict | nu
             ? judgeFind(segment, scope, bases)
             : cmd === "ls"
               ? judgeSimpleFileCommand(segment, "search-root", scope, bases)
-              : cmd === "cat" || cmd === "less" || cmd === "more" || cmd === "head" || cmd === "tail"
+              : cmd === "cat" ||
+                  cmd === "less" ||
+                  cmd === "more" ||
+                  cmd === "head" ||
+                  cmd === "tail"
                 ? judgeSimpleFileCommand(segment, "target", scope, bases)
                 : judgeGenericCommand(segment, scope, bases);
     if (v !== null) return v;
@@ -765,7 +878,12 @@ export function evaluateReviewerScope(
     const v = markDefaulted(judgePathAccess(".", "search-root", scope));
     if (v !== null) return v;
   }
-  if (toolName === "Glob" && !sawSearchRoot && sawGlob && !globConstrainedToCurrent) {
+  if (
+    toolName === "Glob" &&
+    !sawSearchRoot &&
+    sawGlob &&
+    !globConstrainedToCurrent
+  ) {
     const v = markDefaulted(judgePathAccess(".", "search-root", scope));
     if (v !== null) return v;
   }
@@ -781,8 +899,17 @@ export function parseDispatchRecord(raw: string): ReviewerDispatch | null {
     if (typeof r.reviewer !== "string" || r.reviewer.length === 0) return null;
     if (typeof r.unit !== "string" || r.unit.length === 0) return null;
     if (typeof r.stage !== "string") return null;
-    if (!Array.isArray(r.exempt) || !r.exempt.every((e) => typeof e === "string")) return null;
-    return { reviewer: r.reviewer, stage: r.stage, unit: r.unit, exempt: r.exempt as string[] };
+    if (
+      !Array.isArray(r.exempt) ||
+      !r.exempt.every((e) => typeof e === "string")
+    )
+      return null;
+    return {
+      reviewer: r.reviewer,
+      stage: r.stage,
+      unit: r.unit,
+      exempt: r.exempt as string[],
+    };
   } catch {
     return null;
   }
@@ -792,7 +919,11 @@ export function parseDispatchRecord(raw: string): ReviewerDispatch | null {
 // PreToolUse error channel. Self-explaining and redirecting: it names the
 // scope, the offending target, and the sanctioned alternative, so the
 // reviewer self-corrects without retrying the same call.
-export function blockReason(target: string, dispatch: ReviewerDispatch, defaulted = false): string {
+export function blockReason(
+  target: string,
+  dispatch: ReviewerDispatch,
+  defaulted = false,
+): string {
   const defaultNote = defaulted
     ? ` (this command names no path, so "${target}" is the implicit recursive search ` +
       `root it falls back to - not a path you typed; give it an explicit in-scope path)`
@@ -869,7 +1000,11 @@ export async function run(input: string): Promise<number> {
   try {
     const healthDir = hooksHealthDir(projectDir);
     mkdirSync(healthDir, { recursive: true });
-    writeFileSync(join(healthDir, `${HOOK_NAME}.last`), isoTimestamp(), "utf-8");
+    writeFileSync(
+      join(healthDir, `${HOOK_NAME}.last`),
+      isoTimestamp(),
+      "utf-8",
+    );
   } catch {
     // Heartbeat failure is non-fatal - never let it affect the decision.
   }
@@ -885,7 +1020,20 @@ export async function run(input: string): Promise<number> {
 
   const toolName = parsed.tool_name ?? "";
   const toolInput = parsed.tool_input;
-  if (!["Read", "NotebookRead", "Edit", "MultiEdit", "Write", "NotebookEdit", "LS", "Glob", "Grep", "Bash"].includes(toolName)) {
+  if (
+    ![
+      "Read",
+      "NotebookRead",
+      "Edit",
+      "MultiEdit",
+      "Write",
+      "NotebookEdit",
+      "LS",
+      "Glob",
+      "Grep",
+      "Bash",
+    ].includes(toolName)
+  ) {
     return 0;
   }
 
@@ -910,7 +1058,10 @@ export async function run(input: string): Promise<number> {
         { unit: unitScope.unit, exempt: [] },
         {
           recordRoot: dirname(dirname(reviewerDispatchPath(projectDir))),
-          cwd: typeof cwdField === "string" && cwdField.length > 0 ? cwdField : projectDir,
+          cwd:
+            typeof cwdField === "string" && cwdField.length > 0
+              ? cwdField
+              : projectDir,
         },
       );
     } catch (e) {
@@ -948,12 +1099,17 @@ export async function run(input: string): Promise<number> {
     try {
       const agent = parsed.agent_type ?? "";
       if (REVIEW_AGENT_RE.test(agent)) {
-        const touchesConstruction = candidateStrings(toolName, toolInput).some((c) =>
-          toPosix(c.text).includes("construction/"),
+        const touchesConstruction = candidateStrings(toolName, toolInput).some(
+          (c) => toPosix(c.text).includes("construction/"),
         );
         if (touchesConstruction) {
-          const marker = join(hooksHealthDir(projectDir), `${HOOK_NAME}.missing-record.last`);
-          const fresh = existsSync(marker) && Date.now() - statSync(marker).mtimeMs < 10 * 60 * 1000;
+          const marker = join(
+            hooksHealthDir(projectDir),
+            `${HOOK_NAME}.missing-record.last`,
+          );
+          const fresh =
+            existsSync(marker) &&
+            Date.now() - statSync(marker).mtimeMs < 10 * 60 * 1000;
           if (!fresh) {
             writeFileSync(marker, isoTimestamp(), "utf-8");
             recordHookDrop(
@@ -995,7 +1151,11 @@ export async function run(input: string): Promise<number> {
     return 0; // unreadable record - fail open
   }
   if (dispatch === null) {
-    recordHookDrop(projectDir, HOOK_NAME, "reviewer dispatch record is malformed; enforcement skipped");
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      "reviewer dispatch record is malformed; enforcement skipped",
+    );
     return 0;
   }
 
@@ -1022,7 +1182,10 @@ export async function run(input: string): Promise<number> {
     const cwdField = (parsed as { cwd?: unknown }).cwd;
     verdict = evaluateReviewerScope(toolName, toolInput, dispatch, {
       recordRoot: dirname(dirname(recordPath)),
-      cwd: typeof cwdField === "string" && cwdField.length > 0 ? cwdField : projectDir,
+      cwd:
+        typeof cwdField === "string" && cwdField.length > 0
+          ? cwdField
+          : projectDir,
     });
   } catch (e) {
     recordHookDrop(projectDir, HOOK_NAME, errorMessage(e));
@@ -1038,7 +1201,9 @@ export async function run(input: string): Promise<number> {
     dispatch.unit,
   );
 
-  process.stderr.write(`${blockReason(verdict.target ?? "", dispatch, verdict.defaulted)}\n`);
+  process.stderr.write(
+    `${blockReason(verdict.target ?? "", dispatch, verdict.defaulted)}\n`,
+  );
   return 2; // harness PreToolUse reject contract: exit 2 + stderr blocks
 }
 

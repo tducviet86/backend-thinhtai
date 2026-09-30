@@ -8,30 +8,32 @@ Derive stage configuration from the work breakdown analysis. For each conditiona
 
 ### INCEPTION stages
 
-| Stage | EXECUTE when | SKIP when |
-|-------|-------------|-----------|
-| Domain Design | Work streams introduce new components/services, new architectural boundaries, greenfield projects | All streams modify existing components only, no new service boundaries |
-| Units Generation | Multiple independent work streams, cross-cutting concerns requiring sequenced delivery | Single stream or tightly coupled streams that form one natural unit |
-| Contract Design | More than one unit must integrate, or a unit exposes a public/external API to formalise before parallel build | Single self-contained unit with no inter-unit boundaries and no external API |
+| Stage            | EXECUTE when                                                                                                  | SKIP when                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Domain Design    | Work streams introduce new components/services, new architectural boundaries, greenfield projects             | All streams modify existing components only, no new service boundaries       |
+| Units Generation | Multiple independent work streams, cross-cutting concerns requiring sequenced delivery                        | Single stream or tightly coupled streams that form one natural unit          |
+| Contract Design  | More than one unit must integrate, or a unit exposes a public/external API to formalise before parallel build | Single self-contained unit with no inter-unit boundaries and no external API |
 
 ### CONSTRUCTION stages (per-unit)
 
-| Stage | EXECUTE when | SKIP when |
-|-------|-------------|-----------|
-| Functional Design | Streams involve complex business logic, state machines, multi-step workflows, domain modeling | Simple CRUD, config changes, straightforward data transformations |
-| NFR Requirements | Streams handle security-sensitive data, performance SLAs, public-facing APIs, regulatory compliance | Internal tools, prototypes, low-risk utility functions |
-| NFR Design | NFR Requirements produced non-trivial requirements | NFR Requirements skipped or produced only basic constraints |
-| Infrastructure Design | Streams require new deployment targets, CI/CD changes, infrastructure-as-code | Existing infrastructure unchanged, deploying to established pipeline |
+| Stage                 | EXECUTE when                                                                                        | SKIP when                                                            |
+| --------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Functional Design     | Streams involve complex business logic, state machines, multi-step workflows, domain modeling       | Simple CRUD, config changes, straightforward data transformations    |
+| NFR Requirements      | Streams handle security-sensitive data, performance SLAs, public-facing APIs, regulatory compliance | Internal tools, prototypes, low-risk utility functions               |
+| NFR Design            | NFR Requirements produced non-trivial requirements                                                  | NFR Requirements skipped or produced only basic constraints          |
+| Infrastructure Design | Streams require new deployment targets, CI/CD changes, infrastructure-as-code                       | Existing infrastructure unchanged, deploying to established pipeline |
 
 ### Configuration rationale format
 
 For each stage decision, tie the rationale to specific work streams:
+
 - "EXECUTE — Streams 1 and 3 introduce new service boundaries requiring architectural design"
 - "SKIP — All streams modify existing components within established architecture"
 
 ## Work Stream Identification Patterns
 
 ### Grouping strategies
+
 - **By domain area**: Group requirements/stories that share domain entities and business rules
 - **By user persona**: Group requirements serving the same user type
 - **By dependency chain**: Group requirements where one enables another
@@ -39,11 +41,13 @@ For each stage decision, tie the rationale to specific work streams:
 - **By delivery boundary**: Group work that can be independently delivered and tested
 
 ### Stream sizing guidance
+
 - **Simple projects** (1-2 streams): Single feature additions, bug fixes, focused refactoring
 - **Standard projects** (2-4 streams): Multi-feature work with some cross-cutting concerns
 - **Complex projects** (4-6 streams): Distributed changes, multiple integration points, significant architectural work
 
 ### Sequencing strategies
+
 1. **Foundation first**: Infrastructure and shared services before dependent features
 2. **High-risk early**: Tackle uncertainty before investing in dependent work
 3. **Value delivery**: Arrange so partial delivery still provides user value
@@ -60,8 +64,8 @@ Per the canonical Glossary (`stage-protocol.md` Terminology), a **Bolt** is the 
 
 Heuristics for Bolt sequencing:
 
-- **Walking skeleton first** (Cockburn, *Crystal Clear*) — the first Bolt is a minimal end-to-end implementation that proves the architecture works, before adding features.
-- **WSJF / Cost of Delay ÷ Duration** (Reinertsen, *Principles of Product Development Flow*; SAFe) — order Bolts by (value + time criticality + risk reduction) divided by job size.
+- **Walking skeleton first** (Cockburn, _Crystal Clear_) — the first Bolt is a minimal end-to-end implementation that proves the architecture works, before adding features.
+- **WSJF / Cost of Delay ÷ Duration** (Reinertsen, _Principles of Product Development Flow_; SAFe) — order Bolts by (value + time criticality + risk reduction) divided by job size.
 - **Risk-first** (Boehm, Spiral Model) — sequence the highest-uncertainty Bolts early so decisions are calibrated before dependent work commits.
 - **Value-first** — ship Bolts in value order when risk is low and value delivery is the dominant constraint.
 
@@ -80,6 +84,7 @@ Every execution plan MUST include these sections:
 7. **Success Criteria** — measurable outcomes for project completion
 
 Optional sections (include when applicable):
+
 - **Transformation Scope** — for brownfield projects with significant refactoring
 - **Package Change Sequence** — for multi-unit projects with dependency ordering
 - **Multi-Module Coordination** — for brownfield projects touching multiple packages
@@ -88,16 +93,17 @@ Optional sections (include when applicable):
 
 ### Severity Levels
 
-| Level | Description | Indicators | Example |
-|-------|-------------|------------|---------|
-| **Low** | Well-understood, minimal dependencies | Standard patterns, established tech, isolated changes | Adding a new REST endpoint to an existing API |
-| **Medium** | Some unknowns, moderate dependencies | New library adoption, moderate cross-component impact | Integrating a third-party auth provider |
-| **High** | Significant unknowns, complex dependencies | New technology, data migration, multiple integration points | Migrating from SQL to NoSQL for a core domain |
-| **Critical** | Architectural changes, breaking changes | Fundamental pattern changes, data schema overhaul, API contract changes | Rewriting monolith services into microservices |
+| Level        | Description                                | Indicators                                                              | Example                                        |
+| ------------ | ------------------------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------- |
+| **Low**      | Well-understood, minimal dependencies      | Standard patterns, established tech, isolated changes                   | Adding a new REST endpoint to an existing API  |
+| **Medium**   | Some unknowns, moderate dependencies       | New library adoption, moderate cross-component impact                   | Integrating a third-party auth provider        |
+| **High**     | Significant unknowns, complex dependencies | New technology, data migration, multiple integration points             | Migrating from SQL to NoSQL for a core domain  |
+| **Critical** | Architectural changes, breaking changes    | Fundamental pattern changes, data schema overhaul, API contract changes | Rewriting monolith services into microservices |
 
 ### Risk Documentation Pattern
 
 For each identified risk, document:
+
 - **Risk**: What could go wrong
 - **Likelihood**: Low / Medium / High
 - **Impact**: Low / Medium / High / Critical
@@ -106,18 +112,21 @@ For each identified risk, document:
 ## Unit Decomposition Heuristics
 
 ### When to use single-unit delivery
+
 - Fewer than 5 user stories
 - All stories share the same components
 - No independent deploy/test boundaries
 - Simple feature addition or bug fix
 
 ### When to use multi-unit delivery
+
 - 5+ user stories spanning different domains
 - Independent feature groups that can be delivered and tested separately
 - Different risk profiles across feature groups (ship low-risk first)
 - Cross-cutting concerns (e.g., auth, logging) that should be built before dependent features
 
 ### Unit ordering principles
+
 1. **Foundation first**: Infrastructure and shared services before dependent features
 2. **High-risk early**: Tackle uncertainty before investing in dependent work
 3. **Value delivery**: Arrange so partial delivery still provides user value
@@ -126,6 +135,7 @@ For each identified risk, document:
 ## Depth Calibration
 
 ### Simple project indicators
+
 - Single page or single API endpoint
 - No external integrations
 - Single user role
@@ -133,6 +143,7 @@ For each identified risk, document:
 - Internal tool or prototype
 
 ### Standard project indicators
+
 - Multi-page application or multi-endpoint API
 - 1-3 external integrations
 - 2-4 user roles with different permissions
@@ -140,6 +151,7 @@ For each identified risk, document:
 - Production-grade with moderate traffic expectations
 
 ### Complex project indicators
+
 - Distributed system or microservice architecture
 - 4+ external integrations or real-time data flows
 - Complex authorization model (RBAC, ABAC, multi-tenancy)

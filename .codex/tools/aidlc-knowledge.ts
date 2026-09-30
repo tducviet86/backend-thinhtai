@@ -145,7 +145,11 @@ export function indexPath(projectDir: string, space: string): string {
  * composes, without touching shared code.
  */
 export function spaceAuditShardPath(projectDir: string, space: string): string {
-  return join(intentsDir(projectDir, space), "audit", auditShardName(projectDir));
+  return join(
+    intentsDir(projectDir, space),
+    "audit",
+    auditShardName(projectDir),
+  );
 }
 
 /**
@@ -184,7 +188,11 @@ export function spaceAuditShardPath(projectDir: string, space: string): string {
  * not keyed to it. A miscounted or unrouted new call site fails that test, not
  * this comment.
  */
-function containedKbDescendant(projectDir: string, space: string, rel: string): string {
+function containedKbDescendant(
+  projectDir: string,
+  space: string,
+  rel: string,
+): string {
   assertKnowledgeRootTrusted(projectDir, space);
   const kbAnchor = realpathOrSelf(documentkbDir(projectDir, space));
   return assertNoSymlinkInChainOrThrow(kbAnchor, rel);
@@ -199,12 +207,20 @@ export function journalDir(projectDir: string, space: string): string {
 
 /** One transaction's staging dir. Named by transaction id and referenced by no
  *  index row, which is what makes a crashed run's leftovers collectable. */
-export function journalTxnDir(projectDir: string, space: string, txnId: string): string {
+export function journalTxnDir(
+  projectDir: string,
+  space: string,
+  txnId: string,
+): string {
   return containedKbDescendant(projectDir, space, join(".journal", txnId));
 }
 
 /** `documentkb/<id>/` — one document's derived material. */
-export function documentDir(projectDir: string, space: string, id: string): string {
+export function documentDir(
+  projectDir: string,
+  space: string,
+  id: string,
+): string {
   return containedKbDescendant(projectDir, space, id);
 }
 
@@ -213,7 +229,10 @@ export function documentDir(projectDir: string, space: string, id: string): stri
 // Never descended into. `aidlc` is here because a `documents/` tree that somehow
 // contains the workspace root would otherwise walk the whole workspace — and
 // with a symlink, walk it from ABOVE documents/.
-const PRUNED_WALK_DIRS: ReadonlySet<string> = new Set(["aidlc", "node_modules"]);
+const PRUNED_WALK_DIRS: ReadonlySet<string> = new Set([
+  "aidlc",
+  "node_modules",
+]);
 
 function isDotfile(name: string): boolean {
   return name.startsWith(".");
@@ -396,7 +415,8 @@ export function hasPdfMagicInWindow(buf: Buffer): boolean {
 function hasBinaryMagic(buf: Buffer): boolean {
   if (hasPdfMagicInWindow(buf)) return true;
   return BINARY_MAGICS_FIXED_OFFSET.some(
-    (magic) => buf.length >= magic.length && magic.every((b, i) => buf[i] === b),
+    (magic) =>
+      buf.length >= magic.length && magic.every((b, i) => buf[i] === b),
   );
 }
 
@@ -501,7 +521,12 @@ export const SUMMARY_TEXT_FILE_BYTE_CAP = SUMMARY_MAX_CHARS * 4;
 
 /** The default extractor when a harness configures none. */
 const DEFAULT_PDF_ARGV: readonly string[] = [
-  "pdftotext", "-q", "-l", String(EXTRACT_PAGE_CAP), "$IN", "-",
+  "pdftotext",
+  "-q",
+  "-l",
+  String(EXTRACT_PAGE_CAP),
+  "$IN",
+  "-",
 ];
 
 export interface ExtractorProbe {
@@ -525,7 +550,10 @@ export function probeExtractor(argv0: string): ExtractorProbe {
   for (const flag of ["-v", "--version"]) {
     let r: SpawnSyncReturns<string>;
     try {
-      r = spawnSync(argv0, [flag], { encoding: "utf-8", timeout: EXTRACT_PROBE_TIMEOUT_MS });
+      r = spawnSync(argv0, [flag], {
+        encoding: "utf-8",
+        timeout: EXTRACT_PROBE_TIMEOUT_MS,
+      });
     } catch {
       return { name: argv0, version: null, available: false };
     }
@@ -539,18 +567,22 @@ export function probeExtractor(argv0: string): ExtractorProbe {
     if (r.status === null) continue; // killed (timeout) -- try the other spelling
     // Version banners go to STDERR as often as stdout for tools of this era, so
     // both streams are consulted.
-    const first = `${r.stdout ?? ""}${r.stderr ?? ""}`.trim().split("\n")[0]?.trim() ?? "";
+    const first =
+      `${r.stdout ?? ""}${r.stderr ?? ""}`.trim().split("\n")[0]?.trim() ?? "";
     // A line that is an error ABOUT the flag is not a version.
-    const looksLikeError = /^(I\/O Error|Error|error:|usage:)/i.test(first) ||
-      first.includes(flag);
+    const looksLikeError =
+      /^(I\/O Error|Error|error:|usage:)/i.test(first) || first.includes(flag);
     if (first.length > 0 && !looksLikeError) {
       return { name: argv0, version: first, available: true };
     }
   }
   // Runs but produced no usable banner from either spelling: available with an
   // unknown version beats claiming it is missing.
-  const exists = spawnSync(argv0, ["-v"], { timeout: EXTRACT_PROBE_TIMEOUT_MS });
-  const enoent = (exists.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT";
+  const exists = spawnSync(argv0, ["-v"], {
+    timeout: EXTRACT_PROBE_TIMEOUT_MS,
+  });
+  const enoent =
+    (exists.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT";
   return { name: argv0, version: null, available: !enoent };
 }
 
@@ -629,7 +661,8 @@ export function extractDocument(
         state: "extraction_failed",
         extractor: { name: argv[0], version: "unknown" },
         detectedType: mime,
-        reason: `input is ${bytes} bytes, over the ${EXTRACT_INPUT_BYTE_CAP}-byte cap; ` +
+        reason:
+          `input is ${bytes} bytes, over the ${EXTRACT_INPUT_BYTE_CAP}-byte cap; ` +
           `it was never opened`,
       },
     };
@@ -643,7 +676,11 @@ export function extractDocument(
     // `unsupported_type` above records) -- a retry needs to know what type
     // this row was routed for, to re-probe once an extractor exists for it.
     return {
-      record: { state: "extractor_unavailable", extractor: { name: argv[0] }, detectedType: mime },
+      record: {
+        state: "extractor_unavailable",
+        extractor: { name: argv[0] },
+        detectedType: mime,
+      },
     };
   }
   const version = probe.version ?? "unknown";
@@ -658,7 +695,8 @@ export function extractDocument(
   });
 
   if (r.error !== undefined) {
-    const timedOut = (r.error as NodeJS.ErrnoException).code === "ETIMEDOUT" ||
+    const timedOut =
+      (r.error as NodeJS.ErrnoException).code === "ETIMEDOUT" ||
       r.signal === "SIGTERM";
     return {
       record: {
@@ -717,7 +755,9 @@ export function extractDocument(
 export function detectMimeType(absPath: string, buf: Buffer): string {
   if (hasPdfMagicInWindow(buf)) return "application/pdf";
   if (!looksBinary(buf)) {
-    return absPath.toLowerCase().endsWith(".md") ? "text/markdown" : "text/plain";
+    return absPath.toLowerCase().endsWith(".md")
+      ? "text/markdown"
+      : "text/plain";
   }
   // Checked AFTER the PDF/text branches (a docx is binary, so it would
   // otherwise fall to octet-stream) and BEFORE the octet-stream default: this
@@ -743,7 +783,11 @@ export function detectMimeType(absPath: string, buf: Buffer): string {
  *  row `onboard` wrote failed `validateDocumentIndex` on the very next read.
  *  A path that escapes here would also leak one machine's layout into a
  *  committed file. */
-export function portableSourcePath(projectDir: string, space: string, absPath: string): string {
+export function portableSourcePath(
+  projectDir: string,
+  space: string,
+  absPath: string,
+): string {
   // Anchored despite reading like a pure string function: `realpathOrSelf` below is
   // existsSync + realpathSync, so the containment decision -- the check whose whole
   // job is keeping an absolute path out of a committed file -- was being made
@@ -789,11 +833,16 @@ function realpathOrSelf(p: string): string {
 // This path-only helper does not bind a later open against a parent-directory
 // replacement. Direct document reads use resolveContainedFile below so the
 // descriptor must match the identity observed while containment still held.
-export function resolveContainedPath(anchorReal: string, relPath: string): string {
+export function resolveContainedPath(
+  anchorReal: string,
+  relPath: string,
+): string {
   const anchorNorm = realpathOrSelf(anchorReal);
   const candidate = assertNoSymlinkInChainOrThrow(anchorNorm, relPath);
   const real = realpathOrSelf(candidate);
-  const anchorWithSep = anchorNorm.endsWith(sep) ? anchorNorm : anchorNorm + sep;
+  const anchorWithSep = anchorNorm.endsWith(sep)
+    ? anchorNorm
+    : anchorNorm + sep;
   if (real !== anchorNorm && !real.startsWith(anchorWithSep)) {
     throw new Error(
       `path resolves outside its anchor: ${relPath} -> ${real}. Reaching outside ` +
@@ -808,10 +857,7 @@ export interface ResolvedContainedFile {
   readonly identity: FileIdentity;
 }
 
-function sameFileIdentity(
-  left: FileIdentity,
-  right: FileIdentity,
-): boolean {
+function sameFileIdentity(left: FileIdentity, right: FileIdentity): boolean {
   return left.dev === right.dev && left.ino === right.ino;
 }
 
@@ -900,7 +946,10 @@ export interface SourcesLocal {
  * A PRESENT but malformed map fails closed: it is machine-local input, but it
  * resolves to filesystem roots, so a half-understood map must not be guessed at.
  */
-export function readSourcesLocal(projectDir: string, space: string): SourcesLocal | null {
+export function readSourcesLocal(
+  projectDir: string,
+  space: string,
+): SourcesLocal | null {
   // `.sources.local.json` sits directly under `knowledge/` -- a SIBLING of
   // documentkb/, inside the same container this guard exists for. I first
   // classified this as out of scope because it "reads outside documentkb/", which
@@ -920,13 +969,17 @@ export function readSourcesLocal(projectDir: string, space: string): SourcesLoca
   assertKnowledgeRootTrusted(projectDir, space);
   const p = sourcesLocalPath(projectDir, space);
   if (!existsSync(p)) return null;
-  const raw = readAtomicReplacedFileNoFollowOrThrow(p, "knowledge/.sources.local.json")
-    .toString("utf-8");
+  const raw = readAtomicReplacedFileNoFollowOrThrow(
+    p,
+    "knowledge/.sources.local.json",
+  ).toString("utf-8");
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (e) {
-    throw new Error(`knowledge/.sources.local.json is not valid JSON: ${errorMessage(e)}`);
+    throw new Error(
+      `knowledge/.sources.local.json is not valid JSON: ${errorMessage(e)}`,
+    );
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("knowledge/.sources.local.json must be a JSON object.");
@@ -938,11 +991,19 @@ export function readSourcesLocal(projectDir: string, space: string): SourcesLoca
         `(got ${JSON.stringify(obj.schema_version)}).`,
     );
   }
-  if (typeof obj.sources !== "object" || obj.sources === null || Array.isArray(obj.sources)) {
-    throw new Error("knowledge/.sources.local.json `sources` must be an object of alias → root.");
+  if (
+    typeof obj.sources !== "object" ||
+    obj.sources === null ||
+    Array.isArray(obj.sources)
+  ) {
+    throw new Error(
+      "knowledge/.sources.local.json `sources` must be an object of alias → root.",
+    );
   }
   const sources: Record<string, string> = {};
-  for (const [alias, root] of Object.entries(obj.sources as Record<string, unknown>)) {
+  for (const [alias, root] of Object.entries(
+    obj.sources as Record<string, unknown>,
+  )) {
     if (typeof root !== "string" || root.length === 0) {
       throw new Error(
         `knowledge/.sources.local.json alias "${alias}" must map to a non-empty path.`,
@@ -1008,12 +1069,17 @@ export function readIndex(projectDir: string, space: string): DocumentIndex {
   assertKnowledgeRootTrusted(projectDir, space);
   const path = indexPath(projectDir, space);
   if (!existsSync(path)) return emptyIndex();
-  const raw = readAtomicReplacedFileNoFollowOrThrow(path, "documentkb/index.json").toString("utf-8");
+  const raw = readAtomicReplacedFileNoFollowOrThrow(
+    path,
+    "documentkb/index.json",
+  ).toString("utf-8");
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (e) {
-    throw new Error(`documentkb/index.json is not valid JSON: ${errorMessage(e)}`);
+    throw new Error(
+      `documentkb/index.json is not valid JSON: ${errorMessage(e)}`,
+    );
   }
   const result = validateDocumentIndex(parsed);
   if (!result.ok) {
@@ -1025,7 +1091,11 @@ export function readIndex(projectDir: string, space: string): DocumentIndex {
   return result.value;
 }
 
-export function writeIndex(projectDir: string, space: string, index: DocumentIndex): void {
+export function writeIndex(
+  projectDir: string,
+  space: string,
+  index: DocumentIndex,
+): void {
   // The last write chokepoint, so the anchor is re-checked here even though every
   // in-module caller has already checked it. Measured unguarded: a direct
   // `writeIndex` against a symlinked `documentkb` put index.json outside the
@@ -1046,7 +1116,10 @@ export function writeIndex(projectDir: string, space: string, index: DocumentInd
     );
   }
   ensureDirSync(documentkbDir(projectDir, space));
-  writeFileAtomic(indexPath(projectDir, space), JSON.stringify(index, null, 2) + "\n");
+  writeFileAtomic(
+    indexPath(projectDir, space),
+    JSON.stringify(index, null, 2) + "\n",
+  );
 }
 
 /** Read + validate one document's `metadata.json`, through the same boundary as
@@ -1066,13 +1139,17 @@ export function readDocumentMetadata(
   // container and then trusts its contents will read a symlinked metadata.json
   // inside an already-trusted <id>/ dir.
   const metaReal = resolveContainedPath(kbReal, `${id}/metadata.json`);
-  const raw = readAtomicReplacedFileNoFollowOrThrow(metaReal, `documentkb/${id}/metadata.json`)
-    .toString("utf-8");
+  const raw = readAtomicReplacedFileNoFollowOrThrow(
+    metaReal,
+    `documentkb/${id}/metadata.json`,
+  ).toString("utf-8");
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (e) {
-    throw new Error(`documentkb/${id}/metadata.json is not valid JSON: ${errorMessage(e)}`);
+    throw new Error(
+      `documentkb/${id}/metadata.json is not valid JSON: ${errorMessage(e)}`,
+    );
   }
   const result = validateDocumentMetadata(parsed);
   if (!result.ok) {
@@ -1099,7 +1176,10 @@ function writeMetadataTo(dir: string, row: DocumentRow): void {
     content_trust: "untrusted",
     content_handling: "data-not-instructions",
   };
-  writeFileAtomic(join(dir, "metadata.json"), JSON.stringify(meta, null, 2) + "\n");
+  writeFileAtomic(
+    join(dir, "metadata.json"),
+    JSON.stringify(meta, null, 2) + "\n",
+  );
 }
 
 /**
@@ -1122,7 +1202,11 @@ function writeMetadataTo(dir: string, row: DocumentRow): void {
  * exactly the shape that drifts: this is now the only place either caller
  * writes a row's metadata+content pair, so a future fix here reaches both.
  */
-function publishRowContent(dir: string, row: DocumentRow, text: string | Buffer | undefined): void {
+function publishRowContent(
+  dir: string,
+  row: DocumentRow,
+  text: string | Buffer | undefined,
+): void {
   writeMetadataTo(dir, row);
   writeRowContentOnly(dir, text);
 }
@@ -1132,16 +1216,29 @@ function publishRowContent(dir: string, row: DocumentRow, text: string | Buffer 
  *  commit (which already writes every row's metadata.json in one bulk pass
  *  strictly before this loop runs, so the same INDEX-then-CONTENT ordering
  *  holds without needing to interleave the two per row). */
-function writeRowContentOnly(dir: string, text: string | Buffer | undefined): void {
+function writeRowContentOnly(
+  dir: string,
+  text: string | Buffer | undefined,
+): void {
   ensureDirSync(dir);
   if (text === undefined) {
-    try { removeTreeSync(join(dir, "content.md")); } catch { /* absent */ }
+    try {
+      removeTreeSync(join(dir, "content.md"));
+    } catch {
+      /* absent */
+    }
   } else {
-    writeBufferAtomic(join(dir, "content.md"), typeof text === "string" ? Buffer.from(text, "utf-8") : text);
+    writeBufferAtomic(
+      join(dir, "content.md"),
+      typeof text === "string" ? Buffer.from(text, "utf-8") : text,
+    );
   }
 }
 
-function setRowContentFields(row: DocumentRow, text: string | Buffer | undefined): void {
+function setRowContentFields(
+  row: DocumentRow,
+  text: string | Buffer | undefined,
+): void {
   if (text === undefined) {
     delete row.content;
     delete row.content_sha256;
@@ -1159,7 +1256,10 @@ function setRowContentFields(row: DocumentRow, text: string | Buffer | undefined
 // capture across two spaces in an earlier line of this work: capture happened,
 // a human deliberated, promotion happened after, and the cursor moved in
 // between. Pinning at entry makes that impossible by construction.
-export function resolveSpaceFlag(raw: string | undefined, projectDir: string): string {
+export function resolveSpaceFlag(
+  raw: string | undefined,
+  projectDir: string,
+): string {
   // The FALLBACK is validated exactly like an explicit flag, not trusted raw.
   // `activeSpace()` (aidlc-lib.ts) reads the `aidlc/active-space` cursor with no
   // shape check of its own -- unlike an explicit `--space`, which always went
@@ -1178,10 +1278,10 @@ export function resolveSpaceFlag(raw: string | undefined, projectDir: string): s
     throw new Error(
       raw_
         ? `The active-space cursor ("${candidate}") is not a valid space name — must be ` +
-          `a lowercase slug (letters, digits, hyphens; leading letter). Pass --space ` +
-          `<name> explicitly, or repair aidlc/active-space, then re-run.`
+            `a lowercase slug (letters, digits, hyphens; leading letter). Pass --space ` +
+            `<name> explicitly, or repair aidlc/active-space, then re-run.`
         : `Invalid --space "${raw}": must be a lowercase slug (letters, digits, hyphens; ` +
-          `leading letter) naming an existing space.`,
+            `leading letter) naming an existing space.`,
     );
   }
   const known = listSpaces(projectDir).map((s) => s.name);
@@ -1189,10 +1289,10 @@ export function resolveSpaceFlag(raw: string | undefined, projectDir: string): s
     throw new Error(
       raw_
         ? `The active-space cursor names an unknown space "${valid}". Existing: ` +
-          `${known.join(", ")}. Pass --space <name> explicitly, or switch back to a ` +
-          `known space (/aidlc space <name>), then re-run.`
+            `${known.join(", ")}. Pass --space <name> explicitly, or switch back to a ` +
+            `known space (/aidlc space <name>), then re-run.`
         : `Unknown space "${valid}". Existing: ${known.join(", ")}. This tool never creates ` +
-          `a space — create it deliberately first (/aidlc space create ${valid}), then re-run.`,
+            `a space — create it deliberately first (/aidlc space create ${valid}), then re-run.`,
     );
   }
   return valid;
@@ -1247,7 +1347,10 @@ export function resolveSpaceFlag(raw: string | undefined, projectDir: string): s
  * nor `documentkb/` yet, and a path component that does not exist cannot redirect
  * anything. `assertNoSymlinkInChainOrThrow` already treats ENOENT that way.
  */
-export function assertKnowledgeRootTrusted(projectDir: string, space: string): void {
+export function assertKnowledgeRootTrusted(
+  projectDir: string,
+  space: string,
+): void {
   // `space` becomes a raw path COMPONENT two lines down. Every in-repo caller
   // reaches this through `resolveSpaceFlag`, which now validates it (including
   // the active-space-cursor fallback) — but this function is the shared funnel
@@ -1320,7 +1423,10 @@ function buildRow(
   const id = uuidv7();
   const row: DocumentRow = {
     id,
-    source: { kind: "managed", path: portableSourcePath(projectDir, space, absPath) },
+    source: {
+      kind: "managed",
+      path: portableSourcePath(projectDir, space, absPath),
+    },
     sha256: digest,
     bytes: buf.length,
     indexed_at: now,
@@ -1478,7 +1584,9 @@ export function onboard(
     const abs = isAbsolute(pathArg) ? pathArg : resolve(projectDir, pathArg);
     if (!existsSync(abs)) throw new Error(`No such path: ${pathArg}`);
     const real = realpathSync(abs);
-    const documentsWithSep = documentsReal.endsWith(sep) ? documentsReal : documentsReal + sep;
+    const documentsWithSep = documentsReal.endsWith(sep)
+      ? documentsReal
+      : documentsReal + sep;
     if (!real.startsWith(documentsWithSep)) {
       // Copying an external path in is the design's default behaviour, but it
       // belongs with the story that owns source kinds; refusing clearly beats
@@ -1493,7 +1601,9 @@ export function onboard(
 
   const index = readIndex(projectDir, space);
   const liveBySource = new Map(
-    index.documents.filter((row) => !isTombstoned(row)).map((row) => [row.source.path, row]),
+    index.documents
+      .filter((row) => !isTombstoned(row))
+      .map((row) => [row.source.path, row]),
   );
 
   // The BATCH caps -- distinct from EXTRACT_INPUT_BYTE_CAP's per-document
@@ -1510,7 +1620,8 @@ export function onboard(
         const stat = statSync(abs);
         const sourcePath = portableSourcePath(projectDir, space, abs);
         const existing = liveBySource.get(sourcePath);
-        const indexedAt = existing === undefined ? Number.NaN : Date.parse(existing.indexed_at);
+        const indexedAt =
+          existing === undefined ? Number.NaN : Date.parse(existing.indexed_at);
         if (
           existing === undefined ||
           stat.size !== existing.bytes ||
@@ -1518,7 +1629,9 @@ export function onboard(
         ) {
           work.push({ abs, bytes: stat.size });
         }
-      } catch { /* vanished mid-walk; readCandidate below will skip or refuse it */ }
+      } catch {
+        /* vanished mid-walk; readCandidate below will skip or refuse it */
+      }
     }
     if (work.length > EXTRACT_BATCH_DOC_CAP) {
       throw new Error(
@@ -1602,10 +1715,14 @@ export function onboard(
       // `already` BEFORE applying `intentUuid`, so a scope request on an
       // already-indexed document was silently dropped). Deferred, not
       // written here -- see `pendingIntentAssociations` above.
-      if (intentUuid !== undefined && !(existing.related_intent_ids ?? []).includes(intentUuid)) {
+      if (
+        intentUuid !== undefined &&
+        !(existing.related_intent_ids ?? []).includes(intentUuid)
+      ) {
         pendingIntentAssociations.push(existing.id);
       }
-      const contentNeedsRepair = existing.extraction.state === "extracted" &&
+      const contentNeedsRepair =
+        existing.extraction.state === "extracted" &&
         verifiedContentBytes(projectDir, space, existing) === null;
       if (existing.sha256 === digest && !contentNeedsRepair) {
         // Already indexed, unchanged. Reported, never swallowed.
@@ -1630,7 +1747,13 @@ export function onboard(
         };
         setRowContentFields(row, outcome.text);
         editedIds.add(row.id);
-        staged.push({ row, buf, abs, text: outcome.text, baseRow: structuredClone(existing) });
+        staged.push({
+          row,
+          buf,
+          abs,
+          text: outcome.text,
+          baseRow: structuredClone(existing),
+        });
       }
       continue;
     }
@@ -1646,7 +1769,8 @@ export function onboard(
         indexed: [],
         refused: {
           path: sourcePath,
-          reason: `duplicate document id ${row.id} generated within one batch — the batch ` +
+          reason:
+            `duplicate document id ${row.id} generated within one batch — the batch ` +
             `was refused whole, and index.json was not modified`,
         },
       };
@@ -1660,7 +1784,8 @@ export function onboard(
         indexed: [],
         refused: {
           path: sourcePath,
-          reason: `document id ${row.id} already exists in index.json — the batch was ` +
+          reason:
+            `document id ${row.id} already exists in index.json — the batch was ` +
             `refused whole, and index.json was not modified`,
         },
       };
@@ -1674,23 +1799,36 @@ export function onboard(
   // with `--intent` must not silently do nothing just because there was no
   // row to create or edit.
   if (staged.length === 0) {
-    withAuditLock(projectDir, () => {
-      for (const id of pendingIntentAssociations) {
-        setIntentAssociation(projectDir, space, id, intentUuid as string, "associate");
-      }
-      const current = readIndex(projectDir, space);
-      const auditState = documentAuditState(projectDir, space);
-      for (const outcome of outcomes) {
-        const row = current.documents.find((candidate) => candidate.id === outcome.id);
-        if (!row) continue;
-        // A prior audit-last attempt may have committed index.json and then
-        // failed before metadata.json. Idempotent retry repairs every derived
-        // representation before it repairs provenance.
-        writeMetadataTo(documentDir(projectDir, space, row.id), row);
-        ensureDocumentRevisionAudit(projectDir, space, row, auditState);
-        ensureDocumentAssociationAudit(projectDir, space, row, auditState);
-      }
-    }, undefined, space);
+    withAuditLock(
+      projectDir,
+      () => {
+        for (const id of pendingIntentAssociations) {
+          setIntentAssociation(
+            projectDir,
+            space,
+            id,
+            intentUuid as string,
+            "associate",
+          );
+        }
+        const current = readIndex(projectDir, space);
+        const auditState = documentAuditState(projectDir, space);
+        for (const outcome of outcomes) {
+          const row = current.documents.find(
+            (candidate) => candidate.id === outcome.id,
+          );
+          if (!row) continue;
+          // A prior audit-last attempt may have committed index.json and then
+          // failed before metadata.json. Idempotent retry repairs every derived
+          // representation before it repairs provenance.
+          writeMetadataTo(documentDir(projectDir, space, row.id), row);
+          ensureDocumentRevisionAudit(projectDir, space, row, auditState);
+          ensureDocumentAssociationAudit(projectDir, space, row, auditState);
+        }
+      },
+      undefined,
+      space,
+    );
     return { space, indexed: outcomes };
   }
 
@@ -1716,241 +1854,277 @@ export function onboard(
       const stageDir = join(txnDir, row.id);
       ensureDirSync(stageDir);
       writeMetadataTo(stageDir, row);
-      writeBufferAtomic(join(stageDir, "source.sha256"), Buffer.from(row.sha256 + "\n"));
+      writeBufferAtomic(
+        join(stageDir, "source.sha256"),
+        Buffer.from(row.sha256 + "\n"),
+      );
       if (text !== undefined) {
         // content.md holds the extractor's output VERBATIM -- no banner, no
         // wrapper. It is digest-compared against source_revision, so a prepended
         // notice would corrupt that comparison. The untrusted-data declaration is
         // added by the verb that EMITS the text, at emit time.
-        writeBufferAtomic(join(stageDir, "content.md"), Buffer.from(text, "utf-8"));
+        writeBufferAtomic(
+          join(stageDir, "content.md"),
+          Buffer.from(text, "utf-8"),
+        );
       }
     }
 
     // --- Pass 3: COMMIT, inside the space-level lock. ---
-    const committed = withAuditLock(projectDir, () => {
-      // (a) RE-VALIDATE every digest. THE step that makes this safe: a document
-      // edited during staging would otherwise be indexed with the new digest and
-      // the OLD text -- a silent correctness failure no amount of locking
-      // elsewhere prevents. On mismatch, discard and report; do NOT retry in
-      // place, because an editor saving repeatedly would spin.
-      for (const { row, abs } of staged) {
-        const current = sha256Hex(readRegularFileNoFollowOrThrow(abs, row.source.path));
-        if (current !== row.sha256) {
-          throw new Error(
-            `${row.source.path} changed while it was being staged (${row.sha256} -> ` +
-              `${current}). Nothing was indexed. Re-run once the file has settled.`,
+    const committed = withAuditLock(
+      projectDir,
+      () => {
+        // (a) RE-VALIDATE every digest. THE step that makes this safe: a document
+        // edited during staging would otherwise be indexed with the new digest and
+        // the OLD text -- a silent correctness failure no amount of locking
+        // elsewhere prevents. On mismatch, discard and report; do NOT retry in
+        // place, because an editor saving repeatedly would spin.
+        for (const { row, abs } of staged) {
+          const current = sha256Hex(
+            readRegularFileNoFollowOrThrow(abs, row.source.path),
           );
+          if (current !== row.sha256) {
+            throw new Error(
+              `${row.source.path} changed while it was being staged (${row.sha256} -> ` +
+                `${current}). Nothing was indexed. Re-run once the file has settled.`,
+            );
+          }
         }
-      }
 
-      // (b) Read the index FRESH inside the lock. The copy from pass 1 was read
-      // before the lock, so a concurrent run may have added rows since -- and
-      // writing the stale copy back is exactly how a concurrent onboard loses a
-      // row.
-      const fresh = readIndex(projectDir, space);
-      const freshIds = new Set(fresh.documents.map((r) => r.id));
-      const freshSources = new Map(fresh.documents.map((r) => [r.source.path, r]));
-      const landed: DocumentRow[] = [];
-      const edited: DocumentRow[] = [];
-      const editedStageIds = new Map<string, string>();
-      for (const { row, baseRow, text } of staged) {
-        const stagedRowId = row.id;
-        if (editedIds.has(row.id)) {
-          // This id is EXPECTED to already exist in the fresh index -- it is
-          // the row being refreshed in place, not a new one. A concurrent
-          // onboard/sync may have already advanced it past this digest; in
-          // that case there is nothing left for THIS run to apply.
-          const freshRow = fresh.documents.find((r) => r.id === row.id);
-          if (freshRow !== undefined && baseRow !== undefined &&
-              JSON.stringify(freshRow) !== JSON.stringify(baseRow)) {
-            // Another writer changed this identity after staging (rebind and
-            // association updates are the important cases). Never apply a
-            // pre-lock edit plan to a row it was not planned from.
+        // (b) Read the index FRESH inside the lock. The copy from pass 1 was read
+        // before the lock, so a concurrent run may have added rows since -- and
+        // writing the stale copy back is exactly how a concurrent onboard loses a
+        // row.
+        const fresh = readIndex(projectDir, space);
+        const freshIds = new Set(fresh.documents.map((r) => r.id));
+        const freshSources = new Map(
+          fresh.documents.map((r) => [r.source.path, r]),
+        );
+        const landed: DocumentRow[] = [];
+        const edited: DocumentRow[] = [];
+        const editedStageIds = new Map<string, string>();
+        for (const { row, baseRow, text } of staged) {
+          const stagedRowId = row.id;
+          if (editedIds.has(row.id)) {
+            // This id is EXPECTED to already exist in the fresh index -- it is
+            // the row being refreshed in place, not a new one. A concurrent
+            // onboard/sync may have already advanced it past this digest; in
+            // that case there is nothing left for THIS run to apply.
+            const freshRow = fresh.documents.find((r) => r.id === row.id);
+            if (
+              freshRow !== undefined &&
+              baseRow !== undefined &&
+              JSON.stringify(freshRow) !== JSON.stringify(baseRow)
+            ) {
+              // Another writer changed this identity after staging (rebind and
+              // association updates are the important cases). Never apply a
+              // pre-lock edit plan to a row it was not planned from.
+              continue;
+            }
+            const sameRevisionAlreadyPublished =
+              freshRow !== undefined &&
+              freshRow.sha256 === row.sha256 &&
+              (freshRow.content === undefined ||
+                verifiedContentBytes(projectDir, space, freshRow) !== null);
+            if (freshRow === undefined || sameRevisionAlreadyPublished)
+              continue;
+            // The row's identity for THIS edit was evidenced at pass 1 by a LIVE
+            // (non-tombstoned) match at the same path. A concurrent process may
+            // have tombstoned it since -- e.g. a `sync` that observed the
+            // original removed, in the window between this run's pass 1 and this
+            // commit. Applying `row` onto a now-tombstoned `freshRow` would
+            // silently resurrect it with fresh content while `Object.assign`
+            // leaves `removed_at` in place (it is absent from `row`, which never
+            // carried it), producing a row that is simultaneously live-looking
+            // and tombstoned -- a state no reader agrees on. Skip instead: the
+            // next onboard/sync re-evaluates this path from scratch and mints a
+            // fresh identity, exactly like any other formerly-tombstoned path.
+            if (isTombstoned(freshRow)) continue;
+            Object.assign(freshRow, row);
+            edited.push(freshRow);
+            editedStageIds.set(freshRow.id, stagedRowId);
             continue;
           }
-          const sameRevisionAlreadyPublished = freshRow !== undefined &&
-            freshRow.sha256 === row.sha256 &&
-            (freshRow.content === undefined ||
-              verifiedContentBytes(projectDir, space, freshRow) !== null);
-          if (freshRow === undefined || sameRevisionAlreadyPublished) continue;
-          // The row's identity for THIS edit was evidenced at pass 1 by a LIVE
-          // (non-tombstoned) match at the same path. A concurrent process may
-          // have tombstoned it since -- e.g. a `sync` that observed the
-          // original removed, in the window between this run's pass 1 and this
-          // commit. Applying `row` onto a now-tombstoned `freshRow` would
-          // silently resurrect it with fresh content while `Object.assign`
-          // leaves `removed_at` in place (it is absent from `row`, which never
-          // carried it), producing a row that is simultaneously live-looking
-          // and tombstoned -- a state no reader agrees on. Skip instead: the
-          // next onboard/sync re-evaluates this path from scratch and mints a
-          // fresh identity, exactly like any other formerly-tombstoned path.
-          if (isTombstoned(freshRow)) continue;
-          Object.assign(freshRow, row);
-          edited.push(freshRow);
-          editedStageIds.set(freshRow.id, stagedRowId);
-          continue;
+          // A concurrent run may have indexed the same source already. That is a
+          // no-op, not a conflict -- report it as `already`, like the pre-lock path.
+          const existing = freshSources.get(row.source.path);
+          if (existing !== undefined && !isTombstoned(existing)) {
+            if (existing.sha256 === row.sha256) continue;
+            // The source path is the identity evidence, exactly as in the read-pass
+            // edited branch. A concurrent onboard may have published an older
+            // revision while this fresh row was staged; refresh that live row in
+            // place instead of minting a second identity for one path.
+            existing.sha256 = row.sha256;
+            existing.bytes = row.bytes;
+            existing.indexed_at = row.indexed_at;
+            existing.extraction = row.extraction;
+            setRowContentFields(existing, text);
+            edited.push(existing);
+            editedStageIds.set(existing.id, stagedRowId);
+            continue;
+          }
+          if (freshIds.has(row.id)) {
+            throw new Error(
+              `document id ${row.id} appeared in index.json while this batch was staged. ` +
+                `Nothing was indexed.`,
+            );
+          }
+          fresh.documents.push(row);
+          landed.push(row);
         }
-        // A concurrent run may have indexed the same source already. That is a
-        // no-op, not a conflict -- report it as `already`, like the pre-lock path.
-        const existing = freshSources.get(row.source.path);
-        if (existing !== undefined && !isTombstoned(existing)) {
-          if (existing.sha256 === row.sha256) continue;
-          // The source path is the identity evidence, exactly as in the read-pass
-          // edited branch. A concurrent onboard may have published an older
-          // revision while this fresh row was staged; refresh that live row in
-          // place instead of minting a second identity for one path.
-          existing.sha256 = row.sha256;
-          existing.bytes = row.bytes;
-          existing.indexed_at = row.indexed_at;
-          existing.extraction = row.extraction;
-          setRowContentFields(existing, text);
-          edited.push(existing);
-          editedStageIds.set(existing.id, stagedRowId);
-          continue;
+
+        // (c) VALIDATE THE WHOLE CANDIDATE INDEX before anything lands on disk.
+        // This is the invariant the orphan-intent defect violated: the OLD order
+        // renamed a staged dir into `documentkb/<id>/` first and let `writeIndex`
+        // discover the invalid row second -- so an invalid `related_intent_ids`
+        // entry (an unregistered intent's UUID resolving to `""`) published a
+        // metadata.json the schema itself refuses, index.json was never written,
+        // and every later `sync` failed the same validation forever with no
+        // remedy. Checking here, before rename, means a batch that would fail
+        // publishes NOTHING -- the journal dir (still on disk, never renamed) is
+        // left for `onboard`'s own `finally` to clean up, exactly like any other
+        // aborted batch.
+        //
+        // SHARED with `syncDocuments`'s commit below (assertPublishable): one
+        // ordering invariant, expressed once, rather than two implementations
+        // that can drift apart -- see that function's own commit block for the
+        // twin failure this closes on the sync side.
+        assertPublishable(fresh);
+
+        // (d) `rename()` each staged dir into place for a FRESH row (its
+        // `documentkb/<id>/` did not exist before). This runs BEFORE the index
+        // write below for a DIFFERENT reason than the edited-row order that
+        // follows it: a fresh row has no prior citation to protect, so the only
+        // hazard here is the index pointing at a directory that was never
+        // created -- rename-then-index-write is what makes a crash between the
+        // two leave collectable garbage instead.
+        for (const row of landed) {
+          const from = join(txnDir, row.id);
+          const to = documentDir(projectDir, space, row.id);
+          ensureDirSync(documentkbDir(projectDir, space));
+          renameIntoPlace(from, to);
         }
-        if (freshIds.has(row.id)) {
-          throw new Error(
-            `document id ${row.id} appeared in index.json while this batch was staged. ` +
-              `Nothing was indexed.`,
+
+        // (e) Write the index BEFORE any edited row's metadata.json/content.md.
+        // `fresh` already carries both the landed rows (pushed above) and the
+        // edited rows (mutated in place via Object.assign at (b)), so ONE write
+        // here covers both. THE FIX (finding 6): an edited row is NOT a fresh
+        // identity -- its OLD digest already had published content a reader may
+        // cite, so it needs `sync`'s SAME index-before-content discipline, and
+        // that function's own commit comment explains exactly why: `show` reads
+        // `row.sha256`/`row.extraction`/`row.content` from index.json ALONE and
+        // gates the text it serves on `derivativeIsCurrent`. The OLD order here
+        // wrote content.md with the NEW text and then the index SECOND -- proved
+        // by making index.json immutable: content.md held new text while the
+        // index still recorded the old digest, so `show` served new content
+        // under a citation that never claimed it. Publishing the index first
+        // means a later content-write failure leaves content stale-or-absent
+        // under the row's OWN new digest, never someone else's old one.
+        if (landed.length > 0 || edited.length > 0) {
+          try {
+            writeIndex(projectDir, space, fresh);
+          } catch (error) {
+            // Fresh directories were renamed out of the journal just above. If
+            // the authoritative index did not commit, remove only those newly
+            // landed identities so a later rebuild cannot resurrect a failed,
+            // unaudited onboard operation.
+            for (const row of landed) {
+              try {
+                removeTreeSync(documentDir(projectDir, space, row.id));
+              } catch {
+                /* best effort */
+              }
+            }
+            throw error;
+          }
+        }
+
+        // (f) NOW publish each edited row's metadata.json + content.md -- after
+        // the index reflects its new digest/extraction, never before. Routed
+        // through the ONE shared helper `sync`'s equivalent step also uses
+        // (`publishRowContent`), so this ordering rule is expressed once rather
+        // than as two independent implementations that can drift apart, which is
+        // exactly what produced this finding: `sync`'s commit had the correct
+        // order and onboard's edited path -- new code in the same effort --
+        // never inherited it.
+        for (const row of edited) {
+          const dir = documentDir(projectDir, space, row.id);
+          const stageId = editedStageIds.get(row.id) ?? row.id;
+          const stagedText =
+            row.content === undefined
+              ? undefined
+              : readRegularFileNoFollowOrThrow(
+                  join(txnDir, stageId, "content.md"),
+                  `${stageId}/content.md`,
+                );
+          publishRowContent(dir, row, stagedText);
+        }
+
+        // (f) Append the audit event LAST, and unlocked -- this process already
+        // holds the lock, so the locking variant would deadlock on itself.
+        //
+        // All three DOCUMENT_* events go to the SPACE-level shard (intent
+        // undefined), including for an intent-scoped document: the intent UUID is
+        // recorded as a FIELD, never used to select the shard. A document is a
+        // space-level object that merely references intents, and associate/
+        // dissociate can change that reference later -- splitting one document's
+        // history across two shards because its scope changed would make it
+        // unreconstructible.
+        for (const row of landed) {
+          appendAuditEntryAtPathUnlocked(
+            "DOCUMENT_INDEXED",
+            {
+              Space: space,
+              Document: row.id,
+              Source: row.source.path,
+              Digest: row.sha256,
+              ...(row.related_intent_ids === undefined
+                ? {}
+                : { Intents: JSON.stringify(row.related_intent_ids) }),
+            },
+            projectDir,
+            spaceAuditShardPath(projectDir, space),
           );
         }
-        fresh.documents.push(row);
-        landed.push(row);
-      }
-
-      // (c) VALIDATE THE WHOLE CANDIDATE INDEX before anything lands on disk.
-      // This is the invariant the orphan-intent defect violated: the OLD order
-      // renamed a staged dir into `documentkb/<id>/` first and let `writeIndex`
-      // discover the invalid row second -- so an invalid `related_intent_ids`
-      // entry (an unregistered intent's UUID resolving to `""`) published a
-      // metadata.json the schema itself refuses, index.json was never written,
-      // and every later `sync` failed the same validation forever with no
-      // remedy. Checking here, before rename, means a batch that would fail
-      // publishes NOTHING -- the journal dir (still on disk, never renamed) is
-      // left for `onboard`'s own `finally` to clean up, exactly like any other
-      // aborted batch.
-      //
-      // SHARED with `syncDocuments`'s commit below (assertPublishable): one
-      // ordering invariant, expressed once, rather than two implementations
-      // that can drift apart -- see that function's own commit block for the
-      // twin failure this closes on the sync side.
-      assertPublishable(fresh);
-
-      // (d) `rename()` each staged dir into place for a FRESH row (its
-      // `documentkb/<id>/` did not exist before). This runs BEFORE the index
-      // write below for a DIFFERENT reason than the edited-row order that
-      // follows it: a fresh row has no prior citation to protect, so the only
-      // hazard here is the index pointing at a directory that was never
-      // created -- rename-then-index-write is what makes a crash between the
-      // two leave collectable garbage instead.
-      for (const row of landed) {
-        const from = join(txnDir, row.id);
-        const to = documentDir(projectDir, space, row.id);
-        ensureDirSync(documentkbDir(projectDir, space));
-        renameIntoPlace(from, to);
-      }
-
-      // (e) Write the index BEFORE any edited row's metadata.json/content.md.
-      // `fresh` already carries both the landed rows (pushed above) and the
-      // edited rows (mutated in place via Object.assign at (b)), so ONE write
-      // here covers both. THE FIX (finding 6): an edited row is NOT a fresh
-      // identity -- its OLD digest already had published content a reader may
-      // cite, so it needs `sync`'s SAME index-before-content discipline, and
-      // that function's own commit comment explains exactly why: `show` reads
-      // `row.sha256`/`row.extraction`/`row.content` from index.json ALONE and
-      // gates the text it serves on `derivativeIsCurrent`. The OLD order here
-      // wrote content.md with the NEW text and then the index SECOND -- proved
-      // by making index.json immutable: content.md held new text while the
-      // index still recorded the old digest, so `show` served new content
-      // under a citation that never claimed it. Publishing the index first
-      // means a later content-write failure leaves content stale-or-absent
-      // under the row's OWN new digest, never someone else's old one.
-      if (landed.length > 0 || edited.length > 0) {
-        try {
-          writeIndex(projectDir, space, fresh);
-        } catch (error) {
-          // Fresh directories were renamed out of the journal just above. If
-          // the authoritative index did not commit, remove only those newly
-          // landed identities so a later rebuild cannot resurrect a failed,
-          // unaudited onboard operation.
-          for (const row of landed) {
-            try { removeTreeSync(documentDir(projectDir, space, row.id)); } catch { /* best effort */ }
-          }
-          throw error;
+        for (const row of edited) {
+          appendAuditEntryAtPathUnlocked(
+            "DOCUMENT_UPDATED",
+            {
+              Space: space,
+              Document: row.id,
+              Change: "edited",
+              Source: row.source.path,
+              Digest: row.sha256,
+            },
+            projectDir,
+            spaceAuditShardPath(projectDir, space),
+          );
         }
-      }
-
-      // (f) NOW publish each edited row's metadata.json + content.md -- after
-      // the index reflects its new digest/extraction, never before. Routed
-      // through the ONE shared helper `sync`'s equivalent step also uses
-      // (`publishRowContent`), so this ordering rule is expressed once rather
-      // than as two independent implementations that can drift apart, which is
-      // exactly what produced this finding: `sync`'s commit had the correct
-      // order and onboard's edited path -- new code in the same effort --
-      // never inherited it.
-      for (const row of edited) {
-        const dir = documentDir(projectDir, space, row.id);
-        const stageId = editedStageIds.get(row.id) ?? row.id;
-        const stagedText = row.content === undefined
-          ? undefined
-          : readRegularFileNoFollowOrThrow(join(txnDir, stageId, "content.md"), `${stageId}/content.md`);
-        publishRowContent(dir, row, stagedText);
-      }
-
-      // (f) Append the audit event LAST, and unlocked -- this process already
-      // holds the lock, so the locking variant would deadlock on itself.
-      //
-      // All three DOCUMENT_* events go to the SPACE-level shard (intent
-      // undefined), including for an intent-scoped document: the intent UUID is
-      // recorded as a FIELD, never used to select the shard. A document is a
-      // space-level object that merely references intents, and associate/
-      // dissociate can change that reference later -- splitting one document's
-      // history across two shards because its scope changed would make it
-      // unreconstructible.
-      for (const row of landed) {
-        appendAuditEntryAtPathUnlocked(
-          "DOCUMENT_INDEXED",
-          {
-            Space: space,
-            Document: row.id,
-            Source: row.source.path,
-            Digest: row.sha256,
-            ...(row.related_intent_ids === undefined
-              ? {}
-              : { Intents: JSON.stringify(row.related_intent_ids) }),
-          },
-          projectDir,
-          spaceAuditShardPath(projectDir, space),
-        );
-      }
-      for (const row of edited) {
-        appendAuditEntryAtPathUnlocked(
-          "DOCUMENT_UPDATED",
-          {
-            Space: space,
-            Document: row.id,
-            Change: "edited",
-            Source: row.source.path,
-            Digest: row.sha256,
-          },
-          projectDir,
-          spaceAuditShardPath(projectDir, space),
-        );
-      }
-      // Pending intent associations (finding #5), applied inside the same
-      // lock as everything else this batch touches.
-      for (const id of pendingIntentAssociations) {
-        setIntentAssociation(projectDir, space, id, intentUuid as string, "associate");
-      }
-      const auditState = documentAuditState(projectDir, space);
-      for (const outcome of outcomes) {
-        const row = fresh.documents.find((candidate) => candidate.id === outcome.id);
-        if (!row) continue;
-        ensureDocumentRevisionAudit(projectDir, space, row, auditState);
-        ensureDocumentAssociationAudit(projectDir, space, row, auditState);
-      }
-      return { landed, edited };
-    }, undefined, space);
+        // Pending intent associations (finding #5), applied inside the same
+        // lock as everything else this batch touches.
+        for (const id of pendingIntentAssociations) {
+          setIntentAssociation(
+            projectDir,
+            space,
+            id,
+            intentUuid as string,
+            "associate",
+          );
+        }
+        const auditState = documentAuditState(projectDir, space);
+        for (const outcome of outcomes) {
+          const row = fresh.documents.find(
+            (candidate) => candidate.id === outcome.id,
+          );
+          if (!row) continue;
+          ensureDocumentRevisionAudit(projectDir, space, row, auditState);
+          ensureDocumentAssociationAudit(projectDir, space, row, auditState);
+        }
+        return { landed, edited };
+      },
+      undefined,
+      space,
+    );
 
     for (const row of committed.landed) {
       outcomes.push({
@@ -1982,7 +2156,8 @@ export function onboard(
       ...committed.edited.map((r) => r.source.path),
     ]);
     for (const { row } of staged) {
-      if (committedIds.has(row.id) || committedPaths.has(row.source.path)) continue;
+      if (committedIds.has(row.id) || committedPaths.has(row.source.path))
+        continue;
       // A LIVE match only: the race handled above (a concurrent tombstone)
       // means a row at this path can exist and NOT be what this outcome
       // should report as "already" -- a tombstoned row at the same path is a
@@ -2006,7 +2181,9 @@ export function onboard(
     // never a correctness problem.
     try {
       removeTreeSync(txnDir);
-    } catch { /* collected on the next sync */ }
+    } catch {
+      /* collected on the next sync */
+    }
   }
 
   return { space, indexed: outcomes };
@@ -2031,7 +2208,9 @@ const TXN_WRITER_STAMP = "writer.pid";
 function writeTxnLivenessStamp(txnDir: string): void {
   try {
     writeFileAtomic(join(txnDir, TXN_WRITER_STAMP), `${process.pid}\n`);
-  } catch { /* best-effort; falls back to age-based collection */ }
+  } catch {
+    /* best-effort; falls back to age-based collection */
+  }
 }
 
 /** Collect journal dirs left behind by crashed runs. Referenced by no index row,
@@ -2049,7 +2228,10 @@ function writeTxnLivenessStamp(txnDir: string): void {
  * grace window, or a stamp naming a dead PID) means "this is a crash's
  * leftovers, and removal is safe".
  */
-export function collectStaleJournals(projectDir: string, space: string): string[] {
+export function collectStaleJournals(
+  projectDir: string,
+  space: string,
+): string[] {
   // This function DELETES, so it is the least forgiving place in the module to
   // trust an unverified anchor. Measured with the guard absent: `documentkb`
   // symlinked out, plus a `.journal/<txn>/victim.txt` at the target, and this
@@ -2074,7 +2256,9 @@ export function collectStaleJournals(projectDir: string, space: string): string[
     try {
       removeTreeSync(full);
       collected.push(entry);
-    } catch { /* leave it; the next sync retries */ }
+    } catch {
+      /* leave it; the next sync retries */
+    }
   }
   return collected;
 }
@@ -2094,7 +2278,9 @@ function isLiveTxnDir(txnDir: string): boolean {
   const stampPath = join(txnDir, TXN_WRITER_STAMP);
   let raw: string;
   try {
-    raw = readAtomicReplacedFileNoFollowOrThrow(stampPath, "txn liveness stamp").toString("utf-8").trim();
+    raw = readAtomicReplacedFileNoFollowOrThrow(stampPath, "txn liveness stamp")
+      .toString("utf-8")
+      .trim();
   } catch {
     // No stamp (or unreadable): either a legacy txn dir predating this
     // mechanism, or the mkdir->stamp acquire window. Grace on AGE, not on
@@ -2102,7 +2288,8 @@ function isLiveTxnDir(txnDir: string): boolean {
     // function exists to collect.
     let ageMs: number;
     try {
-      ageMs = performance.timeOrigin + performance.now() - statSync(txnDir).mtimeMs;
+      ageMs =
+        performance.timeOrigin + performance.now() - statSync(txnDir).mtimeMs;
     } catch {
       return false; // vanished under us; nothing to protect
     }
@@ -2177,7 +2364,9 @@ export const UNTRUSTED_TAGS_NOTICE =
  * by calling these instead of `process.stdout.write`.
  */
 function emitJson(payload: Record<string, unknown>): void {
-  process.stdout.write(`${JSON.stringify({ path_notice: UNTRUSTED_PATH_NOTICE, ...payload })}\n`);
+  process.stdout.write(
+    `${JSON.stringify({ path_notice: UNTRUSTED_PATH_NOTICE, ...payload })}\n`,
+  );
 }
 
 function emitHuman(body: string): void {
@@ -2190,7 +2379,8 @@ export interface ListedDocument {
   /** The state a READER should act on, which is not always the stored one: an
    *  `extracted` row whose digest moved reports `invalidated`. */
   state: string;
-  status: "indexed" | "tombstoned" | "source_unavailable" | "present_but_refused";
+  status:
+    "indexed" | "tombstoned" | "source_unavailable" | "present_but_refused";
   bytes: number;
   indexed_at: string;
   intents?: string[];
@@ -2232,9 +2422,14 @@ function availabilityOf(
       ? "source_unavailable"
       : "indexed";
   }
-  const abs = join(knowledgeDir(projectDir, space), row.source.path.split("/").join(sep));
+  const abs = join(
+    knowledgeDir(projectDir, space),
+    row.source.path.split("/").join(sep),
+  );
   if (!existsSync(abs)) return "source_unavailable";
-  return statOnlyRefusal(abs, row.source.path) === null ? "indexed" : "present_but_refused";
+  return statOnlyRefusal(abs, row.source.path) === null
+    ? "indexed"
+    : "present_but_refused";
 }
 
 /**
@@ -2247,7 +2442,10 @@ function availabilityOf(
  * original is deleted looks like data loss, and one that appears with no status
  * looks healthy.
  */
-export function listDocuments(projectDir: string, space: string): ListedDocument[] {
+export function listDocuments(
+  projectDir: string,
+  space: string,
+): ListedDocument[] {
   assertKnowledgeRootTrusted(projectDir, space);
   return readIndex(projectDir, space).documents.map((row) => ({
     id: row.id,
@@ -2256,7 +2454,9 @@ export function listDocuments(projectDir: string, space: string): ListedDocument
     status: availabilityOf(projectDir, space, row),
     bytes: row.bytes,
     indexed_at: row.indexed_at,
-    ...(row.related_intent_ids === undefined ? {} : { intents: [...row.related_intent_ids] }),
+    ...(row.related_intent_ids === undefined
+      ? {}
+      : { intents: [...row.related_intent_ids] }),
     ...(row.tags === undefined ? {} : { tags: [...row.tags] }),
     ...(row.tags === undefined ? {} : { tags_notice: UNTRUSTED_TAGS_NOTICE }),
     summary_state: effectiveSummaryState(row),
@@ -2303,7 +2503,10 @@ function verifiedDerivativeBytes(
     const kbReal = realpathSync(documentkbDir(projectDir, space));
     const rel = relPath.replace(/^documentkb\//, "");
     const real = resolveContainedPath(kbReal, rel);
-    const bytes = readAtomicReplacedFileNoFollowOrThrow(real, `documentkb/${rel}`);
+    const bytes = readAtomicReplacedFileNoFollowOrThrow(
+      real,
+      `documentkb/${rel}`,
+    );
     return sha256Hex(bytes) === expectedSha256 ? bytes : null;
   } catch {
     return null;
@@ -2315,9 +2518,18 @@ function verifiedContentBytes(
   space: string,
   row: DocumentRow,
 ): Buffer | null {
-  if (row.content === undefined || row.content_sha256 === undefined ||
-      !derivativeIsCurrent(row)) return null;
-  return verifiedDerivativeBytes(projectDir, space, row.content, row.content_sha256);
+  if (
+    row.content === undefined ||
+    row.content_sha256 === undefined ||
+    !derivativeIsCurrent(row)
+  )
+    return null;
+  return verifiedDerivativeBytes(
+    projectDir,
+    space,
+    row.content,
+    row.content_sha256,
+  );
 }
 
 function verifiedSummaryBytes(
@@ -2325,9 +2537,18 @@ function verifiedSummaryBytes(
   space: string,
   row: DocumentRow,
 ): Buffer | null {
-  if (row.summary.state !== "generated" || row.summary_sha256 === undefined ||
-      !summaryIsCurrent(row)) return null;
-  return verifiedDerivativeBytes(projectDir, space, row.summary.path, row.summary_sha256);
+  if (
+    row.summary.state !== "generated" ||
+    row.summary_sha256 === undefined ||
+    !summaryIsCurrent(row)
+  )
+    return null;
+  return verifiedDerivativeBytes(
+    projectDir,
+    space,
+    row.summary.path,
+    row.summary_sha256,
+  );
 }
 
 /**
@@ -2337,7 +2558,11 @@ function verifiedSummaryBytes(
  * point: a caller that receives `content` cannot receive it without also
  * receiving the declaration that it is data, not instructions.
  */
-export function showDocument(projectDir: string, space: string, id: string): ShownDocument {
+export function showDocument(
+  projectDir: string,
+  space: string,
+  id: string,
+): ShownDocument {
   assertKnowledgeRootTrusted(projectDir, space);
   const index = readIndex(projectDir, space);
   const row = index.documents.find((r) => r.id === id);
@@ -2354,7 +2579,9 @@ export function showDocument(projectDir: string, space: string, id: string): Sho
     status: availabilityOf(projectDir, space, row),
     bytes: row.bytes,
     indexed_at: row.indexed_at,
-    ...(row.related_intent_ids === undefined ? {} : { intents: [...row.related_intent_ids] }),
+    ...(row.related_intent_ids === undefined
+      ? {}
+      : { intents: [...row.related_intent_ids] }),
     ...(row.tags === undefined ? {} : { tags: [...row.tags] }),
     ...(row.tags === undefined ? {} : { tags_notice: UNTRUSTED_TAGS_NOTICE }),
     summary_state: effectiveSummaryState(row),
@@ -2414,23 +2641,30 @@ export function showDocument(projectDir: string, space: string, id: string): Sho
  *  deliberately rather than being filtered for. */
 export function renderList(rows: ListedDocument[]): string {
   if (rows.length === 0) {
-    return "No documents indexed. Put files under knowledge/documents/ and run " +
-      "`/aidlc knowledge onboard`.\n";
+    return (
+      "No documents indexed. Put files under knowledge/documents/ and run " +
+      "`/aidlc knowledge onboard`.\n"
+    );
   }
   const lines = rows.map((r) => {
     // The state is ALWAYS shown, including for healthy rows: a status column that
     // appears only on problems trains the eye to read its absence as "fine",
     // which is exactly how a tombstone comes to look healthy.
     const flag = r.status === "indexed" ? r.state : r.status;
-    const tagSuffix = r.tags !== undefined && r.tags.length > 0 ? `  [${r.tags.join(", ")}]` : "";
+    const tagSuffix =
+      r.tags !== undefined && r.tags.length > 0
+        ? `  [${r.tags.join(", ")}]`
+        : "";
     return `${r.id}  ${flag.padEnd(22)}  ${r.summary_state.padEnd(11)}  ${r.path}${tagSuffix}`;
   });
   const tagsNotice = rows.some((r) => r.tags !== undefined)
     ? `${UNTRUSTED_TAGS_NOTICE}\n\n`
     : "";
-  return `${tagsNotice}${rows.length} document(s)\n` +
+  return (
+    `${tagsNotice}${rows.length} document(s)\n` +
     `id                                    extraction/status       summary      path\n` +
-    `${lines.join("\n")}\n`;
+    `${lines.join("\n")}\n`
+  );
 }
 
 /** Human-readable single record. Emits the notice inline with the content, for
@@ -2448,26 +2682,47 @@ export function renderShow(d: ShownDocument): string {
   ];
   if (d.intents !== undefined) out.push(`intents    ${d.intents.join(", ")}`);
   if (d.tags !== undefined) {
-    out.push("", d.tags_notice ?? UNTRUSTED_TAGS_NOTICE, "", `tags       ${d.tags.join(", ")}`);
+    out.push(
+      "",
+      d.tags_notice ?? UNTRUSTED_TAGS_NOTICE,
+      "",
+      `tags       ${d.tags.join(", ")}`,
+    );
   }
   out.push(`summary    ${d.summary_state}`);
-  if (d.extraction.reason !== undefined) out.push(`reason     ${d.extraction.reason}`);
+  if (d.extraction.reason !== undefined)
+    out.push(`reason     ${d.extraction.reason}`);
   // A truncated extraction must announce itself: an agent answering from the
   // first 50 pages of a 300-page policy with no signal it read a fraction is
   // exactly the silent-partial-knowledge failure this feature exists to
   // prevent. The flag was always recorded; this line makes it visible where
   // the content is served.
   if (d.extraction.truncated === true) {
-    const extent = d.extraction.chars !== undefined ? ` at ${d.extraction.chars} characters` : "";
+    const extent =
+      d.extraction.chars !== undefined
+        ? ` at ${d.extraction.chars} characters`
+        : "";
     out.push(
       `truncated  yes${extent} — the content below is a PARTIAL extraction, not the whole document`,
     );
   }
   if (d.summary_text !== undefined) {
-    out.push("", d.summary_notice ?? UNTRUSTED_CONTENT_NOTICE, "", "--- summary ---", d.summary_text);
+    out.push(
+      "",
+      d.summary_notice ?? UNTRUSTED_CONTENT_NOTICE,
+      "",
+      "--- summary ---",
+      d.summary_text,
+    );
   }
   if (d.content !== undefined) {
-    out.push("", d.content_notice ?? UNTRUSTED_CONTENT_NOTICE, "", "--- content ---", d.content);
+    out.push(
+      "",
+      d.content_notice ?? UNTRUSTED_CONTENT_NOTICE,
+      "",
+      "--- content ---",
+      d.content,
+    );
   }
   return out.join("\n") + "\n";
 }
@@ -2524,7 +2779,11 @@ export interface SyncResult {
  * protect against different edits -- but it is stated here so a future reader
  * does not "simplify" one away on the evidence that removing it breaks nothing.
  */
-function deleteDerivedText(projectDir: string, space: string, id: string): void {
+function deleteDerivedText(
+  projectDir: string,
+  space: string,
+  id: string,
+): void {
   const dir = documentDir(projectDir, space, id);
   for (const leaf of ["content.md", "summary.md"]) {
     const path = join(dir, leaf);
@@ -2547,20 +2806,31 @@ export function syncDocuments(
 ): SyncResult {
   assertKnowledgeRootTrusted(projectDir, space);
   const documentsAbs = documentsDir(projectDir, space);
-  const documentsReal = existsSync(documentsAbs) ? realpathSync(documentsAbs) : documentsAbs;
+  const documentsReal = existsSync(documentsAbs)
+    ? realpathSync(documentsAbs)
+    : documentsAbs;
 
   // A DELETED index.json is recoverable, and this is where that happens: rebuild
   // it from the per-document metadata.json files before reconciling. The
   // duplication across the two files IS the recovery mechanism.
-  if (!existsSync(indexPath(projectDir, space)) && existsSync(documentkbDir(projectDir, space))) {
-    withAuditLock(projectDir, () => {
-      // Recheck after acquiring: another writer may have restored or advanced
-      // the index while this sync waited. Never overwrite that fresh state with
-      // a metadata snapshot assembled before its transaction completed.
-      if (existsSync(indexPath(projectDir, space))) return;
-      const rebuilt = rebuildIndex(projectDir, space);
-      if (rebuilt.documents.length > 0) writeIndex(projectDir, space, rebuilt);
-    }, undefined, space);
+  if (
+    !existsSync(indexPath(projectDir, space)) &&
+    existsSync(documentkbDir(projectDir, space))
+  ) {
+    withAuditLock(
+      projectDir,
+      () => {
+        // Recheck after acquiring: another writer may have restored or advanced
+        // the index while this sync waited. Never overwrite that fresh state with
+        // a metadata snapshot assembled before its transaction completed.
+        if (existsSync(indexPath(projectDir, space))) return;
+        const rebuilt = rebuildIndex(projectDir, space);
+        if (rebuilt.documents.length > 0)
+          writeIndex(projectDir, space, rebuilt);
+      },
+      undefined,
+      space,
+    );
   }
 
   const before = readIndex(projectDir, space);
@@ -2604,7 +2874,10 @@ export function syncDocuments(
       // A file that cannot be read is left alone rather than tombstoned: it is
       // present, so calling it removed would be a lie, and refusing the whole
       // sync would make one bad file block reconciling everything else.
-      refusedPaths.set(portableSourcePath(projectDir, space, abs), errorMessage(e));
+      refusedPaths.set(
+        portableSourcePath(projectDir, space, abs),
+        errorMessage(e),
+      );
       continue;
     }
     byPath.set(portableSourcePath(projectDir, space, abs), {
@@ -2620,8 +2893,13 @@ export function syncDocuments(
   // managed paths here, without following them, so present-but-refused remains
   // distinct from removed.
   for (const row of before.documents) {
-    if (isTombstoned(row) || row.source.kind !== "managed" ||
-        byPath.has(row.source.path) || refusedPaths.has(row.source.path)) continue;
+    if (
+      isTombstoned(row) ||
+      row.source.kind !== "managed" ||
+      byPath.has(row.source.path) ||
+      refusedPaths.has(row.source.path)
+    )
+      continue;
     const abs = join(knowledgeDir(projectDir, space), row.source.path);
     const refusal = statOnlyRefusal(abs, row.source.path);
     if (refusal !== null) refusedPaths.set(row.source.path, refusal);
@@ -2680,9 +2958,11 @@ export function syncDocuments(
       }
       // Digest unchanged. Normally nothing to do -- EXCEPT when the environment
       // is what changed.
-      if (shouldRetryExtraction(row) ||
-          (row.extraction.state === "extracted" &&
-            verifiedContentBytes(projectDir, space, row) === null)) {
+      if (
+        shouldRetryExtraction(row) ||
+        (row.extraction.state === "extracted" &&
+          verifiedContentBytes(projectDir, space, row) === null)
+      ) {
         needsRetry.push({ row, here });
         continue;
       }
@@ -2740,7 +3020,10 @@ export function syncDocuments(
   const needsNew: OnDiskCandidate[] = [];
   for (const [path, v] of byPath) {
     if (claimed.has(path)) continue;
-    if (before.documents.some((r) => r.source.path === path && !isTombstoned(r))) continue;
+    if (
+      before.documents.some((r) => r.source.path === path && !isTombstoned(r))
+    )
+      continue;
     needsNew.push(v);
   }
 
@@ -2753,7 +3036,11 @@ export function syncDocuments(
   // extracting) while 21 BRAND-NEW documents in one pathless sync still hit
   // the same cap onboard's pathless walk would refuse -- same batch-scope
   // hazard, now measured against the right quantity.
-  const workItems = [...needsChanged, ...needsRetry, ...needsNew.map((n) => ({ here: n }))];
+  const workItems = [
+    ...needsChanged,
+    ...needsRetry,
+    ...needsNew.map((n) => ({ here: n })),
+  ];
   if (workItems.length > EXTRACT_BATCH_DOC_CAP) {
     throw new Error(
       `This sync would extract or newly index ${workItems.length} documents, over the ` +
@@ -2770,7 +3057,9 @@ export function syncDocuments(
         let digest = "refused";
         try {
           digest = sha256Hex(readCandidate(documentsReal, abs));
-        } catch { /* type/cap refusal remains part of the snapshot */ }
+        } catch {
+          /* type/cap refusal remains part of the snapshot */
+        }
         snapshot.set(
           portableSourcePath(projectDir, space, abs),
           `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${digest}`,
@@ -2809,8 +3098,13 @@ export function syncDocuments(
     const mime = detectMimeType(here.abs, buf);
     const outcome = extractDocument(here.abs, mime, buf.length, here.digest);
     plans.push({
-      row, change: "changed", nextDigest: here.digest, nextBytes: buf.length,
-      extraction: outcome.record, text: outcome.text, abs: here.abs,
+      row,
+      change: "changed",
+      nextDigest: here.digest,
+      nextBytes: buf.length,
+      extraction: outcome.record,
+      text: outcome.text,
+      abs: here.abs,
     });
   }
   for (const { row, here } of needsRetry) {
@@ -2819,304 +3113,372 @@ export function syncDocuments(
     const mime = detectMimeType(here.abs, buf);
     const outcome = extractDocument(here.abs, mime, buf.length, here.digest);
     plans.push({
-      row, change: "retried", extraction: outcome.record, text: outcome.text, abs: here.abs,
+      row,
+      change: "retried",
+      extraction: outcome.record,
+      text: outcome.text,
+      abs: here.abs,
     });
   }
   const fresh: { abs: string; row: DocumentRow; text?: string }[] = [];
   for (const next of needsNew) {
     const buf = rereadPlannedBytes(next);
     if (buf === null) continue;
-    fresh.push({ abs: next.abs, ...buildRow(projectDir, space, next.abs, buf, now) });
+    fresh.push({
+      abs: next.abs,
+      ...buildRow(projectDir, space, next.abs, buf, now),
+    });
   }
 
   // --- Commit, under the lock ---
-  return withAuditLock(projectDir, () => {
-    // Crashed-run journals are collected HERE, inside the lock, not before it.
-    // Planning above (and a concurrent `onboard`'s staging phase) runs OUTSIDE
-    // the lock by design -- extraction is slow, and the lock's acquire budget is
-    // short. That means a live `onboard` can be mid-stage in `.journal/<txn>/`
-    // at the exact moment THIS process reaches this line. Collecting before
-    // the lock races that staging dir directly; collecting after acquiring it
-    // does not remove the window entirely (the stamp + PID check still decide
-    // "live" vs "dead"), but it does mean no OTHER concurrent committer can
-    // observe a half-collected state, and it matches the one place every other
-    // mutation in this file happens.
-    const journalsCollected = collectStaleJournals(projectDir, space);
+  return withAuditLock(
+    projectDir,
+    () => {
+      // Crashed-run journals are collected HERE, inside the lock, not before it.
+      // Planning above (and a concurrent `onboard`'s staging phase) runs OUTSIDE
+      // the lock by design -- extraction is slow, and the lock's acquire budget is
+      // short. That means a live `onboard` can be mid-stage in `.journal/<txn>/`
+      // at the exact moment THIS process reaches this line. Collecting before
+      // the lock races that staging dir directly; collecting after acquiring it
+      // does not remove the window entirely (the stamp + PID check still decide
+      // "live" vs "dead"), but it does mean no OTHER concurrent committer can
+      // observe a half-collected state, and it matches the one place every other
+      // mutation in this file happens.
+      const journalsCollected = collectStaleJournals(projectDir, space);
 
-    // Read fresh, INSIDE the lock -- the same rule `onboard`'s commit already
-    // follows and for the same reason: the copy planning used predates the
-    // lock, and writing it back is how a concurrent writer's row is lost.
-    const index = readIndex(projectDir, space);
-    for (const row of index.documents) {
-      if (isTombstoned(row)) deleteDerivedText(projectDir, space, row.id);
-    }
-    const rows = new Map(index.documents.map((r) => [r.id, r]));
-    const liveSourcePaths = new Map(
-      index.documents.filter((r) => !isTombstoned(r)).map((r) => [r.source.path, r]),
-    );
-    const changes: SyncChange[] = [];
-    // Deferred: nothing here touches disk. Every mutation lands on the IN-MEMORY
-    // candidate first, so a mid-batch throw (or a failed assertPublishable
-    // below) leaves every file on disk exactly as it was.
-    const contentWrites: { id: string; text: string | undefined }[] = [];
-    const tombstoneDeletes: string[] = [];
-    const audits: (() => void)[] = [];
-
-    // THE COMPARE-AND-SWAP. `plan.row` is the snapshot planning read BEFORE the
-    // lock. A concurrent writer (rebind, another sync, onboard's edit path) may
-    // have advanced the SAME row since -- and the missing recheck here was the
-    // defect: the old code trusted `plan.nextDigest`/`nextBytes`/extraction/text
-    // verbatim and applied them onto whatever the fresh row happened to be. A
-    // digest-only recheck (the other reviewer's prescription) is insufficient:
-    // a concurrent `rebind` changes the PATH, not the digest, so a stale
-    // "changed" plan would overwrite a rebound row's fresh identity with a
-    // decision made about the row it used to be. The precondition compares the
-    // WHOLE snapshot -- path, digest, extraction state, tombstone state -- and
-    // ANY mismatch means REPLAN, never apply: skip this row's plan entirely and
-    // let the next sync (which reads fresh) decide from the row's current
-    // truth. There is no partial-apply path.
-    const stillMatchesPlan = (fresh: DocumentRow, planned: DocumentRow): boolean =>
-      fresh.source.path === planned.source.path &&
-      fresh.sha256 === planned.sha256 &&
-      JSON.stringify(fresh.extraction) === JSON.stringify(planned.extraction) &&
-      isTombstoned(fresh) === isTombstoned(planned);
-
-    // THE SOURCE RECHECK. `stillMatchesPlan` guards the CATALOG ROW's identity
-    // -- it says nothing about the FILE ON DISK the plan's `text`/`extraction`
-    // were produced from. Planning (and extraction, for "changed"/"retried")
-    // runs entirely OUTSIDE the lock, same as onboard's staging phase, and for
-    // the identical reason: extraction spawns an external process and the
-    // lock's acquire budget is short. Between that read and this commit, the
-    // source can be overwritten any number of times -- the row CAS above
-    // cannot see that, because nothing about the CATALOG changed. Measured
-    // against the shipped tool (2026-08-13): editing a file 300 times while
-    // `sync` ran committed a digest matching neither the file's state at any
-    // single point nor its final content -- `sync` published extraction text
-    // for bytes that no longer existed anywhere. `onboard`'s own commit
-    // already re-hashes for exactly this reason (pass 3(a) above); `sync`
-    // must too, for every plan that carries extracted `text` or a `nextDigest`
-    // derived from a pre-lock read. A mismatch means REPLAN, never publish --
-    // same "skip, let the next sync decide" rule as the row CAS.
-    const sourceStillMatches = (plan: Plan): boolean => {
-      if (plan.abs === undefined) return true; // no source read at plan time
-      let current: string;
-      try {
-        current = sha256Hex(readRegularFileNoFollowOrThrow(plan.abs, plan.row.source.path));
-      } catch {
-        return false; // vanished or became unreadable since planning; replan next sync
+      // Read fresh, INSIDE the lock -- the same rule `onboard`'s commit already
+      // follows and for the same reason: the copy planning used predates the
+      // lock, and writing it back is how a concurrent writer's row is lost.
+      const index = readIndex(projectDir, space);
+      for (const row of index.documents) {
+        if (isTombstoned(row)) deleteDerivedText(projectDir, space, row.id);
       }
-      // "changed": the plan's own claim is that the source now reads
-      // `nextDigest`. "retried": digest was UNCHANGED at plan time, so the
-      // source must still equal the row's existing sha256.
-      const expected = plan.change === "changed" ? plan.nextDigest : plan.row.sha256;
-      return current === expected;
-    };
-    const sourcePathPresent = (path: string): boolean => {
-      try {
-        lstatSync(join(knowledgeDir(projectDir, space), path));
-        return true;
-      } catch (error) {
-        return (error as NodeJS.ErrnoException).code !== "ENOENT";
-      }
-    };
-    const currentDiskSnapshot = snapshotDisk(
-      existsSync(documentsReal) ? walkDocuments(documentsReal) : [],
-    );
-    const diskShapeStillMatches = currentDiskSnapshot.size === plannedDiskSnapshot.size &&
-      [...currentDiskSnapshot].every(([path, signature]) =>
-        plannedDiskSnapshot.get(path) === signature
+      const rows = new Map(index.documents.map((r) => [r.id, r]));
+      const liveSourcePaths = new Map(
+        index.documents
+          .filter((r) => !isTombstoned(r))
+          .map((r) => [r.source.path, r]),
       );
+      const changes: SyncChange[] = [];
+      // Deferred: nothing here touches disk. Every mutation lands on the IN-MEMORY
+      // candidate first, so a mid-batch throw (or a failed assertPublishable
+      // below) leaves every file on disk exactly as it was.
+      const contentWrites: { id: string; text: string | undefined }[] = [];
+      const tombstoneDeletes: string[] = [];
+      const audits: (() => void)[] = [];
 
-    for (const plan of plans) {
-      const row = rows.get(plan.row.id);
-      if (row === undefined) continue; // vanished under us; the next sync sees it
-      if (plan.change !== "unchanged" && !stillMatchesPlan(row, plan.row)) {
-        // The row moved out from under this plan (a concurrent rebind is the
-        // measured case). Applying `plan` now would mutate a row this decision
-        // was never made about. Skip -- the row's CURRENT truth stands, and the
-        // next sync replans against it.
-        continue;
-      }
-      if ((plan.change === "changed" || plan.change === "retried") && !sourceStillMatches(plan)) {
-        // The source kept moving for the whole staging window (or vanished).
-        // Publishing `plan.text`/`plan.extraction` now would commit a
-        // derivative for bytes that no longer exist anywhere. Skip -- the
-        // next sync re-reads the source fresh and replans from its current
-        // truth, exactly like the row CAS above.
-        continue;
-      }
-      if (plan.change === "removed" &&
-          (!diskShapeStillMatches || sourcePathPresent(plan.row.source.path))) {
-        // The source was recreated while this sync waited for the lock. The
-        // removal decision is stale; leave the live identity untouched.
-        continue;
-      }
-      if (plan.change === "moved") {
-        const targetClaimed = index.documents.some((candidate) =>
-          candidate.id !== row.id &&
-          !isTombstoned(candidate) &&
-          candidate.source.path === plan.nextPath
+      // THE COMPARE-AND-SWAP. `plan.row` is the snapshot planning read BEFORE the
+      // lock. A concurrent writer (rebind, another sync, onboard's edit path) may
+      // have advanced the SAME row since -- and the missing recheck here was the
+      // defect: the old code trusted `plan.nextDigest`/`nextBytes`/extraction/text
+      // verbatim and applied them onto whatever the fresh row happened to be. A
+      // digest-only recheck (the other reviewer's prescription) is insufficient:
+      // a concurrent `rebind` changes the PATH, not the digest, so a stale
+      // "changed" plan would overwrite a rebound row's fresh identity with a
+      // decision made about the row it used to be. The precondition compares the
+      // WHOLE snapshot -- path, digest, extraction state, tombstone state -- and
+      // ANY mismatch means REPLAN, never apply: skip this row's plan entirely and
+      // let the next sync (which reads fresh) decide from the row's current
+      // truth. There is no partial-apply path.
+      const stillMatchesPlan = (
+        fresh: DocumentRow,
+        planned: DocumentRow,
+      ): boolean =>
+        fresh.source.path === planned.source.path &&
+        fresh.sha256 === planned.sha256 &&
+        JSON.stringify(fresh.extraction) ===
+          JSON.stringify(planned.extraction) &&
+        isTombstoned(fresh) === isTombstoned(planned);
+
+      // THE SOURCE RECHECK. `stillMatchesPlan` guards the CATALOG ROW's identity
+      // -- it says nothing about the FILE ON DISK the plan's `text`/`extraction`
+      // were produced from. Planning (and extraction, for "changed"/"retried")
+      // runs entirely OUTSIDE the lock, same as onboard's staging phase, and for
+      // the identical reason: extraction spawns an external process and the
+      // lock's acquire budget is short. Between that read and this commit, the
+      // source can be overwritten any number of times -- the row CAS above
+      // cannot see that, because nothing about the CATALOG changed. Measured
+      // against the shipped tool (2026-08-13): editing a file 300 times while
+      // `sync` ran committed a digest matching neither the file's state at any
+      // single point nor its final content -- `sync` published extraction text
+      // for bytes that no longer existed anywhere. `onboard`'s own commit
+      // already re-hashes for exactly this reason (pass 3(a) above); `sync`
+      // must too, for every plan that carries extracted `text` or a `nextDigest`
+      // derived from a pre-lock read. A mismatch means REPLAN, never publish --
+      // same "skip, let the next sync decide" rule as the row CAS.
+      const sourceStillMatches = (plan: Plan): boolean => {
+        if (plan.abs === undefined) return true; // no source read at plan time
+        let current: string;
+        try {
+          current = sha256Hex(
+            readRegularFileNoFollowOrThrow(plan.abs, plan.row.source.path),
+          );
+        } catch {
+          return false; // vanished or became unreadable since planning; replan next sync
+        }
+        // "changed": the plan's own claim is that the source now reads
+        // `nextDigest`. "retried": digest was UNCHANGED at plan time, so the
+        // source must still equal the row's existing sha256.
+        const expected =
+          plan.change === "changed" ? plan.nextDigest : plan.row.sha256;
+        return current === expected;
+      };
+      const sourcePathPresent = (path: string): boolean => {
+        try {
+          lstatSync(join(knowledgeDir(projectDir, space), path));
+          return true;
+        } catch (error) {
+          return (error as NodeJS.ErrnoException).code !== "ENOENT";
+        }
+      };
+      const currentDiskSnapshot = snapshotDisk(
+        existsSync(documentsReal) ? walkDocuments(documentsReal) : [],
+      );
+      const diskShapeStillMatches =
+        currentDiskSnapshot.size === plannedDiskSnapshot.size &&
+        [...currentDiskSnapshot].every(
+          ([path, signature]) => plannedDiskSnapshot.get(path) === signature,
         );
-        if (!diskShapeStillMatches || sourcePathPresent(plan.row.source.path) ||
-            targetClaimed || !sourceStillMatches(plan)) {
-          // A move is valid only while the old path remains absent and the
-          // unique target still carries the bytes planning identified.
+
+      for (const plan of plans) {
+        const row = rows.get(plan.row.id);
+        if (row === undefined) continue; // vanished under us; the next sync sees it
+        if (plan.change !== "unchanged" && !stillMatchesPlan(row, plan.row)) {
+          // The row moved out from under this plan (a concurrent rebind is the
+          // measured case). Applying `plan` now would mutate a row this decision
+          // was never made about. Skip -- the row's CURRENT truth stands, and the
+          // next sync replans against it.
           continue;
         }
+        if (
+          (plan.change === "changed" || plan.change === "retried") &&
+          !sourceStillMatches(plan)
+        ) {
+          // The source kept moving for the whole staging window (or vanished).
+          // Publishing `plan.text`/`plan.extraction` now would commit a
+          // derivative for bytes that no longer exist anywhere. Skip -- the
+          // next sync re-reads the source fresh and replans from its current
+          // truth, exactly like the row CAS above.
+          continue;
+        }
+        if (
+          plan.change === "removed" &&
+          (!diskShapeStillMatches || sourcePathPresent(plan.row.source.path))
+        ) {
+          // The source was recreated while this sync waited for the lock. The
+          // removal decision is stale; leave the live identity untouched.
+          continue;
+        }
+        if (plan.change === "moved") {
+          const targetClaimed = index.documents.some(
+            (candidate) =>
+              candidate.id !== row.id &&
+              !isTombstoned(candidate) &&
+              candidate.source.path === plan.nextPath,
+          );
+          if (
+            !diskShapeStillMatches ||
+            sourcePathPresent(plan.row.source.path) ||
+            targetClaimed ||
+            !sourceStillMatches(plan)
+          ) {
+            // A move is valid only while the old path remains absent and the
+            // unique target still carries the bytes planning identified.
+            continue;
+          }
+        }
+        if (plan.change === "new" && !diskShapeStillMatches) {
+          // Fresh-row identity also depends on global topology: a concurrent
+          // deletion or move may make this candidate the continuation of an
+          // existing row. Replan instead of minting a second identity.
+          continue;
+        }
+        switch (plan.change) {
+          case "unchanged":
+            changes.push({
+              id: row.id,
+              path: row.source.path,
+              change: "unchanged",
+            });
+            break;
+          case "moved":
+            row.source = {
+              ...row.source,
+              path: plan.nextPath!,
+            } as DocumentRow["source"];
+            changes.push({ id: row.id, path: plan.nextPath!, change: "moved" });
+            audits.push(() =>
+              emitDocumentUpdated(projectDir, space, row, "moved"),
+            );
+            break;
+          case "changed":
+            row.sha256 = plan.nextDigest!;
+            row.bytes = plan.nextBytes!;
+            row.extraction = plan.extraction!;
+            contentWrites.push({ id: row.id, text: plan.text });
+            setRowContentFields(row, plan.text);
+            changes.push({
+              id: row.id,
+              path: row.source.path,
+              change: "changed",
+              state: row.extraction.state,
+            });
+            audits.push(() =>
+              emitDocumentUpdated(projectDir, space, row, "changed"),
+            );
+            break;
+          case "retried":
+            row.extraction = plan.extraction!;
+            contentWrites.push({ id: row.id, text: plan.text });
+            setRowContentFields(row, plan.text);
+            changes.push({
+              id: row.id,
+              path: row.source.path,
+              change: "retried",
+              state: row.extraction.state,
+            });
+            audits.push(() =>
+              emitDocumentUpdated(projectDir, space, row, "re-extracted"),
+            );
+            break;
+          case "removed": {
+            // A metadata-only tombstone: id, last path, last digest, removed_at. It
+            // survives because a rule promoted later cites this id and the citation
+            // must not dangle.
+            row.removed_at = now;
+            delete row.content;
+            delete row.content_sha256;
+            row.summary = { state: "absent" };
+            delete row.summary_sha256;
+            row.extraction = {
+              state: "unsupported_type",
+              detectedType: "removed",
+            };
+            tombstoneDeletes.push(row.id);
+            changes.push({
+              id: row.id,
+              path: row.source.path,
+              change: "removed",
+            });
+            audits.push(() =>
+              appendAuditEntryAtPathUnlocked(
+                "DOCUMENT_REMOVED",
+                {
+                  Space: space,
+                  Document: row.id,
+                  "Last Path": row.source.path,
+                  "Last Digest": row.sha256,
+                },
+                projectDir,
+                spaceAuditShardPath(projectDir, space),
+              ),
+            );
+            break;
+          }
+          default:
+            break;
+        }
       }
-      if (plan.change === "new" && !diskShapeStillMatches) {
-        // Fresh-row identity also depends on global topology: a concurrent
-        // deletion or move may make this candidate the continuation of an
-        // existing row. Replan instead of minting a second identity.
-        continue;
-      }
-      switch (plan.change) {
-        case "unchanged":
-          changes.push({ id: row.id, path: row.source.path, change: "unchanged" });
-          break;
-        case "moved":
-          row.source = { ...row.source, path: plan.nextPath! } as DocumentRow["source"];
-          changes.push({ id: row.id, path: plan.nextPath!, change: "moved" });
-          audits.push(() => emitDocumentUpdated(projectDir, space, row, "moved"));
-          break;
-        case "changed":
-          row.sha256 = plan.nextDigest!;
-          row.bytes = plan.nextBytes!;
-          row.extraction = plan.extraction!;
-          contentWrites.push({ id: row.id, text: plan.text });
-          setRowContentFields(row, plan.text);
-          changes.push({
-            id: row.id, path: row.source.path, change: "changed", state: row.extraction.state,
-          });
-          audits.push(() => emitDocumentUpdated(projectDir, space, row, "changed"));
-          break;
-        case "retried":
-          row.extraction = plan.extraction!;
-          contentWrites.push({ id: row.id, text: plan.text });
-          setRowContentFields(row, plan.text);
-          changes.push({
-            id: row.id, path: row.source.path, change: "retried", state: row.extraction.state,
-          });
-          audits.push(() => emitDocumentUpdated(projectDir, space, row, "re-extracted"));
-          break;
-        case "removed": {
-          // A metadata-only tombstone: id, last path, last digest, removed_at. It
-          // survives because a rule promoted later cites this id and the citation
-          // must not dangle.
-          row.removed_at = now;
-          delete row.content;
-          delete row.content_sha256;
-          row.summary = { state: "absent" };
-          delete row.summary_sha256;
-          row.extraction = { state: "unsupported_type", detectedType: "removed" };
-          tombstoneDeletes.push(row.id);
-          changes.push({ id: row.id, path: row.source.path, change: "removed" });
-          audits.push(() => appendAuditEntryAtPathUnlocked(
-            "DOCUMENT_REMOVED",
+
+      for (const { abs, row, text } of fresh) {
+        if (!diskShapeStillMatches) continue;
+        let currentDigest: string;
+        try {
+          currentDigest = sha256Hex(
+            readRegularFileNoFollowOrThrow(abs, row.source.path),
+          );
+        } catch {
+          continue;
+        }
+        if (currentDigest !== row.sha256) continue;
+        if (index.documents.some((r) => r.id === row.id)) continue;
+        // A concurrent writer (onboard, or another sync) may have indexed this
+        // exact source path since planning read `before`. Skip rather than mint
+        // a second row for one file -- the same identity rule onboard's own
+        // commit-time recheck applies to its "already indexed" case.
+        if (liveSourcePaths.has(row.source.path)) continue;
+        index.documents.push(row);
+        contentWrites.push({ id: row.id, text });
+        changes.push({
+          id: row.id,
+          path: row.source.path,
+          change: "new",
+          state: row.extraction.state,
+        });
+        audits.push(() =>
+          appendAuditEntryAtPathUnlocked(
+            "DOCUMENT_INDEXED",
             {
               Space: space,
               Document: row.id,
-              "Last Path": row.source.path,
-              "Last Digest": row.sha256,
+              Source: row.source.path,
+              Digest: row.sha256,
+              ...(row.related_intent_ids === undefined
+                ? {}
+                : { Intents: JSON.stringify(row.related_intent_ids) }),
             },
             projectDir,
             spaceAuditShardPath(projectDir, space),
-          ));
-          break;
-        }
-        default:
-          break;
+          ),
+        );
       }
-    }
 
-    for (const { abs, row, text } of fresh) {
-      if (!diskShapeStillMatches) continue;
-      let currentDigest: string;
-      try {
-        currentDigest = sha256Hex(readRegularFileNoFollowOrThrow(abs, row.source.path));
-      } catch {
-        continue;
+      // VALIDATE THE WHOLE CANDIDATE INDEX before anything lands on disk -- the
+      // same gate `onboard` commits through (assertPublishable), so a sync batch
+      // that would leave index.json unreadable publishes NOTHING: no content.md,
+      // no metadata.json, no index.json, no audit row.
+      if (changes.some((c) => c.change !== "unchanged")) {
+        assertPublishable(index);
       }
-      if (currentDigest !== row.sha256) continue;
-      if (index.documents.some((r) => r.id === row.id)) continue;
-      // A concurrent writer (onboard, or another sync) may have indexed this
-      // exact source path since planning read `before`. Skip rather than mint
-      // a second row for one file -- the same identity rule onboard's own
-      // commit-time recheck applies to its "already indexed" case.
-      if (liveSourcePaths.has(row.source.path)) continue;
-      index.documents.push(row);
-      contentWrites.push({ id: row.id, text });
-      changes.push({
-        id: row.id, path: row.source.path, change: "new", state: row.extraction.state,
-      });
-      audits.push(() => appendAuditEntryAtPathUnlocked(
-        "DOCUMENT_INDEXED",
-        {
-          Space: space,
-          Document: row.id,
-          Source: row.source.path,
-          Digest: row.sha256,
-          ...(row.related_intent_ids === undefined
-            ? {}
-            : { Intents: JSON.stringify(row.related_intent_ids) }),
-        },
-        projectDir,
-        spaceAuditShardPath(projectDir, space),
-      ));
-    }
 
-    // VALIDATE THE WHOLE CANDIDATE INDEX before anything lands on disk -- the
-    // same gate `onboard` commits through (assertPublishable), so a sync batch
-    // that would leave index.json unreadable publishes NOTHING: no content.md,
-    // no metadata.json, no index.json, no audit row.
-    if (changes.some((c) => c.change !== "unchanged")) {
-      assertPublishable(index);
-    }
+      // INDEX + METADATA BEFORE CONTENT. `showDocument` reads `row.sha256` /
+      // `row.extraction` / `row.content` from index.json ALONE (readIndex, never
+      // metadata.json) and gates the text it serves on `derivativeIsCurrent`
+      // (`row.extraction.source_revision === row.sha256`). THE DEFECT THIS
+      // CLOSES: the old code wrote content.md and appended its audit row FIRST,
+      // per item, inside the very loop that mutated the row's in-memory digest --
+      // so a LATER item's write failure (metadata, or the batched index write
+      // that used to run last) could leave content.md already holding the NEW
+      // text while index.json on disk still recorded the OLD digest/extraction.
+      // `derivativeIsCurrent` then compared the OLD digest to itself, read TRUE,
+      // and `show` served the new text as though it belonged to the superseded
+      // revision -- exposing content under a citation that never claimed it.
+      //
+      // Publishing index.json (and metadata.json, which a rebuild reads the same
+      // fields from) FIRST inverts the failure direction: if content.md's own
+      // write fails afterward, the row's digest has already moved but its
+      // content is stale-or-absent, so `derivativeIsCurrent` reads FALSE and
+      // `show` WITHHOLDS the text rather than serving it under the wrong
+      // revision -- fails closed instead of leaking.
+      if (changes.some((c) => c.change !== "unchanged")) {
+        writeIndex(projectDir, space, index);
+      }
+      for (const row of index.documents) {
+        writeMetadataTo(documentDir(projectDir, space, row.id), row);
+      }
+      for (const { id, text } of contentWrites) {
+        writeRowContentOnly(documentDir(projectDir, space, id), text);
+      }
+      for (const id of tombstoneDeletes) {
+        deleteDerivedText(projectDir, space, id);
+      }
 
-    // INDEX + METADATA BEFORE CONTENT. `showDocument` reads `row.sha256` /
-    // `row.extraction` / `row.content` from index.json ALONE (readIndex, never
-    // metadata.json) and gates the text it serves on `derivativeIsCurrent`
-    // (`row.extraction.source_revision === row.sha256`). THE DEFECT THIS
-    // CLOSES: the old code wrote content.md and appended its audit row FIRST,
-    // per item, inside the very loop that mutated the row's in-memory digest --
-    // so a LATER item's write failure (metadata, or the batched index write
-    // that used to run last) could leave content.md already holding the NEW
-    // text while index.json on disk still recorded the OLD digest/extraction.
-    // `derivativeIsCurrent` then compared the OLD digest to itself, read TRUE,
-    // and `show` served the new text as though it belonged to the superseded
-    // revision -- exposing content under a citation that never claimed it.
-    //
-    // Publishing index.json (and metadata.json, which a rebuild reads the same
-    // fields from) FIRST inverts the failure direction: if content.md's own
-    // write fails afterward, the row's digest has already moved but its
-    // content is stale-or-absent, so `derivativeIsCurrent` reads FALSE and
-    // `show` WITHHOLDS the text rather than serving it under the wrong
-    // revision -- fails closed instead of leaking.
-    if (changes.some((c) => c.change !== "unchanged")) {
-      writeIndex(projectDir, space, index);
-    }
-    for (const row of index.documents) {
-      writeMetadataTo(documentDir(projectDir, space, row.id), row);
-    }
-    for (const { id, text } of contentWrites) {
-      writeRowContentOnly(documentDir(projectDir, space, id), text);
-    }
-    for (const id of tombstoneDeletes) {
-      deleteDerivedText(projectDir, space, id);
-    }
+      // Audit LAST, only after content + metadata + index all landed -- so the
+      // ledger never records a change the catalog does not yet reflect.
+      for (const emit of audits) emit();
+      const auditState = documentAuditState(projectDir, space);
+      for (const row of index.documents) {
+        if (isTombstoned(row))
+          ensureDocumentRemovalAudit(projectDir, space, row, auditState);
+        else ensureDocumentRevisionAudit(projectDir, space, row, auditState);
+        ensureDocumentAssociationAudit(projectDir, space, row, auditState);
+      }
 
-    // Audit LAST, only after content + metadata + index all landed -- so the
-    // ledger never records a change the catalog does not yet reflect.
-    for (const emit of audits) emit();
-    const auditState = documentAuditState(projectDir, space);
-    for (const row of index.documents) {
-      if (isTombstoned(row)) ensureDocumentRemovalAudit(projectDir, space, row, auditState);
-      else ensureDocumentRevisionAudit(projectDir, space, row, auditState);
-      ensureDocumentAssociationAudit(projectDir, space, row, auditState);
-    }
-
-    return { space, changes, journalsCollected };
-  }, undefined, space);
+      return { space, changes, journalsCollected };
+    },
+    undefined,
+    space,
+  );
 }
 
 /**
@@ -3144,7 +3506,10 @@ export function syncDocuments(
 export function shouldRetryExtraction(row: DocumentRow): boolean {
   const rec = row.extraction;
   if (rec.state === "invalidated") return true;
-  if (rec.state === "extractor_unavailable" || rec.state === "unsupported_type") {
+  if (
+    rec.state === "extractor_unavailable" ||
+    rec.state === "unsupported_type"
+  ) {
     const argv = extractorArgvFor(detectMimeFromRow(row));
     if (argv === null) return false; // still nothing configured for this type
     return probeExtractor(argv[0]).available;
@@ -3153,7 +3518,11 @@ export function shouldRetryExtraction(row: DocumentRow): boolean {
     const argv = extractorArgvFor(detectMimeFromRow(row));
     if (argv === null) return false;
     const probe = probeExtractor(argv[0]);
-    return probe.available && probe.version !== null && probe.version !== rec.extractor.version;
+    return (
+      probe.available &&
+      probe.version !== null &&
+      probe.version !== rec.extractor.version
+    );
   }
   return false;
 }
@@ -3162,10 +3531,12 @@ export function shouldRetryExtraction(row: DocumentRow): boolean {
  *  extractor rather than re-sniffed, so a retry asks about the same tool the
  *  original attempt used. */
 function detectMimeFromRow(row: DocumentRow): string {
-  if (row.extraction.detectedType !== undefined) return row.extraction.detectedType;
-  return row.source.path.toLowerCase().endsWith(".pdf") ? "application/pdf" : "text/plain";
+  if (row.extraction.detectedType !== undefined)
+    return row.extraction.detectedType;
+  return row.source.path.toLowerCase().endsWith(".pdf")
+    ? "application/pdf"
+    : "text/plain";
 }
-
 
 function emitDocumentUpdated(
   projectDir: string,
@@ -3173,7 +3544,8 @@ function emitDocumentUpdated(
   row: DocumentRow,
   change: string,
 ): void {
-  if (row.source.path === null) throw new Error(`Live document ${row.id} has no source path`);
+  if (row.source.path === null)
+    throw new Error(`Live document ${row.id} has no source path`);
   appendAuditEntryAtPathUnlocked(
     "DOCUMENT_UPDATED",
     {
@@ -3191,27 +3563,30 @@ function emitDocumentUpdated(
 function spaceAuditBlocks(projectDir: string, space: string): string[] {
   const currentShard = spaceAuditShardPath(projectDir, space);
   const spaceAuditDir = dirname(currentShard);
-  return readAuditShardEvents(projectDir, undefined, space)
-    .filter((row) => dirname(row.shard) === spaceAuditDir)
-    .sort((a, b) => {
-      // Append position is authoritative within one shard even if its wall
-      // clock moves backwards. Imported shards are projected first; the current
-      // shard is last because repairs written here were computed after reading
-      // all imported evidence and must outrank future-dated stale rows.
-      const currentOrder = Number(a.shard === currentShard) - Number(b.shard === currentShard);
-      if (currentOrder !== 0) return currentOrder;
-      if (a.shard === b.shard) return a.pos - b.pos;
-      // Cross-shard timestamps are not causal and combining them with per-shard
-      // append order creates comparator cycles when one clock regresses. A fixed
-      // shard order is a deterministic provisional projection; current catalog
-      // reconciliation supplies the canonical final state.
-      return a.shard.localeCompare(b.shard);
-    })
-    // A torn append can fuse a truncated block with the next complete block.
-    // Split renderer headings again so complete repairs stand independently
-    // instead of lending their fields to the torn row before them.
-    .flatMap((row) => row.block.split(/\n(?=## )/))
-    .filter((block) => (block.match(/^\*\*Event\*\*:/gm) ?? []).length === 1);
+  return (
+    readAuditShardEvents(projectDir, undefined, space)
+      .filter((row) => dirname(row.shard) === spaceAuditDir)
+      .sort((a, b) => {
+        // Append position is authoritative within one shard even if its wall
+        // clock moves backwards. Imported shards are projected first; the current
+        // shard is last because repairs written here were computed after reading
+        // all imported evidence and must outrank future-dated stale rows.
+        const currentOrder =
+          Number(a.shard === currentShard) - Number(b.shard === currentShard);
+        if (currentOrder !== 0) return currentOrder;
+        if (a.shard === b.shard) return a.pos - b.pos;
+        // Cross-shard timestamps are not causal and combining them with per-shard
+        // append order creates comparator cycles when one clock regresses. A fixed
+        // shard order is a deterministic provisional projection; current catalog
+        // reconciliation supplies the canonical final state.
+        return a.shard.localeCompare(b.shard);
+      })
+      // A torn append can fuse a truncated block with the next complete block.
+      // Split renderer headings again so complete repairs stand independently
+      // instead of lending their fields to the torn row before them.
+      .flatMap((row) => row.block.split(/\n(?=## )/))
+      .filter((block) => (block.match(/^\*\*Event\*\*:/gm) ?? []).length === 1)
+  );
 }
 
 interface DocumentAuditProjection {
@@ -3235,13 +3610,19 @@ function applyDocumentAuditEvent(
 ): void {
   const id = fields.Document;
   if (!id) return;
-  const validIndexed = event === "DOCUMENT_INDEXED" && Boolean(fields.Digest && fields.Source);
-  const validRevision = event === "DOCUMENT_UPDATED" && Boolean(fields.Digest && fields.Source);
-  const validAssociation = event === "DOCUMENT_UPDATED" && Boolean(fields.Intent) &&
+  const validIndexed =
+    event === "DOCUMENT_INDEXED" && Boolean(fields.Digest && fields.Source);
+  const validRevision =
+    event === "DOCUMENT_UPDATED" && Boolean(fields.Digest && fields.Source);
+  const validAssociation =
+    event === "DOCUMENT_UPDATED" &&
+    Boolean(fields.Intent) &&
     (fields.Change === "associate" || fields.Change === "dissociate");
-  const validRemoval = event === "DOCUMENT_REMOVED" &&
+  const validRemoval =
+    event === "DOCUMENT_REMOVED" &&
     Boolean(fields["Last Path"] && fields["Last Digest"]);
-  if (!validIndexed && !validRevision && !validAssociation && !validRemoval) return;
+  if (!validIndexed && !validRevision && !validAssociation && !validRemoval)
+    return;
   let projection = state.documents.get(id);
   if (!projection) {
     projection = { seen: false, intents: new Set() };
@@ -3267,27 +3648,44 @@ function applyDocumentAuditEvent(
       try {
         const values = JSON.parse(fields.Intents) as unknown;
         if (Array.isArray(values)) {
-          for (const value of values) if (typeof value === "string") projection.intents.add(value);
+          for (const value of values)
+            if (typeof value === "string") projection.intents.add(value);
         }
-      } catch { /* malformed historical snapshots contribute no associations */ }
+      } catch {
+        /* malformed historical snapshots contribute no associations */
+      }
     }
   }
   if (event === "DOCUMENT_UPDATED" && fields.Intent) {
     if (fields.Change === "associate") projection.intents.add(fields.Intent);
-    if (fields.Change === "dissociate") projection.intents.delete(fields.Intent);
+    if (fields.Change === "dissociate")
+      projection.intents.delete(fields.Intent);
   }
 }
 
-function documentAuditState(projectDir: string, space: string): DocumentAuditState {
+function documentAuditState(
+  projectDir: string,
+  space: string,
+): DocumentAuditState {
   const state: DocumentAuditState = { documents: new Map() };
   for (const block of spaceAuditBlocks(projectDir, space)) {
     const event = auditBlockField(block, "Event");
-    if (event !== "DOCUMENT_INDEXED" &&
-        event !== "DOCUMENT_UPDATED" &&
-        event !== "DOCUMENT_REMOVED") continue;
+    if (
+      event !== "DOCUMENT_INDEXED" &&
+      event !== "DOCUMENT_UPDATED" &&
+      event !== "DOCUMENT_REMOVED"
+    )
+      continue;
     const fields: Record<string, string> = {};
     for (const name of [
-      "Document", "Change", "Digest", "Source", "Intent", "Intents", "Last Path", "Last Digest",
+      "Document",
+      "Change",
+      "Digest",
+      "Source",
+      "Intent",
+      "Intents",
+      "Last Path",
+      "Last Digest",
     ]) {
       const value = auditBlockField(block, name);
       if (value !== null) fields[name] = value;
@@ -3309,7 +3707,8 @@ function ensureDocumentRevisionAudit(
     projection?.latestRevision?.event !== "DOCUMENT_REMOVED" &&
     projection?.latestRevision?.digest === row.sha256 &&
     projection.latestRevision.source === auditSource
-  ) return;
+  )
+    return;
   if (projection?.seen) {
     const fields = {
       Space: space,
@@ -3354,8 +3753,12 @@ function ensureDocumentRemovalAudit(
   if (!isTombstoned(row)) return;
   const latest = state.documents.get(row.id)?.latestRevision;
   const auditSource = redactProjectDirPrefix(row.source.path, projectDir);
-  if (latest?.event === "DOCUMENT_REMOVED" &&
-      latest.source === auditSource && latest.digest === row.sha256) return;
+  if (
+    latest?.event === "DOCUMENT_REMOVED" &&
+    latest.source === auditSource &&
+    latest.digest === row.sha256
+  )
+    return;
   const fields = {
     Space: space,
     Document: row.id,
@@ -3379,8 +3782,15 @@ function ensureDocumentAssociationAudit(
 ): void {
   const audited = state.documents.get(row.id)?.intents ?? new Set<string>();
   const current = new Set(row.related_intent_ids ?? []);
-  for (const intent of [...audited].filter((value) => !current.has(value)).sort()) {
-    const fields = { Space: space, Document: row.id, Change: "dissociate", Intent: intent };
+  for (const intent of [...audited]
+    .filter((value) => !current.has(value))
+    .sort()) {
+    const fields = {
+      Space: space,
+      Document: row.id,
+      Change: "dissociate",
+      Intent: intent,
+    };
     appendAuditEntryAtPathUnlocked(
       "DOCUMENT_UPDATED",
       fields,
@@ -3389,8 +3799,15 @@ function ensureDocumentAssociationAudit(
     );
     applyDocumentAuditEvent(state, "DOCUMENT_UPDATED", fields);
   }
-  for (const intent of [...current].filter((value) => !audited.has(value)).sort()) {
-    const fields = { Space: space, Document: row.id, Change: "associate", Intent: intent };
+  for (const intent of [...current]
+    .filter((value) => !audited.has(value))
+    .sort()) {
+    const fields = {
+      Space: space,
+      Document: row.id,
+      Change: "associate",
+      Intent: intent,
+    };
     appendAuditEntryAtPathUnlocked(
       "DOCUMENT_UPDATED",
       fields,
@@ -3429,7 +3846,13 @@ export interface ResolvedIntent {
 // registry row, and hand-written rows carry arbitrary strings; treating anything
 // unrecognised as inactive would refuse to scope a document to a perfectly
 // healthy intent. So the guard is a denylist: only these five refuse.
-export const INACTIVE_INTENT_STATUSES = ["complete", "completed", "archived", "closed", "abandoned"];
+export const INACTIVE_INTENT_STATUSES = [
+  "complete",
+  "completed",
+  "archived",
+  "closed",
+  "abandoned",
+];
 
 export function intentIsInactive(status: string): boolean {
   return INACTIVE_INTENT_STATUSES.includes(status.trim().toLowerCase());
@@ -3471,7 +3894,11 @@ export function resolveIntentFlag(
   // intent is nearly always a mistake (the reader has moved on), but it is
   // legitimate when back-filling evidence onto a closed record -- so this is a
   // refusal with a named remedy, never a silent drop.
-  const refuseIfInactive = (i: { uuid: string; slug: string; status: string }): void => {
+  const refuseIfInactive = (i: {
+    uuid: string;
+    slug: string;
+    status: string;
+  }): void => {
     if (allowInactive || !intentIsInactive(i.status)) return;
     throw new Error(
       `Intent "${i.slug}" (${i.uuid}) has status "${i.status}", so it is no longer active. ` +
@@ -3531,7 +3958,9 @@ export function resolveIntentFlag(
   }
 
   if (isCanonicalUuid(raw)) {
-    const byUuid = intents.filter((i) => i.uuid.toLowerCase() === raw.toLowerCase());
+    const byUuid = intents.filter(
+      (i) => i.uuid.toLowerCase() === raw.toLowerCase(),
+    );
     if (byUuid.length === 1) {
       refuseIfInactive(byUuid[0]);
       return requireCanonicalIntentUuid(byUuid[0], raw);
@@ -3624,56 +4053,62 @@ export function setIntentAssociation(
   mode: "associate" | "dissociate",
 ): AssociateOutcome {
   assertKnowledgeRootTrusted(projectDir, space);
-  return withAuditLock(projectDir, () => {
-    const index = readIndex(projectDir, space);
-    const row = index.documents.find((r) => r.id === id);
-    if (row === undefined) {
-      throw new Error(
-        `No document with id ${id} in this space's DocumentKB. Run ` +
-          `\`/aidlc knowledge list\` to see the catalog.`,
-      );
-    }
-    const current = row.related_intent_ids ?? [];
-    const has = current.includes(intentUuid);
+  return withAuditLock(
+    projectDir,
+    () => {
+      const index = readIndex(projectDir, space);
+      const row = index.documents.find((r) => r.id === id);
+      if (row === undefined) {
+        throw new Error(
+          `No document with id ${id} in this space's DocumentKB. Run ` +
+            `\`/aidlc knowledge list\` to see the catalog.`,
+        );
+      }
+      const current = row.related_intent_ids ?? [];
+      const has = current.includes(intentUuid);
 
-    if (mode === "associate" ? has : !has) {
-      // Nothing to mutate. Repair any audit-last gap from a prior failed call,
-      // then report the idempotent state.
+      if (mode === "associate" ? has : !has) {
+        // Nothing to mutate. Repair any audit-last gap from a prior failed call,
+        // then report the idempotent state.
+        writeMetadataTo(documentDir(projectDir, space, row.id), row);
+        const auditState = documentAuditState(projectDir, space);
+        ensureDocumentRevisionAudit(projectDir, space, row, auditState);
+        ensureDocumentAssociationAudit(projectDir, space, row, auditState);
+        return { id, intent: intentUuid, status: "already" as const };
+      }
+
+      const next =
+        mode === "associate"
+          ? [...current, intentUuid]
+          : current.filter((u) => u !== intentUuid);
+
+      // An EMPTY list is invalid, so dissociating the last intent OMITS the key
+      // rather than leaving `[]` behind -- which would read as "scoped to nothing".
+      if (next.length === 0) delete row.related_intent_ids;
+      else row.related_intent_ids = next;
+
+      writeIndex(projectDir, space, index);
       writeMetadataTo(documentDir(projectDir, space, row.id), row);
-      const auditState = documentAuditState(projectDir, space);
-      ensureDocumentRevisionAudit(projectDir, space, row, auditState);
-      ensureDocumentAssociationAudit(projectDir, space, row, auditState);
-      return { id, intent: intentUuid, status: "already" as const };
-    }
 
-    const next = mode === "associate"
-      ? [...current, intentUuid]
-      : current.filter((u) => u !== intentUuid);
-
-    // An EMPTY list is invalid, so dissociating the last intent OMITS the key
-    // rather than leaving `[]` behind -- which would read as "scoped to nothing".
-    if (next.length === 0) delete row.related_intent_ids;
-    else row.related_intent_ids = next;
-
-    writeIndex(projectDir, space, index);
-    writeMetadataTo(documentDir(projectDir, space, row.id), row);
-
-    // Space-level shard, exactly as for onboard: the intent is a FIELD here, not
-    // the shard selector, because this verb is precisely what can CHANGE a
-    // document's scope -- and a document's history must not move when it does.
-    appendAuditEntryAtPathUnlocked(
-      "DOCUMENT_UPDATED",
-      {
-        Space: space,
-        Document: row.id,
-        Change: mode,
-        Intent: intentUuid,
-      },
-      projectDir,
-      spaceAuditShardPath(projectDir, space),
-    );
-    return { id, intent: intentUuid, status: "fresh" as const };
-  }, undefined, space);
+      // Space-level shard, exactly as for onboard: the intent is a FIELD here, not
+      // the shard selector, because this verb is precisely what can CHANGE a
+      // document's scope -- and a document's history must not move when it does.
+      appendAuditEntryAtPathUnlocked(
+        "DOCUMENT_UPDATED",
+        {
+          Space: space,
+          Document: row.id,
+          Change: mode,
+          Intent: intentUuid,
+        },
+        projectDir,
+        spaceAuditShardPath(projectDir, space),
+      );
+      return { id, intent: intentUuid, status: "fresh" as const };
+    },
+    undefined,
+    space,
+  );
 }
 
 // --- summarize (S3b) ---------------------------------------------------------
@@ -3732,7 +4167,9 @@ export function summarizeDocument(
   const truncated = codePoints.length > SUMMARY_MAX_CHARS;
   const bounded = codePoints.slice(0, SUMMARY_MAX_CHARS).join("");
   if (bounded.trim().length === 0) {
-    throw new Error("summary text must not be empty or whitespace-only after applying the character cap.");
+    throw new Error(
+      "summary text must not be empty or whitespace-only after applying the character cap.",
+    );
   }
   const buf = Buffer.from(bounded, "utf-8");
   const summarySha256 = sha256Hex(buf);
@@ -3748,98 +4185,107 @@ export function summarizeDocument(
     ensureDirSync(txnDir);
     writeBufferAtomic(join(txnDir, "summary.md"), buf);
 
-    return withAuditLock(projectDir, () => {
-      // Read fresh, INSIDE the lock -- the same rule every other commit in
-      // this file follows, for the same reason: a concurrent writer (sync,
-      // rebind, another summarize) may have advanced this row since this
-      // call's own pre-lock work.
-      const index = readIndex(projectDir, space);
-      const row = index.documents.find((r) => r.id === id);
-      if (row === undefined) {
-        throw new Error(
-          `No document with id ${id} in this space's DocumentKB. Run ` +
-            `\`/aidlc knowledge list\` to see the catalog.`,
+    return withAuditLock(
+      projectDir,
+      () => {
+        // Read fresh, INSIDE the lock -- the same rule every other commit in
+        // this file follows, for the same reason: a concurrent writer (sync,
+        // rebind, another summarize) may have advanced this row since this
+        // call's own pre-lock work.
+        const index = readIndex(projectDir, space);
+        const row = index.documents.find((r) => r.id === id);
+        if (row === undefined) {
+          throw new Error(
+            `No document with id ${id} in this space's DocumentKB. Run ` +
+              `\`/aidlc knowledge list\` to see the catalog.`,
+          );
+        }
+        if (isTombstoned(row)) {
+          throw new Error(
+            `Document ${id} was removed; a tombstoned document cannot receive a new summary.`,
+          );
+        }
+        // THE re-validation step, mirroring onboard/sync's digest recheck: the
+        // SUPPLIED revision must still match the row's CURRENT digest. A
+        // mismatch means the document changed between when the caller read it
+        // and this commit -- publishing anyway would bind a summary to a
+        // revision the row no longer has, which the very next read would then
+        // report as `invalidated`. Refuse and name the remedy rather than
+        // publish a summary already dead on arrival.
+        if (sourceRevision !== row.sha256) {
+          throw new Error(
+            `${id} changed since source_revision ${sourceRevision} was read (now ${row.sha256}). ` +
+              `Nothing was written. Run \`/aidlc knowledge show ${id}\` again and summarize the ` +
+              `current revision.`,
+          );
+        }
+
+        row.summary = {
+          state: "generated",
+          path: `documentkb/${row.id}/summary.md`,
+          source_revision: sourceRevision,
+        };
+        row.summary_sha256 = summarySha256;
+        // Tags reach the row through NO second, looser path: `tags` is assigned
+        // straight onto the candidate row, and the very next line
+        // (assertPublishable) runs it through the SAME validateDocumentIndex
+        // call every other writer in this file uses -- the identical S3a
+        // validator that refuses an empty array, an over-cap tag, a duplicate,
+        // a control character, untrimmed whitespace. There is no tags-specific
+        // check here to drift from that contract.
+        if (tags !== undefined) row.tags = tags;
+
+        // VALIDATE THE WHOLE CANDIDATE ROW before anything commits -- the same
+        // ordering invariant onboard/sync publish through (assertPublishable):
+        // a summary (or a tags list) that would fail the schema on its very
+        // next read must publish NOTHING, so this call fails closed rather
+        // than leaving an index a future read refuses.
+        assertPublishable(index);
+
+        // INDEX BEFORE CONTENT, for the identical reason `publishRowContent`'s
+        // own comment gives for content.md: `show` gates the text it serves on
+        // `summaryIsCurrent`, which compares `source_revision` against
+        // `row.sha256` as recorded in index.json. Publishing the index first
+        // means a later summary.md write failure leaves the row's
+        // source_revision moved but the file stale-or-absent, so the digest
+        // check fails closed rather than serving unverified bytes.
+        writeIndex(projectDir, space, index);
+        writeMetadataTo(documentDir(projectDir, space, row.id), row);
+        renameIntoPlace(
+          join(txnDir, "summary.md"),
+          join(documentDir(projectDir, space, row.id), "summary.md"),
         );
-      }
-      if (isTombstoned(row)) {
-        throw new Error(
-          `Document ${id} was removed; a tombstoned document cannot receive a new summary.`,
+
+        appendAuditEntryAtPathUnlocked(
+          "DOCUMENT_UPDATED",
+          {
+            Space: space,
+            Document: row.id,
+            Change: "summarized",
+            Source: row.source.path,
+            Digest: sourceRevision,
+          },
+          projectDir,
+          spaceAuditShardPath(projectDir, space),
         );
-      }
-      // THE re-validation step, mirroring onboard/sync's digest recheck: the
-      // SUPPLIED revision must still match the row's CURRENT digest. A
-      // mismatch means the document changed between when the caller read it
-      // and this commit -- publishing anyway would bind a summary to a
-      // revision the row no longer has, which the very next read would then
-      // report as `invalidated`. Refuse and name the remedy rather than
-      // publish a summary already dead on arrival.
-      if (sourceRevision !== row.sha256) {
-        throw new Error(
-          `${id} changed since source_revision ${sourceRevision} was read (now ${row.sha256}). ` +
-            `Nothing was written. Run \`/aidlc knowledge show ${id}\` again and summarize the ` +
-            `current revision.`,
-        );
-      }
 
-      row.summary = {
-        state: "generated",
-        path: `documentkb/${row.id}/summary.md`,
-        source_revision: sourceRevision,
-      };
-      row.summary_sha256 = summarySha256;
-      // Tags reach the row through NO second, looser path: `tags` is assigned
-      // straight onto the candidate row, and the very next line
-      // (assertPublishable) runs it through the SAME validateDocumentIndex
-      // call every other writer in this file uses -- the identical S3a
-      // validator that refuses an empty array, an over-cap tag, a duplicate,
-      // a control character, untrimmed whitespace. There is no tags-specific
-      // check here to drift from that contract.
-      if (tags !== undefined) row.tags = tags;
-
-      // VALIDATE THE WHOLE CANDIDATE ROW before anything commits -- the same
-      // ordering invariant onboard/sync publish through (assertPublishable):
-      // a summary (or a tags list) that would fail the schema on its very
-      // next read must publish NOTHING, so this call fails closed rather
-      // than leaving an index a future read refuses.
-      assertPublishable(index);
-
-      // INDEX BEFORE CONTENT, for the identical reason `publishRowContent`'s
-      // own comment gives for content.md: `show` gates the text it serves on
-      // `summaryIsCurrent`, which compares `source_revision` against
-      // `row.sha256` as recorded in index.json. Publishing the index first
-      // means a later summary.md write failure leaves the row's
-      // source_revision moved but the file stale-or-absent, so the digest
-      // check fails closed rather than serving unverified bytes.
-      writeIndex(projectDir, space, index);
-      writeMetadataTo(documentDir(projectDir, space, row.id), row);
-      renameIntoPlace(
-        join(txnDir, "summary.md"),
-        join(documentDir(projectDir, space, row.id), "summary.md"),
-      );
-
-      appendAuditEntryAtPathUnlocked(
-        "DOCUMENT_UPDATED",
-        {
-          Space: space,
-          Document: row.id,
-          Change: "summarized",
-          Source: row.source.path,
-          Digest: sourceRevision,
-        },
-        projectDir,
-        spaceAuditShardPath(projectDir, space),
-      );
-
-      return {
-        id: row.id,
-        sha256: summarySha256,
-        source_revision: sourceRevision,
-        chars: Array.from(bounded).length,
-        truncated,
-      };
-    }, undefined, space);
+        return {
+          id: row.id,
+          sha256: summarySha256,
+          source_revision: sourceRevision,
+          chars: Array.from(bounded).length,
+          truncated,
+        };
+      },
+      undefined,
+      space,
+    );
   } finally {
-    try { removeTreeSync(txnDir); } catch { /* best effort; sync's collector sweeps stragglers */ }
+    try {
+      removeTreeSync(txnDir);
+    } catch {
+      /* best effort; sync's collector sweeps stragglers */
+    }
   }
 }
 
@@ -3897,13 +4343,20 @@ export function rebuildIndex(projectDir: string, space: string): DocumentIndex {
       );
     }
     if (seen.has(meta.id)) {
-      throw new Error(`duplicate document id ${meta.id} found while rebuilding the index.`);
+      throw new Error(
+        `duplicate document id ${meta.id} found while rebuilding the index.`,
+      );
     }
     seen.add(meta.id);
 
     // Re-match against the LIVE tree. The stored facts are the starting point,
     // not the answer: a row whose source no longer resolves is reclassified here.
-    const { schema_version: _sv, content_trust: _ct, content_handling: _ch, ...row } = meta;
+    const {
+      schema_version: _sv,
+      content_trust: _ct,
+      content_handling: _ch,
+      ...row
+    } = meta;
     documents.push(row as DocumentRow);
   }
   // A crash residue or hand repair can leave multiple live metadata records for
@@ -3949,7 +4402,8 @@ export function rebuildIndex(projectDir: string, space: string): DocumentIndex {
       const aMatches = currentDigest !== null && a.sha256 === currentDigest;
       const bMatches = currentDigest !== null && b.sha256 === currentDigest;
       if (aMatches !== bMatches) return aMatches ? -1 : 1;
-      if (a.indexed_at !== b.indexed_at) return a.indexed_at > b.indexed_at ? -1 : 1;
+      if (a.indexed_at !== b.indexed_at)
+        return a.indexed_at > b.indexed_at ? -1 : 1;
       return a.id.localeCompare(b.id);
     });
     for (const loser of rows.slice(1)) keepIds.delete(loser.id);
@@ -3992,113 +4446,138 @@ export function rebindDocument(
   assertKnowledgeRootTrusted(projectDir, space);
   const documentsAbs = documentsDir(projectDir, space);
   if (!existsSync(documentsAbs)) {
-    throw new Error(`knowledge/documents/ does not exist, so there is nothing to rebind to.`);
+    throw new Error(
+      `knowledge/documents/ does not exist, so there is nothing to rebind to.`,
+    );
   }
   const documentsReal = realpathSync(documentsAbs);
   const abs = isAbsolute(toPath) ? toPath : resolve(projectDir, toPath);
   if (!existsSync(abs)) throw new Error(`No such path: ${toPath}`);
   const real = realpathSync(abs);
-  const withSep = documentsReal.endsWith(sep) ? documentsReal : documentsReal + sep;
+  const withSep = documentsReal.endsWith(sep)
+    ? documentsReal
+    : documentsReal + sep;
   if (!real.startsWith(withSep)) {
     throw new Error(
       `${toPath} is outside knowledge/documents/. Rebind targets a managed document; ` +
         `copy it under documents/ first.`,
     );
   }
-  return withAuditLock(projectDir, () => {
-    // The target may change while rebind waits for the lock. Resolve and read it
-    // again inside the commit boundary so the published digest describes the
-    // bytes that exist at the moment the catalog changes.
-    assertKnowledgeRootTrusted(projectDir, space);
-    const commitDocumentsReal = realpathSync(documentsDir(projectDir, space));
-    if (!existsSync(abs)) throw new Error(`No such path: ${toPath}`);
-    const commitReal = realpathSync(abs);
-    const commitWithSep = commitDocumentsReal.endsWith(sep)
-      ? commitDocumentsReal
-      : commitDocumentsReal + sep;
-    if (!commitReal.startsWith(commitWithSep)) {
-      throw new Error(`${toPath} moved outside knowledge/documents/ while rebind waited.`);
-    }
-    const buf = readCandidate(commitDocumentsReal, commitReal);
-    const digest = sha256Hex(buf);
-    const nextPath = portableSourcePath(projectDir, space, commitReal);
-    const index = readIndex(projectDir, space);
-    const row = index.documents.find((r) => r.id === id);
-    if (row === undefined) {
-      throw new Error(
-        `No document with id ${id} in this space's DocumentKB. Run ` +
-          `\`/aidlc knowledge list\` to see the catalog.`,
+  return withAuditLock(
+    projectDir,
+    () => {
+      // The target may change while rebind waits for the lock. Resolve and read it
+      // again inside the commit boundary so the published digest describes the
+      // bytes that exist at the moment the catalog changes.
+      assertKnowledgeRootTrusted(projectDir, space);
+      const commitDocumentsReal = realpathSync(documentsDir(projectDir, space));
+      if (!existsSync(abs)) throw new Error(`No such path: ${toPath}`);
+      const commitReal = realpathSync(abs);
+      const commitWithSep = commitDocumentsReal.endsWith(sep)
+        ? commitDocumentsReal
+        : commitDocumentsReal + sep;
+      if (!commitReal.startsWith(commitWithSep)) {
+        throw new Error(
+          `${toPath} moved outside knowledge/documents/ while rebind waited.`,
+        );
+      }
+      const buf = readCandidate(commitDocumentsReal, commitReal);
+      const digest = sha256Hex(buf);
+      const nextPath = portableSourcePath(projectDir, space, commitReal);
+      const index = readIndex(projectDir, space);
+      const row = index.documents.find((r) => r.id === id);
+      if (row === undefined) {
+        throw new Error(
+          `No document with id ${id} in this space's DocumentKB. Run ` +
+            `\`/aidlc knowledge list\` to see the catalog.`,
+        );
+      }
+      // Refuse to point two rows at one file: that would make the second row
+      // unreachable by path and is the collision the write path already refuses.
+      const clash = index.documents.find(
+        (r) => r.id !== id && r.source.path === nextPath,
       );
-    }
-    // Refuse to point two rows at one file: that would make the second row
-    // unreachable by path and is the collision the write path already refuses.
-    const clash = index.documents.find((r) => r.id !== id && r.source.path === nextPath);
-    if (clash !== undefined) {
-      throw new Error(
-        `${nextPath} is already the source of document ${clash.id}. Rebind would give two ` +
-          `rows one file, so nothing was changed.`,
-      );
-    }
-    if (
-      row.source.kind === "managed" &&
-      row.source.path === nextPath &&
-      row.sha256 === digest &&
-      !isTombstoned(row)
-    ) {
+      if (clash !== undefined) {
+        throw new Error(
+          `${nextPath} is already the source of document ${clash.id}. Rebind would give two ` +
+            `rows one file, so nothing was changed.`,
+        );
+      }
+      if (
+        row.source.kind === "managed" &&
+        row.source.path === nextPath &&
+        row.sha256 === digest &&
+        !isTombstoned(row)
+      ) {
+        writeMetadataTo(documentDir(projectDir, space, row.id), row);
+        const auditState = documentAuditState(projectDir, space);
+        const latestRevision = auditState.documents.get(row.id)?.latestRevision;
+        const auditSource = redactProjectDirPrefix(nextPath, projectDir);
+        const hasRebindAudit =
+          latestRevision?.event !== "DOCUMENT_REMOVED" &&
+          latestRevision?.source === auditSource &&
+          latestRevision.digest === digest;
+        if (!hasRebindAudit) {
+          const fields = {
+            Space: space,
+            Document: row.id,
+            Change: "rebound",
+            Source: auditSource,
+            Digest: digest,
+          };
+          appendAuditEntryAtPathUnlocked(
+            "DOCUMENT_UPDATED",
+            fields,
+            projectDir,
+            spaceAuditShardPath(projectDir, space),
+          );
+          applyDocumentAuditEvent(auditState, "DOCUMENT_UPDATED", fields);
+        }
+        ensureDocumentAssociationAudit(projectDir, space, row, auditState);
+        return { id: row.id, from: nextPath, to: nextPath, sha256: digest };
+      }
+      const from = row.source.path;
+      row.source = { kind: "managed", path: nextPath };
+      row.sha256 = digest;
+      row.bytes = buf.length;
+      // The identity SURVIVES: same id, same intents. That is the point -- the
+      // citation history stays attached to the document.
+      //
+      // The old extraction described the old bytes, so it is invalidated rather
+      // than kept: a fresh digest with stale text is the corruption the
+      // revision-binding rule exists to prevent. The next sync re-extracts.
+      row.extraction = { state: "invalidated", source_revision: digest };
+      delete row.content;
+      delete row.content_sha256;
+      try {
+        removeTreeSync(
+          join(documentDir(projectDir, space, row.id), "content.md"),
+        );
+      } catch {
+        /* absent */
+      }
+      delete row.removed_at; // a rebind un-tombstones: the document is back
+      row.indexed_at = now;
+
+      writeIndex(projectDir, space, index);
       writeMetadataTo(documentDir(projectDir, space, row.id), row);
-      const auditState = documentAuditState(projectDir, space);
-      const latestRevision = auditState.documents.get(row.id)?.latestRevision;
-      const auditSource = redactProjectDirPrefix(nextPath, projectDir);
-      const hasRebindAudit = latestRevision?.event !== "DOCUMENT_REMOVED" &&
-        latestRevision?.source === auditSource && latestRevision.digest === digest;
-      if (!hasRebindAudit) {
-        const fields = {
+      appendAuditEntryAtPathUnlocked(
+        "DOCUMENT_UPDATED",
+        {
           Space: space,
           Document: row.id,
           Change: "rebound",
-          Source: auditSource,
+          Source: nextPath,
           Digest: digest,
-        };
-        appendAuditEntryAtPathUnlocked(
-          "DOCUMENT_UPDATED",
-          fields,
-          projectDir,
-          spaceAuditShardPath(projectDir, space),
-        );
-        applyDocumentAuditEvent(auditState, "DOCUMENT_UPDATED", fields);
-      }
-      ensureDocumentAssociationAudit(projectDir, space, row, auditState);
-      return { id: row.id, from: nextPath, to: nextPath, sha256: digest };
-    }
-    const from = row.source.path;
-    row.source = { kind: "managed", path: nextPath };
-    row.sha256 = digest;
-    row.bytes = buf.length;
-    // The identity SURVIVES: same id, same intents. That is the point -- the
-    // citation history stays attached to the document.
-    //
-    // The old extraction described the old bytes, so it is invalidated rather
-    // than kept: a fresh digest with stale text is the corruption the
-    // revision-binding rule exists to prevent. The next sync re-extracts.
-    row.extraction = { state: "invalidated", source_revision: digest };
-    delete row.content;
-    delete row.content_sha256;
-    try {
-      removeTreeSync(join(documentDir(projectDir, space, row.id), "content.md"));
-    } catch { /* absent */ }
-    delete row.removed_at; // a rebind un-tombstones: the document is back
-    row.indexed_at = now;
-
-    writeIndex(projectDir, space, index);
-    writeMetadataTo(documentDir(projectDir, space, row.id), row);
-    appendAuditEntryAtPathUnlocked(
-      "DOCUMENT_UPDATED",
-      { Space: space, Document: row.id, Change: "rebound", Source: nextPath, Digest: digest },
-      projectDir,
-      spaceAuditShardPath(projectDir, space),
-    );
-    return { id: row.id, from, to: nextPath, sha256: digest };
-  }, undefined, space);
+        },
+        projectDir,
+        spaceAuditShardPath(projectDir, space),
+      );
+      return { id: row.id, from, to: nextPath, sha256: digest };
+    },
+    undefined,
+    space,
+  );
 }
 
 // --- CLI ---------------------------------------------------------------------
@@ -4136,16 +4615,23 @@ function parseFlags(
       // the empty string. `--intent --json` must not swallow `--json`.
       const next = args[i + 1];
       if (next === undefined || next.startsWith("--")) intent = "";
-      else { intent = next; i++; }
+      else {
+        intent = next;
+        i++;
+      }
     } else if (a === "--json") {
       json = true;
     } else if (a === "--allow-inactive") {
       allowInactive = true;
     } else if (
-      a === "--to" || a === "--text-file" || a === "--source-revision" || a === "--tags"
+      a === "--to" ||
+      a === "--text-file" ||
+      a === "--source-revision" ||
+      a === "--tags"
     ) {
       if (!allowedValueFlags.has(a)) throw new Error(`Unknown flag: ${a}`);
-      if (values[a] !== undefined) throw new Error(`${a} may be specified only once`);
+      if (values[a] !== undefined)
+        throw new Error(`${a} may be specified only once`);
       const next = args[i + 1];
       if (next === undefined || next.startsWith("--")) {
         throw new Error(`${a} requires a non-flag value`);
@@ -4174,7 +4660,12 @@ export function main(argv: string[]): void {
   try {
     switch (subcommand) {
       case "onboard": {
-        const { space: spaceFlag, intent, allowInactive, positional } = parseFlags(args.slice(1));
+        const {
+          space: spaceFlag,
+          intent,
+          allowInactive,
+          positional,
+        } = parseFlags(args.slice(1));
         const pd = resolveProjectDir(projectDir);
         const space = resolveSpaceFlag(spaceFlag, pd);
         assertKnowledgeRootTrusted(pd, space);
@@ -4182,7 +4673,11 @@ export function main(argv: string[]): void {
         // holding a lock across a failure path serialises the workspace for nothing.
         const resolved = resolveIntentFlag(pd, space, intent, allowInactive);
         const result = onboard(
-          pd, space, positional[0], new Date().toISOString(), resolved?.uuid,
+          pd,
+          space,
+          positional[0],
+          new Date().toISOString(),
+          resolved?.uuid,
         );
         if (result.refused) {
           error(`Refused ${result.refused.path}: ${result.refused.reason}`);
@@ -4203,7 +4698,11 @@ export function main(argv: string[]): void {
         break;
       }
       case "show": {
-        const { space: spaceFlag, json, positional } = parseFlags(args.slice(1));
+        const {
+          space: spaceFlag,
+          json,
+          positional,
+        } = parseFlags(args.slice(1));
         if (positional[0] === undefined) error("show requires a document id.");
         const pd = resolveProjectDir(projectDir);
         const space = resolveSpaceFlag(spaceFlag, pd);
@@ -4234,9 +4733,14 @@ export function main(argv: string[]): void {
         break;
       }
       case "rebind": {
-        const { space: spaceFlag, json, positional, values } =
-          parseFlags(args.slice(1), ["--to"]);
-        if (positional[0] === undefined) error("rebind requires a document id.");
+        const {
+          space: spaceFlag,
+          json,
+          positional,
+          values,
+        } = parseFlags(args.slice(1), ["--to"]);
+        if (positional[0] === undefined)
+          error("rebind requires a document id.");
         if (values["--to"] === undefined) {
           error("rebind requires --to <path>.");
         }
@@ -4244,18 +4748,33 @@ export function main(argv: string[]): void {
         const space = resolveSpaceFlag(spaceFlag, pd);
         assertKnowledgeRootTrusted(pd, space);
         const out = rebindDocument(
-          pd, space, positional[0], values["--to"], new Date().toISOString(),
+          pd,
+          space,
+          positional[0],
+          values["--to"],
+          new Date().toISOString(),
         );
         if (json) emitJson(out as unknown as Record<string, unknown>);
         else emitHuman(`rebound ${out.id}: ${out.from} -> ${out.to}\n`);
         break;
       }
       case "summarize": {
-        const { space: spaceFlag, json, positional, values } =
-          parseFlags(args.slice(1), ["--text-file", "--source-revision", "--tags"]);
-        if (positional[0] === undefined) error("summarize requires a document id.");
+        const {
+          space: spaceFlag,
+          json,
+          positional,
+          values,
+        } = parseFlags(args.slice(1), [
+          "--text-file",
+          "--source-revision",
+          "--tags",
+        ]);
+        if (positional[0] === undefined)
+          error("summarize requires a document id.");
         if (values["--text-file"] === undefined) {
-          error("summarize requires --text-file <path> (the LLM-authored summary text).");
+          error(
+            "summarize requires --text-file <path> (the LLM-authored summary text).",
+          );
         }
         if (values["--source-revision"] === undefined) {
           error(
@@ -4283,11 +4802,17 @@ export function main(argv: string[]): void {
         // (aidlc-log.ts). Passed straight through to summarizeDocument, which
         // routes it through the SAME validateDocumentIndex call every other
         // write in this file uses -- no separate tag-shape check here.
-        const tags = values["--tags"] !== undefined
-          ? values["--tags"].split(",")
-          : undefined;
+        const tags =
+          values["--tags"] !== undefined
+            ? values["--tags"].split(",")
+            : undefined;
         const out = summarizeDocument(
-          pd, space, positional[0], textBuf.toString("utf-8"), values["--source-revision"], tags,
+          pd,
+          space,
+          positional[0],
+          textBuf.toString("utf-8"),
+          values["--source-revision"],
+          tags,
         );
         if (json) emitJson(out as unknown as Record<string, unknown>);
         else {
@@ -4300,19 +4825,37 @@ export function main(argv: string[]): void {
       }
       case "associate":
       case "dissociate": {
-        const { space: spaceFlag, intent, json, allowInactive, positional } = parseFlags(args.slice(1));
-        if (positional[0] === undefined) error(`${subcommand} requires a document id.`);
-        if (intent === undefined) error(`${subcommand} requires --intent [slug].`);
+        const {
+          space: spaceFlag,
+          intent,
+          json,
+          allowInactive,
+          positional,
+        } = parseFlags(args.slice(1));
+        if (positional[0] === undefined)
+          error(`${subcommand} requires a document id.`);
+        if (intent === undefined)
+          error(`${subcommand} requires --intent [slug].`);
         const pd = resolveProjectDir(projectDir);
         const space = resolveSpaceFlag(spaceFlag, pd);
         assertKnowledgeRootTrusted(pd, space);
         // `dissociate` deliberately resolves with allowInactive FORCED ON: removing
         // a scope from a finished intent is a cleanup, and refusing it would strand
         // the association with no way to undo it.
-        const resolved = resolveIntentFlag(pd, space, intent, allowInactive || subcommand === "dissociate");
-        if (resolved === null) error(`${subcommand} requires a resolvable intent.`);
+        const resolved = resolveIntentFlag(
+          pd,
+          space,
+          intent,
+          allowInactive || subcommand === "dissociate",
+        );
+        if (resolved === null)
+          error(`${subcommand} requires a resolvable intent.`);
         const outcome = setIntentAssociation(
-          pd, space, positional[0], resolved.uuid, subcommand,
+          pd,
+          space,
+          positional[0],
+          resolved.uuid,
+          subcommand,
         );
         if (json) emitJson(outcome as unknown as Record<string, unknown>);
         else {

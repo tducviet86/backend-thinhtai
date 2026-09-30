@@ -120,7 +120,15 @@
 // open is the only safe failure mode for a hook that can otherwise trap a turn.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   ActiveDirectiveLockContendedError,
@@ -193,7 +201,8 @@ function blockCap(stateContent: string): number {
 
 // The mode-aware default cap (used when no env override is set).
 function defaultBlockCap(stateContent: string): number {
-  return getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous"
+  return getField(stateContent, "Construction Autonomy Mode")?.trim() ===
+    "autonomous"
     ? AUTONOMOUS_BLOCK_CAP
     : INTERACTIVE_BLOCK_CAP;
 }
@@ -253,13 +262,18 @@ function guardFilePath(projectDir: string): string {
 // returns "" when the field is absent. Matches `**Current Stage**:`, with or
 // without the bold markers / backticks, exactly as before.
 function currentStageSlug(stateContent: string): string {
-  const stageMatch = stateContent.match(/Current Stage\*{0,2}:?\s*`?([^\n`]*)`?/);
+  const stageMatch = stateContent.match(
+    /Current Stage\*{0,2}:?\s*`?([^\n`]*)`?/,
+  );
   return (stageMatch?.[1] ?? "").trim();
 }
 
 // The current workflow position signature. It changes when workflow state or
 // the pending directive advances, while ignoring unrelated audit-only traffic.
-function progressSignature(stateContent: string, directive: EngineDirective): string {
+function progressSignature(
+  stateContent: string,
+  directive: EngineDirective,
+): string {
   const stage = currentStageSlug(stateContent);
   // The same projection the engine binds a directive to, so "did the workflow
   // advance?" and "is the issued directive still current?" cannot disagree. This
@@ -275,7 +289,9 @@ function progressSignature(stateContent: string, directive: EngineDirective): st
         part: directive.part ?? null,
         parts: directive.parts ?? null,
         continue_token_sha256: directive.continueToken
-          ? createHash("sha256").update(directive.continueToken, "utf-8").digest("hex")
+          ? createHash("sha256")
+              .update(directive.continueToken, "utf-8")
+              .digest("hex")
           : "",
         rules_content_sha256: directive.rulesContent
           ? createHash("sha256")
@@ -398,7 +414,11 @@ function resetGuard(projectDir: string): void {
   try {
     const dir = stopHookDir(projectDir);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(guardFilePath(projectDir), JSON.stringify({ signature: "", count: 0 }), "utf-8");
+    writeFileSync(
+      guardFilePath(projectDir),
+      JSON.stringify({ signature: "", count: 0 }),
+      "utf-8",
+    );
   } catch {
     // Non-fatal — a stale streak only ever makes us release SOONER, never trap.
   }
@@ -447,11 +467,7 @@ function isHumanWaitStop(
   activeUnit?: string,
 ): boolean {
   try {
-    if (
-      isTeamUnitOwnership(stateContent) &&
-      activeStage &&
-      activeUnit
-    ) {
+    if (isTeamUnitOwnership(stateContent) && activeStage && activeUnit) {
       const status = unitGateStatus(
         projectDir,
         activeStage,
@@ -563,7 +579,8 @@ function isPendingQuestionStop(
       phase.trim().toLowerCase() === "construction" &&
       getField(stateContent, "Construction Iteration")?.trim() === "unit-major";
     if (
-      getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous" &&
+      getField(stateContent, "Construction Autonomy Mode")?.trim() ===
+        "autonomous" &&
       !unitMajorCodeGeneration
     ) {
       return false; // autonomy guard — keep the loop alive
@@ -586,7 +603,8 @@ function isPendingQuestionStop(
       phase,
       unit,
       unitMajorCodeGeneration &&
-        getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous",
+        getField(stateContent, "Construction Autonomy Mode")?.trim() ===
+          "autonomous",
     );
   } catch {
     // Unparseable / odd content — fall through to decideBlock (never trap).
@@ -606,7 +624,10 @@ function isPendingDecisionStop(
   activeUnit?: string,
 ): boolean {
   try {
-    if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
+    if (
+      getField(stateContent, "Construction Autonomy Mode")?.trim() ===
+      "autonomous"
+    ) {
       return false;
     }
     const currentSlug = currentStageSlug(stateContent);
@@ -616,7 +637,7 @@ function isPendingDecisionStop(
       activeUnit !== undefined &&
       getField(stateContent, "Construction Iteration")?.trim() === "unit-major";
     const slug = teamUnitMajorDirective
-      ? (activeStage?.trim() || currentSlug)
+      ? activeStage?.trim() || currentSlug
       : currentSlug;
     if (slug.length === 0) return false;
     if (!teamUnitMajorDirective) {
@@ -663,9 +684,15 @@ function isPendingDecisionStop(
 // AND best-effort deleted here (the janitor), so the next turn starts clean.
 // The delete is wrapped so a failure to unlink never changes the stop decision.
 // The path spelling and the TTL are shared with the doctor probe via aidlc-lib.
-function isPendingComposeStop(projectDir: string, stateContent: string): boolean {
+function isPendingComposeStop(
+  projectDir: string,
+  stateContent: string,
+): boolean {
   try {
-    if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
+    if (
+      getField(stateContent, "Construction Autonomy Mode")?.trim() ===
+      "autonomous"
+    ) {
       return false; // autonomy guard - keep the loop alive
     }
     const marker = composeMarkerPath(projectDir);
@@ -712,7 +739,10 @@ function isPendingSubagentStop(
   sessionId: unknown,
 ): boolean {
   try {
-    if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
+    if (
+      getField(stateContent, "Construction Autonomy Mode")?.trim() ===
+      "autonomous"
+    ) {
       return false; // autonomy guard - keep the loop alive
     }
     const match = matchSubagentInflight(projectDir, sessionId);
@@ -788,7 +818,10 @@ function isInjectedHookFeedback(text: string): boolean {
 // both delivered formats; returns true ONLY with positive evidence. `format`
 // distinguishes Claude's message-shaped JSONL from Codex's {type,payload}
 // rollout. Fail-closed on every miss.
-function transcriptIsConversational(transcriptPath: string, format: "claude" | "codex"): boolean {
+function transcriptIsConversational(
+  transcriptPath: string,
+  format: "claude" | "codex",
+): boolean {
   let raw: string;
   try {
     raw = readFileSync(transcriptPath, "utf-8");
@@ -822,7 +855,11 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
       call: { id: normalizedId, name, input: engineCall ? input : undefined },
     });
   };
-  const recordResult = (id: unknown, output: unknown, failed: unknown): void => {
+  const recordResult = (
+    id: unknown,
+    output: unknown,
+    failed: unknown,
+  ): void => {
     const normalizedId = callId(id);
     turns.push({
       role: "assistant",
@@ -831,7 +868,10 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
       result: {
         id: normalizedId,
         // Do not retain large Read/Task outputs or results preceding their call.
-        output: normalizedId !== null && engineCallIds.has(normalizedId) ? output : undefined,
+        output:
+          normalizedId !== null && engineCallIds.has(normalizedId)
+            ? output
+            : undefined,
         failed: failed !== undefined && failed !== false,
       },
     });
@@ -866,7 +906,9 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
         if (entry.isMeta === true) continue;
         const isToolResult =
           Array.isArray(content) &&
-          content.some((x) => (x as Record<string, unknown>)?.type === "tool_result");
+          content.some(
+            (x) => (x as Record<string, unknown>)?.type === "tool_result",
+          );
         if (isToolResult) {
           for (const block of content) {
             const result = block as Record<string, unknown>;
@@ -894,9 +936,16 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
         const isHuman =
           typeof content === "string" ||
           (Array.isArray(content) &&
-            content.some((x) => (x as Record<string, unknown>)?.type === "text"));
-        if (isHuman) turns.push({ role: "user", engineCall: false, humanPrompt: true });
-      } else if (type === "assistant" && role === "assistant" && Array.isArray(content)) {
+            content.some(
+              (x) => (x as Record<string, unknown>)?.type === "text",
+            ));
+        if (isHuman)
+          turns.push({ role: "user", engineCall: false, humanPrompt: true });
+      } else if (
+        type === "assistant" &&
+        role === "assistant" &&
+        Array.isArray(content)
+      ) {
         let hasToolCall = false;
         for (const block of content) {
           const b = block as Record<string, unknown>;
@@ -906,7 +955,11 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
           }
         }
         if (!hasToolCall) {
-          turns.push({ role: "assistant", engineCall: false, humanPrompt: false });
+          turns.push({
+            role: "assistant",
+            engineCall: false,
+            humanPrompt: false,
+          });
         }
       }
     } else {
@@ -928,7 +981,9 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
               ? content
                   .map((x) => {
                     const b = x as Record<string, unknown>;
-                    return b?.type === "input_text" || b?.type === "text" ? String(b.text ?? "") : "";
+                    return b?.type === "input_text" || b?.type === "text"
+                      ? String(b.text ?? "")
+                      : "";
                   })
                   .join("")
               : "";
@@ -940,18 +995,28 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
               const t = (x as Record<string, unknown>)?.type;
               return t === "input_text" || t === "text";
             }));
-        if (isHuman) turns.push({ role: "user", engineCall: false, humanPrompt: true });
+        if (isHuman)
+          turns.push({ role: "user", engineCall: false, humanPrompt: true });
       } else if (ptype === "message" && payload.role === "assistant") {
-        turns.push({ role: "assistant", engineCall: false, humanPrompt: false });
+        turns.push({
+          role: "assistant",
+          engineCall: false,
+          humanPrompt: false,
+        });
       } else if (ptype === "function_call" || ptype === "local_shell_call") {
-        const name = String(payload.name ?? (ptype === "local_shell_call" ? "Shell" : ""));
+        const name = String(
+          payload.name ?? (ptype === "local_shell_call" ? "Shell" : ""),
+        );
         const args = payload.arguments ?? payload.action ?? {};
         // function_call arguments are a JSON string on Codex; parse leniently.
         let parsedArgs: Record<string, unknown> = {};
         if (typeof args === "string") {
           try {
             const j = JSON.parse(args);
-            parsedArgs = j !== null && typeof j === "object" ? (j as Record<string, unknown>) : { command: args };
+            parsedArgs =
+              j !== null && typeof j === "object"
+                ? (j as Record<string, unknown>)
+                : { command: args };
           } catch {
             parsedArgs = { command: args };
           }
@@ -964,11 +1029,16 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
         // exemption (--status etc.) consistent across both transcript formats,
         // rather than a loose regex that would re-flag a read-only query.
         if (typeof parsedArgs.command !== "string") {
-          parsedArgs = { ...parsedArgs, command: typeof args === "string" ? args : JSON.stringify(args) };
+          parsedArgs = {
+            ...parsedArgs,
+            command: typeof args === "string" ? args : JSON.stringify(args),
+          };
         }
         recordCall(
           payload.call_id,
-          /^(bash|shell|execute_bash|local_shell_call)$/i.test(name) ? "Bash" : name,
+          /^(bash|shell|execute_bash|local_shell_call)$/i.test(name)
+            ? "Bash"
+            : name,
           parsedArgs,
         );
       } else if (ptype === "function_call_output") {
@@ -1018,7 +1088,8 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
       if (results?.length === 1 && results[0] > i) {
         const result = turns[results[0]].result;
         if (
-          result && !result.failed &&
+          result &&
+          !result.failed &&
           !isEngineToolCall(call.name, call.input, result.output)
         ) {
           continue;
@@ -1067,10 +1138,18 @@ function isConversationalStop(
   copilotSession = "",
 ): boolean {
   try {
-    if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
+    if (
+      getField(stateContent, "Construction Autonomy Mode")?.trim() ===
+      "autonomous"
+    ) {
       return false; // autonomy guard: keep the loop alive
     }
-    if (copilotSession) return consumeCopilotConversation(projectDir, stateContent, copilotSession);
+    if (copilotSession)
+      return consumeCopilotConversation(
+        projectDir,
+        stateContent,
+        copilotSession,
+      );
     if (transcriptPath === null || transcriptPath.length === 0) {
       // No transcript delivered — fall back to the marker mtimes.
       return turnMarkersShowConversational(projectDir);
@@ -1110,7 +1189,12 @@ function runEngineNextDirective(
   projectDir: string,
   sessionId: string,
 ): EngineDirective | null {
-  const enginePath = join(projectDir, harnessDir(), "tools", "aidlc-orchestrate.ts");
+  const enginePath = join(
+    projectDir,
+    harnessDir(),
+    "tools",
+    "aidlc-orchestrate.ts",
+  );
   if (!existsSync(enginePath)) return null;
   // The spawn MUST be time-bounded. Without a timeout a hung `next` (an engine
   // that never returns) would hang this hook for the whole turn — a session
@@ -1128,13 +1212,7 @@ function runEngineNextDirective(
   // forever: tier 3 would look implemented and never fire. markEngineTouch() is a
   // no-op when it sees this env var (aidlc-lib.ts).
   const proc = Bun.spawnSync({
-    cmd: [
-      "bun",
-      enginePath,
-      "next",
-      "--project-dir",
-      projectDir,
-    ],
+    cmd: ["bun", enginePath, "next", "--project-dir", projectDir],
     stdout: "pipe",
     stderr: "pipe",
     timeout: ENGINE_TIMEOUT_MS,
@@ -1155,16 +1233,19 @@ function runEngineNextDirective(
     ) {
       const kind = (parsed as { kind: string }).kind;
       const stage =
-        "stage" in parsed && typeof (parsed as { stage?: unknown }).stage === "string"
+        "stage" in parsed &&
+        typeof (parsed as { stage?: unknown }).stage === "string"
           ? (parsed as { stage: string }).stage.trim()
           : "";
       const unit =
-        "unit" in parsed && typeof (parsed as { unit?: unknown }).unit === "string"
+        "unit" in parsed &&
+        typeof (parsed as { unit?: unknown }).unit === "string"
           ? (parsed as { unit: string }).unit.trim()
           : "";
       const continueToken =
         "continue_token" in parsed &&
-          typeof (parsed as { continue_token?: unknown }).continue_token === "string"
+        typeof (parsed as { continue_token?: unknown }).continue_token ===
+          "string"
           ? (parsed as { continue_token: string }).continue_token.trim()
           : "";
       const part =
@@ -1179,36 +1260,43 @@ function runEngineNextDirective(
         Number.isInteger((parsed as { parts: number }).parts)
           ? (parsed as { parts: number }).parts
           : undefined;
-      const rawUnits = "units" in parsed ? (parsed as { units?: unknown }).units : undefined;
+      const rawUnits =
+        "units" in parsed ? (parsed as { units?: unknown }).units : undefined;
       const units =
-        Array.isArray(rawUnits) && rawUnits.every((entry) => typeof entry === "string")
-          ? rawUnits.map((entry) => entry.trim()).filter((entry) => entry.length > 0)
+        Array.isArray(rawUnits) &&
+        rawUnits.every((entry) => typeof entry === "string")
+          ? rawUnits
+              .map((entry) => entry.trim())
+              .filter((entry) => entry.length > 0)
           : undefined;
       const worker =
-        "worker" in parsed && typeof (parsed as { worker?: unknown }).worker === "string"
+        "worker" in parsed &&
+        typeof (parsed as { worker?: unknown }).worker === "string"
           ? (parsed as { worker: string }).worker.trim()
           : "";
       const repo =
-        "repo" in parsed && typeof (parsed as { repo?: unknown }).repo === "string"
+        "repo" in parsed &&
+        typeof (parsed as { repo?: unknown }).repo === "string"
           ? (parsed as { repo: string }).repo.trim()
           : "";
-      const wave = "wave" in parsed ? (parsed as { wave?: unknown }).wave : undefined;
+      const wave =
+        "wave" in parsed ? (parsed as { wave?: unknown }).wave : undefined;
       const rawRulesContent =
         "rules_content" in parsed
           ? (parsed as { rules_content?: unknown }).rules_content
           : undefined;
       const rulesContent =
         Array.isArray(rawRulesContent) &&
-          rawRulesContent.every(
-            (entry) =>
-              entry !== null &&
-              typeof entry === "object" &&
-              "path" in entry &&
-              typeof (entry as { path?: unknown }).path === "string" &&
-              "text" in entry &&
-              typeof (entry as { text?: unknown }).text === "string",
-          )
-          ? rawRulesContent as Array<{ path: string; text: string }>
+        rawRulesContent.every(
+          (entry) =>
+            entry !== null &&
+            typeof entry === "object" &&
+            "path" in entry &&
+            typeof (entry as { path?: unknown }).path === "string" &&
+            "text" in entry &&
+            typeof (entry as { text?: unknown }).text === "string",
+        )
+          ? (rawRulesContent as Array<{ path: string; text: string }>)
           : undefined;
       return {
         kind,
@@ -1283,397 +1371,457 @@ function continuationReason(
 // --- Main ---------------------------------------------------------------------
 
 export async function run(input: string): Promise<number> {
-const projectDir = resolveProjectDirFromHook(import.meta.url);
-let earlySessionId = "";
-let earlyRawSessionId: unknown;
-try {
-  const early = JSON.parse(input) as { session_id?: unknown };
-  earlyRawSessionId = early.session_id;
-  if (typeof early.session_id === "string") {
-    earlySessionId = validSessionId(early.session_id) ?? "";
-  }
-} catch {
-  /* malformed input remains fail-open */
-}
-
-// Write a health heartbeat (mirrors the other hooks' .aidlc-engine/hooks-health beat).
-try {
-  const healthDir = hooksHealthDir(projectDir);
-  mkdirSync(healthDir, { recursive: true });
-  writeFileSync(join(healthDir, "continue-workflow.last"), isoTimestamp(), "utf-8");
-} catch {
-  // Heartbeat failure is non-fatal — never let it affect the stop decision.
-}
-
-// Mirror the SubagentStop hook's stdin idiom: a TTY means no Claude Code JSON
-// is coming (test/debug contexts) — allow the stop rather than block on a
-// terminal read.
-if (process.stdin.isTTY) return allowStop();
-
-// No-op outside AIDLC: if there is no workflow state file under the project dir,
-// there is nothing to enforce — allow the stop. Defends the frontmatter scoping.
-const selection = resolveWorkflowSelection(projectDir, {
-  sessionId: earlySessionId || undefined,
-});
-const statePath = stateFilePathForSelection(projectDir, selection);
-if (!existsSync(statePath)) return allowStop();
-
-let stateContent: string;
-try {
-  stateContent = readFileSync(statePath, "utf-8");
-} catch (e) {
-  // Unreadable state — fail open (never trap) and record the drop.
-  recordHookDrop(projectDir, HOOK_NAME, errorMessage(e));
-  return allowStop();
-}
-
-// Parse the Stop-hook input. Garbage / empty stdin must NOT crash and must NOT
-// trap the turn (fail open). We read `stop_hook_active` (the recursion bound)
-// and `transcript_path` (the conversational carve-out, tier 3). Claude and Codex
-// both deliver `transcript_path`; Kiro and opencode deliver neither, so
-// transcriptPath stays null there and the carve-out reads the turn-shape markers
-// instead (see isConversationalStop).
-let stopHookActive = false;
-let transcriptPath: string | null = null;
-// The conversation id Claude Code stamps on Stop input - used to key the
-// session-scoped `<sessionId>.transcript` pointer written below. "" when absent
-// (a TTY/empty invocation or a host that omits it); writeCurrentTranscriptPath
-// still writes the unscoped `current.transcript` fallback in that case.
-let sessionId = earlySessionId;
-let rawSessionId = earlyRawSessionId;
-// Transcript format: Codex's rollout JSONL lives under a `.../sessions/<date>/
-// rollout-*.jsonl` path and uses a {type,payload} shape; Claude's is message-
-// shaped JSONL. Default to Claude; switch to Codex when the path looks like a
-// Codex rollout. (Both readers fail-closed, so a misclassification can only ever
-// return false and fall through to the cap, never a false allow.)
-let transcriptFormat: "claude" | "codex" = "claude";
-try {
-  const raw: unknown = JSON.parse(input);
-  if (raw !== null && typeof raw === "object") {
-    const obj = raw as Record<string, unknown>;
-    if ("stop_hook_active" in obj) stopHookActive = obj.stop_hook_active === true;
-    if ("session_id" in obj) rawSessionId = obj.session_id;
-    if (typeof obj.session_id === "string") {
-      sessionId = validSessionId(obj.session_id) ?? "";
+  const projectDir = resolveProjectDirFromHook(import.meta.url);
+  let earlySessionId = "";
+  let earlyRawSessionId: unknown;
+  try {
+    const early = JSON.parse(input) as { session_id?: unknown };
+    earlyRawSessionId = early.session_id;
+    if (typeof early.session_id === "string") {
+      earlySessionId = validSessionId(early.session_id) ?? "";
     }
-    if (typeof obj.transcript_path === "string" && obj.transcript_path.length > 0) {
-      transcriptPath = obj.transcript_path;
-      if (/[/\\]rollout-[^/\\]*\.jsonl$/.test(transcriptPath)) transcriptFormat = "codex";
+  } catch {
+    /* malformed input remains fail-open */
+  }
+
+  // Write a health heartbeat (mirrors the other hooks' .aidlc-engine/hooks-health beat).
+  try {
+    const healthDir = hooksHealthDir(projectDir);
+    mkdirSync(healthDir, { recursive: true });
+    writeFileSync(
+      join(healthDir, "continue-workflow.last"),
+      isoTimestamp(),
+      "utf-8",
+    );
+  } catch {
+    // Heartbeat failure is non-fatal — never let it affect the stop decision.
+  }
+
+  // Mirror the SubagentStop hook's stdin idiom: a TTY means no Claude Code JSON
+  // is coming (test/debug contexts) — allow the stop rather than block on a
+  // terminal read.
+  if (process.stdin.isTTY) return allowStop();
+
+  // No-op outside AIDLC: if there is no workflow state file under the project dir,
+  // there is nothing to enforce — allow the stop. Defends the frontmatter scoping.
+  const selection = resolveWorkflowSelection(projectDir, {
+    sessionId: earlySessionId || undefined,
+  });
+  const statePath = stateFilePathForSelection(projectDir, selection);
+  if (!existsSync(statePath)) return allowStop();
+
+  let stateContent: string;
+  try {
+    stateContent = readFileSync(statePath, "utf-8");
+  } catch (e) {
+    // Unreadable state — fail open (never trap) and record the drop.
+    recordHookDrop(projectDir, HOOK_NAME, errorMessage(e));
+    return allowStop();
+  }
+
+  // Parse the Stop-hook input. Garbage / empty stdin must NOT crash and must NOT
+  // trap the turn (fail open). We read `stop_hook_active` (the recursion bound)
+  // and `transcript_path` (the conversational carve-out, tier 3). Claude and Codex
+  // both deliver `transcript_path`; Kiro and opencode deliver neither, so
+  // transcriptPath stays null there and the carve-out reads the turn-shape markers
+  // instead (see isConversationalStop).
+  let stopHookActive = false;
+  let transcriptPath: string | null = null;
+  // The conversation id Claude Code stamps on Stop input - used to key the
+  // session-scoped `<sessionId>.transcript` pointer written below. "" when absent
+  // (a TTY/empty invocation or a host that omits it); writeCurrentTranscriptPath
+  // still writes the unscoped `current.transcript` fallback in that case.
+  let sessionId = earlySessionId;
+  let rawSessionId = earlyRawSessionId;
+  // Transcript format: Codex's rollout JSONL lives under a `.../sessions/<date>/
+  // rollout-*.jsonl` path and uses a {type,payload} shape; Claude's is message-
+  // shaped JSONL. Default to Claude; switch to Codex when the path looks like a
+  // Codex rollout. (Both readers fail-closed, so a misclassification can only ever
+  // return false and fall through to the cap, never a false allow.)
+  let transcriptFormat: "claude" | "codex" = "claude";
+  try {
+    const raw: unknown = JSON.parse(input);
+    if (raw !== null && typeof raw === "object") {
+      const obj = raw as Record<string, unknown>;
+      if ("stop_hook_active" in obj)
+        stopHookActive = obj.stop_hook_active === true;
+      if ("session_id" in obj) rawSessionId = obj.session_id;
+      if (typeof obj.session_id === "string") {
+        sessionId = validSessionId(obj.session_id) ?? "";
+      }
+      if (
+        typeof obj.transcript_path === "string" &&
+        obj.transcript_path.length > 0
+      ) {
+        transcriptPath = obj.transcript_path;
+        if (/[/\\]rollout-[^/\\]*\.jsonl$/.test(transcriptPath))
+          transcriptFormat = "codex";
+      }
+    }
+  } catch {
+    // Malformed JSON (or empty): proceed with stopHookActive=false and no
+    // transcript. The engine read below still governs whether work is pending; the
+    // counter still bounds any block. We never crash on bad input.
+  }
+
+  // A confirmed second intent deliberately moves the shared cursor before this
+  // old conversation ends. The PostToolUse hook writes an exact per-session
+  // receipt for that transition. Allow only when the receipt is fresh, the
+  // session now owns the created intent. The shared cursor is intentionally not
+  // evidence here: another session may move it before this Stop event.
+  if (sessionId) {
+    const handoff = readSessionIntentHandoff(projectDir, sessionId);
+    if (handoff) {
+      const now = Date.now();
+      const fresh =
+        handoff.issuedAtMs <= now &&
+        now - handoff.issuedAtMs <= SESSION_INTENT_HANDOFF_TTL_MS;
+      const target = findIntentByUuid(projectDir, handoff.toIntentUuid);
+      const exactBoundary =
+        fresh &&
+        readSessionIntentUuid(projectDir, sessionId) === handoff.toIntentUuid &&
+        target !== null &&
+        selection.space === target.space &&
+        selection.intent === target.dirName;
+      if (exactBoundary) {
+        clearSessionIntentHandoff(projectDir, sessionId);
+        resetGuard(projectDir);
+        recordHookDrop(
+          projectDir,
+          HOOK_NAME,
+          "allowing stop at the exact post-create fresh-session handoff boundary",
+        );
+        return allowStop();
+      }
+      if (!fresh) clearSessionIntentHandoff(projectDir, sessionId);
     }
   }
-} catch {
-  // Malformed JSON (or empty): proceed with stopHookActive=false and no
-  // transcript. The engine read below still governs whether work is pending; the
-  // counter still bounds any block. We never crash on bad input.
-}
 
-// A confirmed second intent deliberately moves the shared cursor before this
-// old conversation ends. The PostToolUse hook writes an exact per-session
-// receipt for that transition. Allow only when the receipt is fresh, the
-// session now owns the created intent. The shared cursor is intentionally not
-// evidence here: another session may move it before this Stop event.
-if (sessionId) {
-  const handoff = readSessionIntentHandoff(projectDir, sessionId);
-  if (handoff) {
-    const now = Date.now();
-    const fresh =
-      handoff.issuedAtMs <= now &&
-      now - handoff.issuedAtMs <= SESSION_INTENT_HANDOFF_TTL_MS;
-    const target = findIntentByUuid(projectDir, handoff.toIntentUuid);
-    const exactBoundary =
-      fresh &&
-      readSessionIntentUuid(projectDir, sessionId) === handoff.toIntentUuid &&
-      target !== null &&
-      selection.space === target.space &&
-      selection.intent === target.dirName;
-    if (exactBoundary) {
-      clearSessionIntentHandoff(projectDir, sessionId);
-      resetGuard(projectDir);
+  // Usage bookkeeping - persist the live transcript path and fold its new turns
+  // into the durable usage ledger under the current stage. This is THE turn-end
+  // producer of usage-ledger.json alongside the per-tool Pre/PostToolUse fold:
+  // without it the statusline cost segment lags the final turn. Both calls are
+  // cheap (the fold advances per-file cursors, so only new turns are read) and
+  // BOTH are fully guarded - a usage failure must NEVER break or delay the Stop
+  // hook, so any throw is swallowed here rather than propagated. Only Claude
+  // transcripts are folded (the reader is Claude-format-specific); a Codex rollout
+  // path is left alone. currentStage is the same Current Stage slug the rest of
+  // this hook reads; null when absent so byStage isn't polluted.
+  if (transcriptPath && transcriptFormat === "claude") {
+    try {
+      writeCurrentTranscriptPath(projectDir, sessionId, transcriptPath);
+      const currentStage = currentStageSlug(stateContent) || null;
+      // The turn is ending, so every file's last message-id group is complete and
+      // must be counted now (PostToolUse holds it back; Stop closes it).
+      foldTranscriptIntoLedger(
+        projectDir,
+        transcriptPath,
+        currentStage,
+        "flush-all",
+        { sessionId },
+      );
+    } catch {
+      // best-effort - usage never breaks the hook
+    }
+  }
+
+  // Consult the engine for the next move. A null directive (engine unavailable /
+  // unparseable) fails open — allow the stop.
+  const copilotSession =
+    process.env.AIDLC_COPILOT_SESSION_ID === sessionId ? sessionId : "";
+  const copilotEvidence = copilotSession
+    ? copilotStopEvidence(projectDir, stateContent, copilotSession)
+    : null;
+  if (copilotEvidence?.status === "contended") {
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      "active-directive lock contended while reading Copilot Stop evidence; allowing stop",
+    );
+    return allowStop();
+  }
+  if (
+    copilotEvidence?.status === "foreign" ||
+    copilotEvidence?.status === "resume"
+  )
+    return allowStop();
+  if (!copilotSession) {
+    let resumeWaiting = false;
+    try {
+      resumeWaiting = hasCurrentSharedResumeWait(projectDir);
+    } catch (error) {
       recordHookDrop(
         projectDir,
         HOOK_NAME,
-        "allowing stop at the exact post-create fresh-session handoff boundary",
+        `active-directive evidence unavailable while reading shared resume wait: ${errorMessage(error)}; allowing stop`,
       );
       return allowStop();
     }
-    if (!fresh) clearSessionIntentHandoff(projectDir, sessionId);
+    if (resumeWaiting) {
+      recordHookDrop(
+        projectDir,
+        HOOK_NAME,
+        "active resume choice is waiting on the human; allowing the stop before the shared next probe",
+      );
+      return allowStop();
+    }
   }
-}
-
-// Usage bookkeeping - persist the live transcript path and fold its new turns
-// into the durable usage ledger under the current stage. This is THE turn-end
-// producer of usage-ledger.json alongside the per-tool Pre/PostToolUse fold:
-// without it the statusline cost segment lags the final turn. Both calls are
-// cheap (the fold advances per-file cursors, so only new turns are read) and
-// BOTH are fully guarded - a usage failure must NEVER break or delay the Stop
-// hook, so any throw is swallowed here rather than propagated. Only Claude
-// transcripts are folded (the reader is Claude-format-specific); a Codex rollout
-// path is left alone. currentStage is the same Current Stage slug the rest of
-// this hook reads; null when absent so byStage isn't polluted.
-if (transcriptPath && transcriptFormat === "claude") {
-  try {
-    writeCurrentTranscriptPath(projectDir, sessionId, transcriptPath);
-    const currentStage = currentStageSlug(stateContent) || null;
-    // The turn is ending, so every file's last message-id group is complete and
-    // must be counted now (PostToolUse holds it back; Stop closes it).
-    foldTranscriptIntoLedger(
-      projectDir,
-      transcriptPath,
-      currentStage,
-      "flush-all",
-      { sessionId },
-    );
-  } catch {
-    // best-effort - usage never breaks the hook
-  }
-}
-
-// Consult the engine for the next move. A null directive (engine unavailable /
-// unparseable) fails open — allow the stop.
-const copilotSession = process.env.AIDLC_COPILOT_SESSION_ID === sessionId ? sessionId : "";
-const copilotEvidence = copilotSession ? copilotStopEvidence(projectDir, stateContent, copilotSession) : null;
-if (copilotEvidence?.status === "contended") {
-  recordHookDrop(projectDir, HOOK_NAME, "active-directive lock contended while reading Copilot Stop evidence; allowing stop");
-  return allowStop();
-}
-if (copilotEvidence?.status === "foreign" || copilotEvidence?.status === "resume") return allowStop();
-if (!copilotSession) {
-  let resumeWaiting = false;
-  try {
-    resumeWaiting = hasCurrentSharedResumeWait(projectDir);
-  } catch (error) {
+  const retainedDirective =
+    copilotEvidence?.status === "directive"
+      ? copilotEvidence.directive
+      : undefined;
+  const directive: EngineDirective | null = copilotEvidence
+    ? retainedDirective
+      ? { ...retainedDirective, retained: true }
+      : { kind: "rehydrate", retained: true }
+    : runEngineNextDirective(projectDir, sessionId);
+  if (directive === null) {
     recordHookDrop(
       projectDir,
       HOOK_NAME,
-      `active-directive evidence unavailable while reading shared resume wait: ${errorMessage(error)}; allowing stop`,
+      "engine next returned no parseable directive; allowing stop",
     );
     return allowStop();
   }
-  if (resumeWaiting) {
-    recordHookDrop(
-      projectDir,
-      HOOK_NAME,
-      "active resume choice is waiting on the human; allowing the stop before the shared next probe",
-    );
-    return allowStop();
-  }
-}
-const retainedDirective = copilotEvidence?.status === "directive" ? copilotEvidence.directive : undefined;
-const directive: EngineDirective | null = copilotEvidence
-  ? retainedDirective
-    ? { ...retainedDirective, retained: true }
-    : { kind: "rehydrate", retained: true }
-  : runEngineNextDirective(projectDir, sessionId);
-if (directive === null) {
-  recordHookDrop(projectDir, HOOK_NAME, "engine next returned no parseable directive; allowing stop");
-  return allowStop();
-}
-const kind = directive.kind;
-const activeMarker = readActiveDirectiveMarker(projectDir, stateContent);
-const activeStage = directive.stage ?? activeMarker?.stage;
-const activeUnit =
-  directive.unit ??
-  (
-    activeMarker && activeMarker.stage === activeStage
+  const kind = directive.kind;
+  const activeMarker = readActiveDirectiveMarker(projectDir, stateContent);
+  const activeStage = directive.stage ?? activeMarker?.stage;
+  const activeUnit =
+    directive.unit ??
+    (activeMarker && activeMarker.stage === activeStage
       ? activeMarker.unit
-      : undefined
-  );
+      : undefined);
 
-// `done` → the workflow is complete; allow the turn to end and clear the guard
-// so a future stuck sequence starts fresh.
-if (kind === "done") {
-  resetGuard(projectDir);
-  return allowStop();
-}
-
-if (kind === "notice") {
-  resetGuard(projectDir);
-  return allowStop();
-}
-
-// `parked` -> the workflow was intentionally parked mid-flow (issue #367); a
-// human resumes it later with /aidlc --resume. This is the SUPPORTED
-// multi-session exit: allow the turn to end and clear the guard exactly like
-// `done`, so the conductor parks at a clean inter-stage boundary instead of
-// rubber-stamping the remaining stages to force a `done`. Terminal allow only
-// (never a new block), so it can never trap a session.
-//
-// AUTONOMY GUARD (salvaged from the #365 suspend branch): an unattended
-// autonomous Construction run (`Construction Autonomy Mode: autonomous`) MUST
-// keep moving and never self-park. There is no human to resume it later, so a
-// park would strand the swarm/Bolt run waiting on someone who was told they
-// weren't needed. When autonomous, decline the parked allow and fall through to
-// the cap-bounded block below (the loop stays alive; a genuine hang still
-// releases via the no-progress cap). This mirrors isPendingQuestionStop's
-// identical guard (:391) for consistency across every carve-out in this hook.
-if (kind === "parked") {
-  if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
-    recordHookDrop(
-      projectDir,
-      HOOK_NAME,
-      "parked directive seen under autonomous Construction; declining the parked allow (an unattended run must not self-park), falling through to the cap-bounded block",
-    );
-  } else {
+  // `done` → the workflow is complete; allow the turn to end and clear the guard
+  // so a future stuck sequence starts fresh.
+  if (kind === "done") {
     resetGuard(projectDir);
     return allowStop();
   }
-}
 
-// `ask` → the engine is explicitly waiting for human input (for example,
-// freeform scope routing or a paused Unit). Allow the turn to end so the user
-// can respond, rather than re-feeding the loop.
-if (kind === "ask") {
-  return allowStop();
-}
+  if (kind === "notice") {
+    resetGuard(projectDir);
+    return allowStop();
+  }
 
-// Human-wait carve-out: the engine returns a pending directive, but the current
-// stage is positively at [?] awaiting-approval or [R] revising — the conductor
-// is correctly parked on the human (an approval gate or the Request-Changes
-// loop), with genuinely nothing to do without their input. Allow the stop
-// instead of spamming the forwarding-loop nudge. Positive-confirmation only and
-// fail-open (see isHumanWaitStop): any other state, no checkbox row, or a parse
-// error falls through to the cap-bounded block below, unchanged. (This is the
-// current-stage-scoped successor to the broad `[?]` substring match that landed
-// in 679153d; scoping to the current slug and adding [R] is strictly safer.)
-if (isHumanWaitStop(projectDir, stateContent, activeStage, activeUnit)) {
-  recordHookDrop(
-    projectDir,
-    HOOK_NAME,
-    `current stage ${currentStageSlug(stateContent)} is awaiting approval or being revised; allowing the stop (human-wait carve-out)`,
-  );
-  return allowStop();
-}
+  // `parked` -> the workflow was intentionally parked mid-flow (issue #367); a
+  // human resumes it later with /aidlc --resume. This is the SUPPORTED
+  // multi-session exit: allow the turn to end and clear the guard exactly like
+  // `done`, so the conductor parks at a clean inter-stage boundary instead of
+  // rubber-stamping the remaining stages to force a `done`. Terminal allow only
+  // (never a new block), so it can never trap a session.
+  //
+  // AUTONOMY GUARD (salvaged from the #365 suspend branch): an unattended
+  // autonomous Construction run (`Construction Autonomy Mode: autonomous`) MUST
+  // keep moving and never self-park. There is no human to resume it later, so a
+  // park would strand the swarm/Bolt run waiting on someone who was told they
+  // weren't needed. When autonomous, decline the parked allow and fall through to
+  // the cap-bounded block below (the loop stays alive; a genuine hang still
+  // releases via the no-progress cap). This mirrors isPendingQuestionStop's
+  // identical guard (:391) for consistency across every carve-out in this hook.
+  if (kind === "parked") {
+    if (
+      getField(stateContent, "Construction Autonomy Mode")?.trim() ===
+      "autonomous"
+    ) {
+      recordHookDrop(
+        projectDir,
+        HOOK_NAME,
+        "parked directive seen under autonomous Construction; declining the parked allow (an unattended run must not self-park), falling through to the cap-bounded block",
+      );
+    } else {
+      resetGuard(projectDir);
+      return allowStop();
+    }
+  }
 
-// Pending-question carve-out (tier 2): the current [-] cursor has an unanswered
-// question for the active directive stage, so the conductor is parked on the
-// human's answer. The active stage can be later than Current Stage during the
-// unit-major walk. Strictly gated and fail-open (see isPendingQuestionStop).
-if (isPendingQuestionStop(projectDir, stateContent, activeStage, activeUnit)) {
-  const pendingStage = activeStage ?? currentStageSlug(stateContent);
-  recordHookDrop(
-    projectDir,
-    HOOK_NAME,
-    `active stage ${pendingStage} has an unanswered question; allowing the stop (pending-question carve-out)`,
-  );
-  return allowStop();
-}
+  // `ask` → the engine is explicitly waiting for human input (for example,
+  // freeform scope routing or a paused Unit). Allow the turn to end so the user
+  // can respond, rather than re-feeding the loop.
+  if (kind === "ask") {
+    return allowStop();
+  }
 
-// Logged-question carve-out: a DECISION_RECORDED for the current [-] stage has
-// no later QUESTION_ANSWERED. Copilot's numbered-prose questions end the turn
-// without a native picker, so this signal keeps the Stop hook from injecting a
-// continuation that the model could mistake for the answer.
-if (isPendingDecisionStop(projectDir, stateContent, activeStage, activeUnit)) {
-  const teamPending =
-    isTeamUnitOwnership(stateContent) &&
-    activeStage !== undefined &&
-    activeUnit !== undefined &&
-    getField(stateContent, "Construction Iteration")?.trim() === "unit-major";
-  const pendingStage = teamPending
-    ? (activeStage ?? currentStageSlug(stateContent))
-    : currentStageSlug(stateContent);
-  recordHookDrop(
-    projectDir,
-    HOOK_NAME,
-    teamPending
-      ? `active stage ${pendingStage} has an unanswered logged decision; allowing the stop (pending-decision carve-out)`
-      : `current stage ${pendingStage} has an unanswered logged decision; allowing the stop (pending-decision carve-out)`,
-  );
-  return allowStop();
-}
+  // Human-wait carve-out: the engine returns a pending directive, but the current
+  // stage is positively at [?] awaiting-approval or [R] revising — the conductor
+  // is correctly parked on the human (an approval gate or the Request-Changes
+  // loop), with genuinely nothing to do without their input. Allow the stop
+  // instead of spamming the forwarding-loop nudge. Positive-confirmation only and
+  // fail-open (see isHumanWaitStop): any other state, no checkbox row, or a parse
+  // error falls through to the cap-bounded block below, unchanged. (This is the
+  // current-stage-scoped successor to the broad `[?]` substring match that landed
+  // in 679153d; scoping to the current slug and adding [R] is strictly safer.)
+  if (isHumanWaitStop(projectDir, stateContent, activeStage, activeUnit)) {
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      `current stage ${currentStageSlug(stateContent)} is awaiting approval or being revised; allowing the stop (human-wait carve-out)`,
+    );
+    return allowStop();
+  }
 
-// Pending-compose carve-out (tier 2b): an in-flight compose proposal is
-// awaiting the human's approve/edit/reject (the conductor's marker file is on
-// disk) and we are NOT in autonomous Construction - the conductor is parked on
-// the human exactly like a stage gate, so allow the turn to end instead of
-// nudging it back into stage execution mid-compose. Positive-confirmation only
-// (the marker), autonomy-guarded, fail-open (see isPendingComposeStop).
-if (isPendingComposeStop(projectDir, stateContent)) {
-  recordHookDrop(
-    projectDir,
-    HOOK_NAME,
-    "an in-flight compose proposal is pending human approval (aidlc/.aidlc-compose-pending present); allowing the stop (pending-compose carve-out)",
-  );
-  return allowStop();
-}
+  // Pending-question carve-out (tier 2): the current [-] cursor has an unanswered
+  // question for the active directive stage, so the conductor is parked on the
+  // human's answer. The active stage can be later than Current Stage during the
+  // unit-major walk. Strictly gated and fail-open (see isPendingQuestionStop).
+  if (
+    isPendingQuestionStop(projectDir, stateContent, activeStage, activeUnit)
+  ) {
+    const pendingStage = activeStage ?? currentStageSlug(stateContent);
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      `active stage ${pendingStage} has an unanswered question; allowing the stop (pending-question carve-out)`,
+    );
+    return allowStop();
+  }
 
-// Pending-background-subagent carve-out (tier 2c): a background Agent/Task is
-// still running, so the conductor is correctly parked until its result arrives.
-// Positive-confirmation only (a matching ledger entry), session-isolated,
-// autonomy-guarded, freshness-bounded, and fail-open (see
-// isPendingSubagentStop).
-if (isPendingSubagentStop(projectDir, stateContent, rawSessionId)) {
-  recordHookDrop(
-    projectDir,
-    HOOK_NAME,
-    "a background subagent is still in flight for this session; allowing the stop (pending-subagent carve-out)",
-  );
-  return allowStop();
-}
+  // Logged-question carve-out: a DECISION_RECORDED for the current [-] stage has
+  // no later QUESTION_ANSWERED. Copilot's numbered-prose questions end the turn
+  // without a native picker, so this signal keeps the Stop hook from injecting a
+  // continuation that the model could mistake for the answer.
+  if (
+    isPendingDecisionStop(projectDir, stateContent, activeStage, activeUnit)
+  ) {
+    const teamPending =
+      isTeamUnitOwnership(stateContent) &&
+      activeStage !== undefined &&
+      activeUnit !== undefined &&
+      getField(stateContent, "Construction Iteration")?.trim() === "unit-major";
+    const pendingStage = teamPending
+      ? (activeStage ?? currentStageSlug(stateContent))
+      : currentStageSlug(stateContent);
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      teamPending
+        ? `active stage ${pendingStage} has an unanswered logged decision; allowing the stop (pending-decision carve-out)`
+        : `current stage ${pendingStage} has an unanswered logged decision; allowing the stop (pending-decision carve-out)`,
+    );
+    return allowStop();
+  }
 
-// Conversational carve-out (tier 3, issue #365 broader reading): the ending turn
-// answered the human's most recent prompt with NO workflow-engine engagement, so
-// the human was just chatting mid-workflow, allow the stop instead of nudging
-// them back into the loop. Two evidence sources for one predicate: the harness
-// transcript where it is delivered (Claude / Codex), and the `.aidlc-engine/human-turn`
-// vs `.aidlc-engine/engine-touch` mtime comparison where it is not (Kiro IDE, Kiro CLI,
-// opencode). Strictly gated and fail-closed (see isConversationalStop): no
-// evidence, no human prompt, ANY engine call in the responding turn, an
-// autonomous run, or any read error falls through to the cap-bounded block below,
-// so a conductor that engaged the workflow and then quit mid-loop (and every
-// autonomous run) is still nudged.
-if (isConversationalStop(projectDir, stateContent, transcriptPath, transcriptFormat, copilotSession)) {
-  recordHookDrop(
-    projectDir,
-    HOOK_NAME,
-    "the ending turn was conversational (human's last prompt answered with no workflow-engine call); allowing the stop (conversational carve-out)",
-  );
-  return allowStop();
-}
+  // Pending-compose carve-out (tier 2b): an in-flight compose proposal is
+  // awaiting the human's approve/edit/reject (the conductor's marker file is on
+  // disk) and we are NOT in autonomous Construction - the conductor is parked on
+  // the human exactly like a stage gate, so allow the turn to end instead of
+  // nudging it back into stage execution mid-compose. Positive-confirmation only
+  // (the marker), autonomy-guarded, fail-open (see isPendingComposeStop).
+  if (isPendingComposeStop(projectDir, stateContent)) {
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      "an in-flight compose proposal is pending human approval (aidlc/.aidlc-compose-pending present); allowing the stop (pending-compose carve-out)",
+    );
+    return allowStop();
+  }
 
-// A directive is PENDING (run-stage / dispatch-subagent / invoke-swarm /
-// present-gate / ask / print / error). Decide whether to block, honouring the
-// recursion bounds. When the bounds say release, LET GO — a stuck loop must
-// never trap the session.
-let markerCount: { shouldBlock: boolean; count: number } | null = null;
-if (copilotSession && copilotEvidence &&
-    (copilotEvidence.status === "directive" || copilotEvidence.status === "recovery")) {
-  try {
-    markerCount = updateCopilotStopCount(
+  // Pending-background-subagent carve-out (tier 2c): a background Agent/Task is
+  // still running, so the conductor is correctly parked until its result arrives.
+  // Positive-confirmation only (a matching ledger entry), session-isolated,
+  // autonomy-guarded, freshness-bounded, and fail-open (see
+  // isPendingSubagentStop).
+  if (isPendingSubagentStop(projectDir, stateContent, rawSessionId)) {
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      "a background subagent is still in flight for this session; allowing the stop (pending-subagent carve-out)",
+    );
+    return allowStop();
+  }
+
+  // Conversational carve-out (tier 3, issue #365 broader reading): the ending turn
+  // answered the human's most recent prompt with NO workflow-engine engagement, so
+  // the human was just chatting mid-workflow, allow the stop instead of nudging
+  // them back into the loop. Two evidence sources for one predicate: the harness
+  // transcript where it is delivered (Claude / Codex), and the `.aidlc-engine/human-turn`
+  // vs `.aidlc-engine/engine-touch` mtime comparison where it is not (Kiro IDE, Kiro CLI,
+  // opencode). Strictly gated and fail-closed (see isConversationalStop): no
+  // evidence, no human prompt, ANY engine call in the responding turn, an
+  // autonomous run, or any read error falls through to the cap-bounded block below,
+  // so a conductor that engaged the workflow and then quit mid-loop (and every
+  // autonomous run) is still nudged.
+  if (
+    isConversationalStop(
+      projectDir,
+      stateContent,
+      transcriptPath,
+      transcriptFormat,
+      copilotSession,
+    )
+  ) {
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      "the ending turn was conversational (human's last prompt answered with no workflow-engine call); allowing the stop (conversational carve-out)",
+    );
+    return allowStop();
+  }
+
+  // A directive is PENDING (run-stage / dispatch-subagent / invoke-swarm /
+  // present-gate / ask / print / error). Decide whether to block, honouring the
+  // recursion bounds. When the bounds say release, LET GO — a stuck loop must
+  // never trap the session.
+  let markerCount: { shouldBlock: boolean; count: number } | null = null;
+  if (
+    copilotSession &&
+    copilotEvidence &&
+    (copilotEvidence.status === "directive" ||
+      copilotEvidence.status === "recovery")
+  ) {
+    try {
+      markerCount = updateCopilotStopCount(
         projectDir,
         stateContent,
         copilotSession,
-        [kind, activeStage ?? "", activeUnit ?? "", directive.part ?? "", directive.parts ?? "", copilotEvidence.tokenSha256, copilotEvidence.stateSha256, copilotEvidence.resumeStatus, copilotEvidence.resumeAction, copilotEvidence.ownerSession, copilotEvidence.ownerEpoch].join("|"),
+        [
+          kind,
+          activeStage ?? "",
+          activeUnit ?? "",
+          directive.part ?? "",
+          directive.parts ?? "",
+          copilotEvidence.tokenSha256,
+          copilotEvidence.stateSha256,
+          copilotEvidence.resumeStatus,
+          copilotEvidence.resumeAction,
+          copilotEvidence.ownerSession,
+          copilotEvidence.ownerEpoch,
+        ].join("|"),
         stopHookActive,
         blockCap(stateContent),
       );
-  } catch (error) {
-    if (!(error instanceof ActiveDirectiveLockContendedError)) throw error;
-    recordHookDrop(projectDir, HOOK_NAME, "active-directive lock contended while updating Copilot Stop count; allowing stop");
+    } catch (error) {
+      if (!(error instanceof ActiveDirectiveLockContendedError)) throw error;
+      recordHookDrop(
+        projectDir,
+        HOOK_NAME,
+        "active-directive lock contended while updating Copilot Stop count; allowing stop",
+      );
+      return allowStop();
+    }
+  }
+  const shouldBlock = copilotSession
+    ? (markerCount?.shouldBlock ?? false)
+    : decideBlock(projectDir, stateContent, directive, stopHookActive);
+  if (!shouldBlock) {
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      `recursion guard released the stop (no-progress block cap ${blockCap(stateContent)} reached; stop_hook_active=${stopHookActive})`,
+    );
     return allowStop();
   }
-}
-const shouldBlock = copilotSession
-  ? markerCount?.shouldBlock ?? false
-  : decideBlock(projectDir, stateContent, directive, stopHookActive);
-if (!shouldBlock) {
-  recordHookDrop(
-    projectDir,
-    HOOK_NAME,
-    `recursion guard released the stop (no-progress block cap ${blockCap(stateContent)} reached; stop_hook_active=${stopHookActive})`,
-  );
-  return allowStop();
-}
 
-// Within budget — block the stop and re-feed the pending work.
-return blockStop(
-  continuationReason(
-    kind,
-    activeStage ?? currentStageSlug(stateContent),
-    directive.continueToken,
-    directive.rulesContent,
-    directive.retained,
-  ),
-);
+  // Within budget — block the stop and re-feed the pending work.
+  return blockStop(
+    continuationReason(
+      kind,
+      activeStage ?? currentStageSlug(stateContent),
+      directive.continueToken,
+      directive.rulesContent,
+      directive.retained,
+    ),
+  );
 }
 
 if (import.meta.main) {

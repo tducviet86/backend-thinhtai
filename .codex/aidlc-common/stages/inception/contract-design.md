@@ -43,7 +43,7 @@ outputs: contract-summary.md (under this stage's record dir, engine-resolved) �
 Define the formal contracts the system must honour so teams can build in parallel with confidence. A contract is a formal agreement across a boundary: what data crosses it, in what shape, via what protocol, and what happens when things go wrong. Two kinds of boundary qualify:
 
 - **Inter-unit boundaries** — the agreement between a provider unit and a consumer unit inside the system. Treat each like a B2B agreement between two teams in two companies: it must be right from the start, because a wrong contract turns integration into a rework disaster.
-- **Public/external API boundaries** — the agreement between a unit and a consumer *outside* the system (another team, a partner, the public internet). A single-unit system with no inter-unit edges still needs this contract pinned before Code Generation when it exposes such an API; there is no other stage that owns the external API specification.
+- **Public/external API boundaries** — the agreement between a unit and a consumer _outside_ the system (another team, a partner, the public internet). A single-unit system with no inter-unit edges still needs this contract pinned before Code Generation when it exposes such an API; there is no other stage that owns the external API specification.
 
 This stage runs once per workflow (not per unit) — it maps the whole set of boundaries at once, using the dependency DAG from Units Generation to know which units talk to each other, plus each unit's externally consumed surface for public API contracts.
 
@@ -59,6 +59,7 @@ This stage runs once per workflow (not per unit) — it maps the whole set of bo
 ### Step 2: Create Contract Plan with Questions
 
 Create `<record>/inception/contract-design/contract-design-questions.md` with context-appropriate questions using [Answer]: tag format:
+
 - Public/external API surface (which units expose an API consumed outside the system, and its shape) — the single-unit trigger for this stage
 - Integration mechanism per boundary (synchronous REST/HTTP, async event/message, shared schema, gRPC, etc.)
 - Contract ownership (which unit owns each spec)
@@ -68,6 +69,7 @@ Create `<record>/inception/contract-design/contract-design-questions.md` with co
 ### Step 3: Collect and Analyze Answers
 
 Collect answers following stage-protocol.md §3 question flow (offer interaction mode choice, collect answers, write back to file).
+
 - MANDATORY ambiguity analysis: scan for vague language, contradictions, missing details
 - Create follow-up questions if ANY ambiguity found
 - Resolve all ambiguities before proceeding
@@ -103,6 +105,7 @@ That `report` call owns every lifecycle transition and advancement; never perfor
 ### Step 6: Present Completion & Request Approval
 
 Use stage-protocol.md completion template with completion emoji: :handshake:
+
 - Summary of contracts defined (count, mechanisms, ownership)
 - Review path: `<record>/inception/contract-design/`
 - Structured approval question with options: Approve (continue to next stage) / Request Changes

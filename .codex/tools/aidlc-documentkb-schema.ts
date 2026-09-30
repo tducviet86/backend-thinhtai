@@ -144,8 +144,7 @@ export interface DocumentMetadata extends DocumentRow {
 }
 
 export type SchemaResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; errors: string[] };
+  { ok: true; value: T } | { ok: false; errors: string[] };
 
 // A real, parseable ISO-8601 timestamp -- not merely "a non-empty string", which
 // is what `removed_at`'s validator checked for until a hand-edited
@@ -171,8 +170,16 @@ export function isValidIsoTimestamp(raw: unknown): boolean {
   const second = Number(match[6]);
   const offsetHour = match[9] === undefined ? 0 : Number(match[9]);
   const offsetMinute = match[10] === undefined ? 0 : Number(match[10]);
-  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59 ||
-      offsetHour > 23 || offsetMinute > 59) return false;
+  if (
+    month < 1 ||
+    month > 12 ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59 ||
+    offsetHour > 23 ||
+    offsetMinute > 59
+  )
+    return false;
   const maxDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   return day >= 1 && day <= maxDay;
 }
@@ -205,7 +212,8 @@ const SHA256_REGEX = /^[0-9a-f]{64}$/;
 // The shipped uuidv7() output shape. Deliberately not a general UUID matcher:
 // persistence is always a canonical UUID, and accepting a slug here is what
 // would let a renameable display name become an identity.
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // EXPORTED so every caller that is about to persist a UUID into a committed
 // file (a `related_intent_ids` entry, a document id) checks it against the
@@ -230,7 +238,8 @@ function isObject(v: unknown): v is Record<string, unknown> {
 // mean the same thing on every machine that clones it.
 export function validDocumentPath(raw: unknown): boolean {
   if (typeof raw !== "string" || raw.length === 0) return false;
-  if (raw.startsWith("/") || /^[a-zA-Z]:/.test(raw) || raw.startsWith("\\")) return false;
+  if (raw.startsWith("/") || /^[a-zA-Z]:/.test(raw) || raw.startsWith("\\"))
+    return false;
   if (raw.includes("\\")) return false;
   if (raw.split("/").some((seg) => seg === ".." || seg === "")) return false;
   if (raw.includes("\0")) return false;
@@ -243,7 +252,10 @@ function validateSource(raw: unknown, where: string, errors: string[]): void {
     return;
   }
   const kind = raw.kind;
-  if (typeof kind !== "string" || !(SOURCE_KINDS as readonly string[]).includes(kind)) {
+  if (
+    typeof kind !== "string" ||
+    !(SOURCE_KINDS as readonly string[]).includes(kind)
+  ) {
     errors.push(
       `${where}.source.kind must be one of ${SOURCE_KINDS.join(", ")} (got ${JSON.stringify(kind)})`,
     );
@@ -286,81 +298,89 @@ interface StateRequirements {
   detectedType: boolean;
 }
 
-const STATE_REQUIREMENTS: Readonly<Record<ExtractionState, StateRequirements>> = Object.freeze({
-  // Text recovered: everything a reader needs to interpret and re-verify it.
-  extracted: {
-    extractor: "name-and-version",
-    sourceRevision: true,
-    chars: true,
-    truncated: true,
-    reason: false,
-    detectedType: false,
-  },
-  // The extractor RAN and found no text layer, so it has a version and the
-  // result is bound to the revision it inspected.
-  no_extractable_text: {
-    extractor: "name-and-version",
-    sourceRevision: true,
-    chars: false,
-    truncated: false,
-    reason: false,
-    detectedType: false,
-  },
-  // The extractor was NOT found. Name only — there is no version to report.
-  // `detectedType` IS required here (unlike its sibling failure states): a
-  // retry (`shouldRetryExtraction`) needs to know WHICH mime this row was
-  // routed for, to re-probe for an extractor now that one might be
-  // configured/installed. Finding 5(c): without it, `detectMimeFromRow`
-  // guessed from the file EXTENSION alone (".pdf" or bust, else
-  // "text/plain") -- so installing a DOCX extractor never made a `.docx` row
-  // retryable, because its guessed mime was never "application/docx" to
-  // begin with.
-  extractor_unavailable: {
-    extractor: "name-only",
-    sourceRevision: false,
-    chars: false,
-    truncated: false,
-    reason: false,
-    detectedType: true,
-  },
-  // The extractor ran and failed. `reason` is what makes each bound trip
-  // distinguishable rather than one undifferentiated failure.
-  extraction_failed: {
-    extractor: "name-and-version",
-    sourceRevision: false,
-    chars: false,
-    truncated: false,
-    reason: true,
-    detectedType: true,
-  },
-  // No extractor is even configured for this MIME type. Nothing ran.
-  unsupported_type: {
-    extractor: "absent-ok",
-    sourceRevision: false,
-    chars: false,
-    truncated: false,
-    reason: false,
-    detectedType: true,
-  },
-  // A derivative that predates the current digest. Carries the STALE revision,
-  // which is exactly what makes the mismatch visible.
-  invalidated: {
-    extractor: "absent-ok",
-    sourceRevision: true,
-    chars: false,
-    truncated: false,
-    reason: false,
-    detectedType: false,
-  },
-});
+const STATE_REQUIREMENTS: Readonly<Record<ExtractionState, StateRequirements>> =
+  Object.freeze({
+    // Text recovered: everything a reader needs to interpret and re-verify it.
+    extracted: {
+      extractor: "name-and-version",
+      sourceRevision: true,
+      chars: true,
+      truncated: true,
+      reason: false,
+      detectedType: false,
+    },
+    // The extractor RAN and found no text layer, so it has a version and the
+    // result is bound to the revision it inspected.
+    no_extractable_text: {
+      extractor: "name-and-version",
+      sourceRevision: true,
+      chars: false,
+      truncated: false,
+      reason: false,
+      detectedType: false,
+    },
+    // The extractor was NOT found. Name only — there is no version to report.
+    // `detectedType` IS required here (unlike its sibling failure states): a
+    // retry (`shouldRetryExtraction`) needs to know WHICH mime this row was
+    // routed for, to re-probe for an extractor now that one might be
+    // configured/installed. Finding 5(c): without it, `detectMimeFromRow`
+    // guessed from the file EXTENSION alone (".pdf" or bust, else
+    // "text/plain") -- so installing a DOCX extractor never made a `.docx` row
+    // retryable, because its guessed mime was never "application/docx" to
+    // begin with.
+    extractor_unavailable: {
+      extractor: "name-only",
+      sourceRevision: false,
+      chars: false,
+      truncated: false,
+      reason: false,
+      detectedType: true,
+    },
+    // The extractor ran and failed. `reason` is what makes each bound trip
+    // distinguishable rather than one undifferentiated failure.
+    extraction_failed: {
+      extractor: "name-and-version",
+      sourceRevision: false,
+      chars: false,
+      truncated: false,
+      reason: true,
+      detectedType: true,
+    },
+    // No extractor is even configured for this MIME type. Nothing ran.
+    unsupported_type: {
+      extractor: "absent-ok",
+      sourceRevision: false,
+      chars: false,
+      truncated: false,
+      reason: false,
+      detectedType: true,
+    },
+    // A derivative that predates the current digest. Carries the STALE revision,
+    // which is exactly what makes the mismatch visible.
+    invalidated: {
+      extractor: "absent-ok",
+      sourceRevision: true,
+      chars: false,
+      truncated: false,
+      reason: false,
+      detectedType: false,
+    },
+  });
 
-function validateExtraction(raw: unknown, where: string, errors: string[]): void {
+function validateExtraction(
+  raw: unknown,
+  where: string,
+  errors: string[],
+): void {
   if (!isObject(raw)) {
     errors.push(`${where}.extraction must be an object`);
     return;
   }
   const state = raw.state;
-  if (typeof state !== "string" || !(EXTRACTION_STATES as readonly string[]).includes(state)) {
+  if (
+    typeof state !== "string" ||
+    !(EXTRACTION_STATES as readonly string[]).includes(state)
+  ) {
     errors.push(
       `${where}.extraction.state must be one of ${EXTRACTION_STATES.join(", ")} ` +
         `(got ${JSON.stringify(state)})`,
@@ -373,20 +393,31 @@ function validateExtraction(raw: unknown, where: string, errors: string[]): void
   if (req.extractor === "absent-ok") {
     if (raw.extractor !== undefined) {
       if (!isObject(raw.extractor) || typeof raw.extractor.name !== "string") {
-        errors.push(`${where}.extraction.extractor, when present, must carry a name string`);
+        errors.push(
+          `${where}.extraction.extractor, when present, must carry a name string`,
+        );
       }
     }
-  } else if (!isObject(raw.extractor) || typeof raw.extractor.name !== "string") {
+  } else if (
+    !isObject(raw.extractor) ||
+    typeof raw.extractor.name !== "string"
+  ) {
     errors.push(
       `${where}.extraction.extractor.name is required when state is "${state}" — ` +
         `extracted text is only interpretable if you know what produced it`,
     );
-  } else if (req.extractor === "name-and-version" && typeof raw.extractor.version !== "string") {
+  } else if (
+    req.extractor === "name-and-version" &&
+    typeof raw.extractor.version !== "string"
+  ) {
     errors.push(
       `${where}.extraction.extractor.version is required when state is "${state}" — ` +
         `the extractor ran, and a version change is grounds for re-extraction`,
     );
-  } else if (req.extractor === "name-only" && raw.extractor.version !== undefined) {
+  } else if (
+    req.extractor === "name-only" &&
+    raw.extractor.version !== undefined
+  ) {
     // Not pedantry: a version here would be a fabricated fact, since the state
     // means the extractor was never found, let alone run.
     errors.push(
@@ -396,8 +427,13 @@ function validateExtraction(raw: unknown, where: string, errors: string[]): void
   }
 
   // --- source_revision ---
-  if (raw.source_revision !== undefined && !SHA256_REGEX.test(String(raw.source_revision))) {
-    errors.push(`${where}.extraction.source_revision must be a lowercase sha256 hex digest`);
+  if (
+    raw.source_revision !== undefined &&
+    !SHA256_REGEX.test(String(raw.source_revision))
+  ) {
+    errors.push(
+      `${where}.extraction.source_revision must be a lowercase sha256 hex digest`,
+    );
   }
   if (req.sourceRevision && raw.source_revision === undefined) {
     errors.push(
@@ -407,8 +443,15 @@ function validateExtraction(raw: unknown, where: string, errors: string[]): void
   }
 
   // --- per-state companions ---
-  if (req.chars && (typeof raw.chars !== "number" || !Number.isInteger(raw.chars) || raw.chars < 0)) {
-    errors.push(`${where}.extraction.chars must be a non-negative integer when state is "${state}"`);
+  if (
+    req.chars &&
+    (typeof raw.chars !== "number" ||
+      !Number.isInteger(raw.chars) ||
+      raw.chars < 0)
+  ) {
+    errors.push(
+      `${where}.extraction.chars must be a non-negative integer when state is "${state}"`,
+    );
   }
   if (req.truncated && typeof raw.truncated !== "boolean") {
     errors.push(
@@ -423,7 +466,9 @@ function validateExtraction(raw: unknown, where: string, errors: string[]): void
     );
   }
   if (req.detectedType && typeof raw.detectedType !== "string") {
-    errors.push(`${where}.extraction.detectedType is required when state is "${state}"`);
+    errors.push(
+      `${where}.extraction.detectedType is required when state is "${state}"`,
+    );
   }
 }
 
@@ -432,7 +477,12 @@ function validateExtraction(raw: unknown, where: string, errors: string[]): void
 // can carry `summary.path: "documentkb/<B>/summary.md"` and pass validation
 // while serving B's derivative under A's citation -- the same class of defect
 // `content` below closes.
-function validateSummary(raw: unknown, id: unknown, where: string, errors: string[]): void {
+function validateSummary(
+  raw: unknown,
+  id: unknown,
+  where: string,
+  errors: string[],
+): void {
   if (!isObject(raw)) {
     errors.push(`${where}.summary must be an object (a state, not a path)`);
     return;
@@ -441,14 +491,19 @@ function validateSummary(raw: unknown, id: unknown, where: string, errors: strin
   if (raw.state === "generated") {
     if (!validDocumentPath(raw.path)) {
       errors.push(`${where}.summary.path must be a relative POSIX path`);
-    } else if (typeof id === "string" && raw.path !== `documentkb/${id}/summary.md`) {
+    } else if (
+      typeof id === "string" &&
+      raw.path !== `documentkb/${id}/summary.md`
+    ) {
       errors.push(
         `${where}.summary.path must be documentkb/${id}/summary.md -- a summary is always the ` +
           `row's OWN derivative, never another row's`,
       );
     }
     if (!SHA256_REGEX.test(String(raw.source_revision))) {
-      errors.push(`${where}.summary.source_revision must be a sha256 digest (revision-bound)`);
+      errors.push(
+        `${where}.summary.source_revision must be a sha256 digest (revision-bound)`,
+      );
     }
     return;
   }
@@ -461,12 +516,18 @@ function validateRow(raw: unknown, where: string, errors: string[]): void {
     return;
   }
   if (typeof raw.id !== "string" || !UUID_REGEX.test(raw.id)) {
-    errors.push(`${where}.id must be a canonical UUID (got ${JSON.stringify(raw.id)})`);
+    errors.push(
+      `${where}.id must be a canonical UUID (got ${JSON.stringify(raw.id)})`,
+    );
   }
   if (typeof raw.sha256 !== "string" || !SHA256_REGEX.test(raw.sha256)) {
     errors.push(`${where}.sha256 must be a lowercase sha256 hex digest`);
   }
-  if (typeof raw.bytes !== "number" || !Number.isInteger(raw.bytes) || raw.bytes < 0) {
+  if (
+    typeof raw.bytes !== "number" ||
+    !Number.isInteger(raw.bytes) ||
+    raw.bytes < 0
+  ) {
     errors.push(`${where}.bytes must be a non-negative integer`);
   }
   if (!isValidIsoTimestamp(raw.indexed_at)) {
@@ -529,7 +590,9 @@ function validateRow(raw: unknown, where: string, errors: string[]): void {
       const seen = new Map<string, number>(); // normalised key -> first index
       for (const [i, tag] of tags.entries()) {
         if (typeof tag !== "string" || tag.length === 0) {
-          errors.push(`${where}.tags[${i}] must be a non-empty string (got ${JSON.stringify(tag)})`);
+          errors.push(
+            `${where}.tags[${i}] must be a non-empty string (got ${JSON.stringify(tag)})`,
+          );
           continue;
         }
         if (hasTagControlChar(tag)) {
@@ -573,7 +636,10 @@ function validateRow(raw: unknown, where: string, errors: string[]): void {
   if (raw.content !== undefined) {
     if (!validDocumentPath(raw.content)) {
       errors.push(`${where}.content must be a relative POSIX path`);
-    } else if (typeof raw.id === "string" && raw.content !== `documentkb/${raw.id}/content.md`) {
+    } else if (
+      typeof raw.id === "string" &&
+      raw.content !== `documentkb/${raw.id}/content.md`
+    ) {
       // CANONICAL BINDING, not more path hardening. `validDocumentPath` already
       // refuses `..`/absolute/backslash escapes (measured: a
       // `../../../../etc/hosts` variant is refused there, not here) -- the gap
@@ -586,11 +652,18 @@ function validateRow(raw: unknown, where: string, errors: string[]): void {
           `row's OWN derivative, never another row's`,
       );
     }
-    if (typeof raw.content_sha256 !== "string" || !SHA256_REGEX.test(raw.content_sha256)) {
-      errors.push(`${where}.content_sha256 must be a lowercase sha256 digest when content is present`);
+    if (
+      typeof raw.content_sha256 !== "string" ||
+      !SHA256_REGEX.test(raw.content_sha256)
+    ) {
+      errors.push(
+        `${where}.content_sha256 must be a lowercase sha256 digest when content is present`,
+      );
     }
   } else if (raw.content_sha256 !== undefined) {
-    errors.push(`${where}.content_sha256 must be absent when content is absent`);
+    errors.push(
+      `${where}.content_sha256 must be absent when content is absent`,
+    );
   }
   // A SIBLING of `summary` (S3a's shipped, reviewed, two-state union), not a
   // field inside it -- this is additive, not a rewrite of that contract. Kept
@@ -605,9 +678,16 @@ function validateRow(raw: unknown, where: string, errors: string[]): void {
   const summaryState = isObject(raw.summary) ? raw.summary.state : undefined;
   if (raw.summary_sha256 !== undefined) {
     if (summaryState !== "generated") {
-      errors.push(`${where}.summary_sha256 must be absent when summary.state is not "generated"`);
-    } else if (typeof raw.summary_sha256 !== "string" || !SHA256_REGEX.test(raw.summary_sha256)) {
-      errors.push(`${where}.summary_sha256, when present, must be a lowercase sha256 digest`);
+      errors.push(
+        `${where}.summary_sha256 must be absent when summary.state is not "generated"`,
+      );
+    } else if (
+      typeof raw.summary_sha256 !== "string" ||
+      !SHA256_REGEX.test(raw.summary_sha256)
+    ) {
+      errors.push(
+        `${where}.summary_sha256, when present, must be a lowercase sha256 digest`,
+      );
     }
   }
   if ("removed_at" in raw && raw.removed_at !== undefined) {
@@ -630,7 +710,9 @@ function validateRow(raw: unknown, where: string, errors: string[]): void {
 
 // Validate a parsed `index.json`. Returns every error rather than the first, so
 // a hand-edited file reports all its problems in one run.
-export function validateDocumentIndex(raw: unknown): SchemaResult<DocumentIndex> {
+export function validateDocumentIndex(
+  raw: unknown,
+): SchemaResult<DocumentIndex> {
   const errors: string[] = [];
   if (!isObject(raw)) {
     return { ok: false, errors: ["index.json must be a JSON object"] };
@@ -678,7 +760,9 @@ export function validateDocumentIndex(raw: unknown): SchemaResult<DocumentIndex>
 // Validate a parsed per-document `metadata.json`. Same treatment as the index:
 // it is the REBUILD input, and a rebuild that trusts its input is an
 // arbitrary-file-read with extra steps.
-export function validateDocumentMetadata(raw: unknown): SchemaResult<DocumentMetadata> {
+export function validateDocumentMetadata(
+  raw: unknown,
+): SchemaResult<DocumentMetadata> {
   const errors: string[] = [];
   if (!isObject(raw)) {
     return { ok: false, errors: ["metadata.json must be a JSON object"] };
@@ -700,7 +784,9 @@ export function validateDocumentMetadata(raw: unknown): SchemaResult<DocumentMet
     );
   }
   if (raw.content_handling !== "data-not-instructions") {
-    errors.push(`metadata.json content_handling must be "data-not-instructions"`);
+    errors.push(
+      `metadata.json content_handling must be "data-not-instructions"`,
+    );
   }
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, value: raw as unknown as DocumentMetadata };
@@ -752,8 +838,11 @@ export function summaryIsCurrent(row: DocumentRow): boolean {
 // shipped and reviewed) has no literal `"invalidated"` member -- this is a
 // DERIVED reader-facing state, exactly as `effectiveExtractionState` derives
 // `"invalidated"` from a `state: "extracted"` union member that also lacks it.
-export function effectiveSummaryState(row: DocumentRow): "absent" | "generated" | "invalidated" {
+export function effectiveSummaryState(
+  row: DocumentRow,
+): "absent" | "generated" | "invalidated" {
   if (isTombstoned(row)) return "absent";
-  if (row.summary.state === "generated" && !summaryIsCurrent(row)) return "invalidated";
+  if (row.summary.state === "generated" && !summaryIsCurrent(row))
+    return "invalidated";
   return row.summary.state;
 }

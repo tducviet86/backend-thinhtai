@@ -4,23 +4,23 @@ Structured processes for detecting, responding to, and learning from production 
 
 ## Incident Severity Levels
 
-| Level | Name | Criteria | Response Time | Examples |
-|-------|------|----------|---------------|---------|
-| **SEV1** | Critical | Complete service outage or data loss affecting all users | < 15 minutes | Production down, data breach, payment processing failure |
-| **SEV2** | Major | Significant degradation affecting many users, no workaround | < 30 minutes | Partial outage, error rate > 10%, major feature broken |
-| **SEV3** | Minor | Limited impact, workaround available | < 2 hours | Non-critical feature broken, intermittent errors, slow performance |
-| **SEV4** | Low | Cosmetic or minor issue, no user impact | Next business day | UI glitch, non-critical log errors, minor config drift |
+| Level    | Name     | Criteria                                                    | Response Time     | Examples                                                           |
+| -------- | -------- | ----------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
+| **SEV1** | Critical | Complete service outage or data loss affecting all users    | < 15 minutes      | Production down, data breach, payment processing failure           |
+| **SEV2** | Major    | Significant degradation affecting many users, no workaround | < 30 minutes      | Partial outage, error rate > 10%, major feature broken             |
+| **SEV3** | Minor    | Limited impact, workaround available                        | < 2 hours         | Non-critical feature broken, intermittent errors, slow performance |
+| **SEV4** | Low      | Cosmetic or minor issue, no user impact                     | Next business day | UI glitch, non-critical log errors, minor config drift             |
 
 ## Escalation Matrix
 
 Define who to contact at each severity level:
 
-| Severity | Primary Responder | Escalation (30 min) | Escalation (1 hour) |
-|----------|------------------|---------------------|---------------------|
-| SEV1 | On-call engineer | Engineering manager + Incident commander | VP Engineering + Stakeholder communication |
-| SEV2 | On-call engineer | Team lead | Engineering manager |
-| SEV3 | On-call engineer | Team lead (if unresolved in 4 hours) | — |
-| SEV4 | Any team member | — | — |
+| Severity | Primary Responder | Escalation (30 min)                      | Escalation (1 hour)                        |
+| -------- | ----------------- | ---------------------------------------- | ------------------------------------------ |
+| SEV1     | On-call engineer  | Engineering manager + Incident commander | VP Engineering + Stakeholder communication |
+| SEV2     | On-call engineer  | Team lead                                | Engineering manager                        |
+| SEV3     | On-call engineer  | Team lead (if unresolved in 4 hours)     | —                                          |
+| SEV4     | Any team member   | —                                        | —                                          |
 
 ## On-Call Rotation
 
@@ -33,6 +33,7 @@ Define who to contact at each severity level:
 ## Incident Commander Role
 
 For SEV1 and SEV2 incidents, designate an Incident Commander (IC) who:
+
 - **Coordinates** response efforts; does not debug directly.
 - **Communicates** status updates to stakeholders at regular intervals (every 15-30 minutes).
 - **Delegates** workstreams: investigation, mitigation, communication, documentation.
@@ -44,11 +45,13 @@ The IC is not necessarily the most senior engineer; it is the person who can coo
 ## Communication During Incidents
 
 ### Internal
+
 - Create a dedicated Slack/Teams channel: `#incident-YYYY-MM-DD-short-description`.
 - Post structured updates: **Status** (investigating/identified/mitigating/resolved), **Impact** (who is affected), **Next Step** (what we are doing), **ETA** (when the next update will be).
 - Keep the channel focused; move side discussions to threads.
 
 ### External
+
 - SEV1: Status page update within 20 minutes. Customer communication within 1 hour.
 - SEV2: Status page update within 1 hour if customer-visible.
 - Use pre-drafted templates for common scenarios: "We are experiencing elevated error rates..."
@@ -59,6 +62,7 @@ The IC is not necessarily the most senior engineer; it is the person who can coo
 Conduct within 48 hours of incident resolution for SEV1/SEV2.
 
 ### Structure
+
 1. **Timeline**: Minute-by-minute account from detection to resolution.
 2. **Impact**: Users affected, duration, financial/data impact.
 3. **Root Cause**: Technical cause(s) of the incident.
@@ -68,6 +72,7 @@ Conduct within 48 hours of incident resolution for SEV1/SEV2.
 7. **Action Items**: Specific, assigned, time-boxed improvements.
 
 ### Blameless Principles
+
 - Focus on systems and processes, not individuals.
 - People made the best decisions they could with the information available.
 - Ask "what" and "how", not "who".
@@ -97,11 +102,11 @@ Store runbooks as SSM Automation documents in version control. Reference them in
 - **RTO (Recovery Time Objective)**: Maximum acceptable downtime. How quickly must the system be restored?
 - **RPO (Recovery Point Objective)**: Maximum acceptable data loss. How much data can we afford to lose?
 
-| Tier | RTO | RPO | Strategy |
-|------|-----|-----|----------|
-| Critical (payments, auth) | < 5 minutes | 0 (zero data loss) | Multi-AZ active-active, synchronous replication |
-| High (order processing) | < 30 minutes | < 5 minutes | Multi-AZ with automated failover, point-in-time recovery |
-| Standard (reporting, analytics) | < 4 hours | < 1 hour | Regular backups, automated restoration |
-| Low (internal tools) | < 24 hours | < 24 hours | Daily backups, manual restoration |
+| Tier                            | RTO          | RPO                | Strategy                                                 |
+| ------------------------------- | ------------ | ------------------ | -------------------------------------------------------- |
+| Critical (payments, auth)       | < 5 minutes  | 0 (zero data loss) | Multi-AZ active-active, synchronous replication          |
+| High (order processing)         | < 30 minutes | < 5 minutes        | Multi-AZ with automated failover, point-in-time recovery |
+| Standard (reporting, analytics) | < 4 hours    | < 1 hour           | Regular backups, automated restoration                   |
+| Low (internal tools)            | < 24 hours   | < 24 hours         | Daily backups, manual restoration                        |
 
 Test RTO/RPO targets quarterly through game days and disaster recovery drills.

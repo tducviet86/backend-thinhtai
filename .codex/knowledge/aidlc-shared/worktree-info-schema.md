@@ -14,10 +14,10 @@ The slug is the kebab-case Bolt identifier threaded through every worktree comma
 
 ## Exit codes
 
-| Exit | Meaning | stdout | stderr |
-|------|---------|--------|--------|
-| 0 | Hit — JSON emitted | JSON object (see below) | (empty) |
-| 1 | Miss — no `WORKTREE_CREATED` for slug, OR malformed block | (empty) | one-line error message |
+| Exit | Meaning                                                   | stdout                  | stderr                 |
+| ---- | --------------------------------------------------------- | ----------------------- | ---------------------- |
+| 0    | Hit — JSON emitted                                        | JSON object (see below) | (empty)                |
+| 1    | Miss — no `WORKTREE_CREATED` for slug, OR malformed block | (empty)                 | one-line error message |
 
 The exit-code contract mirrors `verify`'s semantics: non-zero is the halt signal. The orchestrator's prose treats any non-zero exit as "no worktree to render" and falls back to the carve-out failure shape (verify-failed or dev-rejection) — but in practice this is unreachable for the wired invocation path (code-generation failure at Step 1 always has `WORKTREE_CREATED` in audit by Step 0).
 

@@ -47,7 +47,11 @@ function projectFromPayload(): string | null {
   } catch {
     // Fall through to cwd for manual/source-tree invocations.
   }
-  const projects = [...new Set(roots.map(installedProject).filter((p): p is string => p !== null))];
+  const projects = [
+    ...new Set(
+      roots.map(installedProject).filter((p): p is string => p !== null),
+    ),
+  ];
   if (projects.length > 1) {
     process.stderr.write(
       `aidlc plugin compose: multiple Cursor workspace roots contain AI-DLC installs (${projects.join(", ")}); set AIDLC_PROJECT_DIR to select one\n`,

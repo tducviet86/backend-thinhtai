@@ -131,11 +131,21 @@ export function judgeFreeze(
   if (stage.for_each === "unit-of-work") {
     if (targetUnit !== null) {
       if (receipts.unitPending?.get(targetUnit)?.recovery === true) {
-        return { block: true, target: file, stage: stage.slug, unit: targetUnit };
+        return {
+          block: true,
+          target: file,
+          stage: stage.slug,
+          unit: targetUnit,
+        };
       }
       // A unit-scoped write voids that unit's receipt only.
       if (receipts.unitVerdicts.has(targetUnit)) {
-        return { block: true, target: file, stage: stage.slug, unit: targetUnit };
+        return {
+          block: true,
+          target: file,
+          stage: stage.slug,
+          unit: targetUnit,
+        };
       }
       return { block: false };
     }
@@ -191,7 +201,9 @@ export function blockReason(
   v: FreezeVerdict,
   guidance = REVIEW_FREEZE_FALLBACK_GUIDANCE,
 ): string {
-  const scope = v.unit ? `stage "${v.stage}" unit "${v.unit}"` : `stage "${v.stage}"`;
+  const scope = v.unit
+    ? `stage "${v.stage}" unit "${v.unit}"`
+    : `stage "${v.stage}"`;
   return (
     `review-freeze: "${v.target}" is this stage's output document for ${scope}, ` +
     "and its latest review is final. Writing it now would make that review no " +
@@ -211,7 +223,11 @@ export async function run(input: string): Promise<number> {
   try {
     const healthDir = hooksHealthDir(projectDir);
     mkdirSync(healthDir, { recursive: true });
-    writeFileSync(join(healthDir, `${HOOK_NAME}.last`), isoTimestamp(), "utf-8");
+    writeFileSync(
+      join(healthDir, `${HOOK_NAME}.last`),
+      isoTimestamp(),
+      "utf-8",
+    );
   } catch {
     // Heartbeat failure is non-fatal - never let it affect the decision.
   }
@@ -312,7 +328,11 @@ export async function run(input: string): Promise<number> {
           releaseAuditLock(projectDir);
         }
       } else {
-        recordHookDrop(projectDir, HOOK_NAME, "audit lock contended; REVIEW_FREEZE_BLOCKED row dropped (block still enforced)");
+        recordHookDrop(
+          projectDir,
+          HOOK_NAME,
+          "audit lock contended; REVIEW_FREEZE_BLOCKED row dropped (block still enforced)",
+        );
       }
     }
   } catch {
@@ -325,21 +345,19 @@ export async function run(input: string): Promise<number> {
     process.stderr.write(`${blockReason(verdict)}\n`);
     return 2;
   }
-  const summaryEvidence = checkSummaryConfirmationEvidence(
-    projectDir,
-    stage,
-    {
-      stateContent,
-      ...(verdict.unit ? { unit: verdict.unit } : {}),
-    },
-  );
+  const summaryEvidence = checkSummaryConfirmationEvidence(projectDir, stage, {
+    stateContent,
+    ...(verdict.unit ? { unit: verdict.unit } : {}),
+  });
   // The attempt as the evaluator sees it, built by the one shared constructor
   // from the receipts the freeze verdict already read. Summary coverage comes
   // from the evidence object's own field, never from its message text.
   const snapshot = guardAttemptState(projectDir, stateContent, stage, {
     ...(verdict.unit ? { unit: verdict.unit } : {}),
     receipts,
-    summaryCoverage: summaryEvidence.ok ? "current" : summaryEvidence.summaryCoverage,
+    summaryCoverage: summaryEvidence.ok
+      ? "current"
+      : summaryEvidence.summaryCoverage,
   });
   const teamGate = teamUnitGateStatus(
     projectDir,

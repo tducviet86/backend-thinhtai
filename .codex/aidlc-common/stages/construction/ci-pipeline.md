@@ -52,6 +52,7 @@ Incremental scopes (infra) skip code-generation and build-and-test by design; wh
 ### Step 2: Generate Clarifying Questions
 
 Create `<record>/construction/ci-pipeline/ci-pipeline-questions.md` with questions:
+
 - What CI tool is in use (CodePipeline, CodeBuild, GitHub Actions, Jenkins)?
 - What is the branch strategy?
 - What quality gates are required before merge?
@@ -70,6 +71,7 @@ Create CI pipeline configuration (buildspec.yml, workflow YAML, or equivalent), 
 ### Step 5: Phase Boundary Verification
 
 Run Construction → Operation verification check:
+
 - Read
   `<record>/construction/build-and-test/cross-unit-traceability.md`.
 - Read every

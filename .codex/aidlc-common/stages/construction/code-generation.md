@@ -79,6 +79,7 @@ outputs: application code + code-generation-plan.md, code-generation-questions.m
 ### Step 1: Read All Unit Artifacts
 
 Read all design artifacts for the current unit:
+
 - Functional design from `<record>/construction/{unit-name}/functional-design/` (if exists)
 - NFR requirements from `<record>/construction/{unit-name}/nfr-requirements/` (if exists)
 - NFR design from `<record>/construction/{unit-name}/nfr-design/` (if exists)
@@ -118,6 +119,7 @@ implementation step. Include story-to-code-step traceability — map each plan
 step back to the user story it implements.
 
 Plan should cover (as applicable to the unit):
+
 - [ ] Business logic implementation
 - [ ] API/endpoint layer
 - [ ] Repository/data access layer
@@ -129,11 +131,13 @@ Plan should cover (as applicable to the unit):
 - [ ] Deployment artifacts (Dockerfiles, IaC)
 
 **Test files are MANDATORY in the plan.** Consult the active test strategy (stage-protocol.md §8 "Test Strategy") to determine test scope and volume:
+
 - **Minimal strategy**: Requirement-driven tests (1 per requirement, happy-path unit floor per component); unit tests are the default, but a `bugfix` / `security-patch` targeted regression uses the narrowest level that reproduces the defect
 - **Standard strategy**: Unit test files per component (5-8 tests each) + integration test stubs for key boundaries
 - **Comprehensive strategy**: Unit + integration + E2E test files per component (10-15 tests each)
 
 Apply the active scope's floor additively:
+
 - `mvp`, `enterprise`, `feature`, `infra`: the selected strategy plus 80% line coverage and CI execution before merge.
 - `bugfix`, `security-patch`: the selected strategy plus a targeted regression for the bug/vulnerability at the narrowest level that reproduces it, even when that adds one integration/E2E test beyond Minimal's unit-test default; the existing suite remains green.
 - `poc`, `refactor`, `workshop`: the selected strategy still applies; the scope adds no extra new-test floor, and the existing suite remains green.
@@ -141,6 +145,7 @@ Apply the active scope's floor additively:
 The selected strategy and scope floor are both obligations. Neither replaces the other.
 
 The plan MUST include steps for:
+
 - [ ] Test files appropriate to the active test strategy
 - [ ] Test configuration (vitest.config, jest.config, or equivalent)
 
@@ -155,6 +160,7 @@ aidlc engine testing-posture render
 Paste the command's complete `## Testing Contract` JSON block into `code-generation-plan.md` unchanged. The resolver reads all `## Testing Posture` sections additively and selects the narrowest explicit methodology/order statement; coverage, tooling, integration, or scope notes remain applicable but cannot erase a broader methodology. A contradictory narrower methodology is an error, not an override: halt and ask for the memory rule to be revised.
 
 Use the contract's `plan_profile.steps` as the required ordering baseline, adapting names and omitting genuinely inapplicable layers without changing the methodology:
+
 - **TDD**: for every applicable testable layer — data-model/database behavior, repository/data access, business logic, API/endpoint, and frontend behavior — plan Red (failing tests), Green (minimal implementation), then Refactor while green.
 - **BDD**: define executable behavior/scenario examples before each observable feature slice, implement that slice across every required layer, run scenarios green, then refactor. Do not turn BDD into layer-local TDD.
 - **ATDD**: write executable acceptance tests before the complete cross-layer feature implementation, implement against that acceptance contract, run acceptance green, then refactor. Do not split acceptance intent into unrelated per-layer Red steps.
@@ -180,6 +186,7 @@ includes its targeted regression at the narrowest level that reproduces the
 defect.
 
 Include:
+
 - Test framework setup and configuration
 - How to run THIS UNIT's tests, including the exact command that is runnable before the first test-first cycle
 - Expected coverage targets
@@ -358,9 +365,10 @@ Delegate to Task tool with subagent_type="aidlc-developer-agent".
 The aidlc-developer-agent persona and its knowledge are loaded automatically by the named agent. Do NOT manually inject the persona in the prompt.
 
 Include in the delegation prompt:
+
 - First, verbatim and unedited, the output of
   `aidlc engine testing-posture brief --unit
-  <directive.unit>` (or `--stage-level` for a zero-Unit directive). Its first
+<directive.unit>` (or `--stage-level` for a zero-Unit directive). Its first
   line is the exact target marker (`AIDLC-UNIT: <directive.unit>` or
   `AIDLC-STAGE: code-generation`), which identifies the one approval authority
   whose plan authorizes the dispatch; its second line is
@@ -401,6 +409,7 @@ The subagent generates all code, test files, and configuration artifacts in the 
 
 After subagent completes, create `<code-generation-record>/code-summary.md`
 documenting:
+
 - Files created/modified
 - Key implementation decisions
 - Test coverage summary

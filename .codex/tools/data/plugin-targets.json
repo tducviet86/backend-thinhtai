@@ -4,37 +4,21 @@
     "manifestDir": ".claude-plugin",
     "harnessLeaf": ".claude",
     "kind": "store",
-    "installRoots": [
-      ".claude",
-      ".gitignore",
-      ".mcp.json",
-      "aidlc"
-    ]
+    "installRoots": [".claude", ".gitignore", ".mcp.json", "aidlc"]
   },
   "codex": {
     "harnessName": "codex",
     "manifestDir": ".codex-plugin",
     "harnessLeaf": ".codex",
     "kind": "store",
-    "installRoots": [
-      ".agents",
-      ".codex",
-      ".gitignore",
-      "aidlc"
-    ]
+    "installRoots": [".agents", ".codex", ".gitignore", "aidlc"]
   },
   "copilot": {
     "harnessName": "copilot",
     "manifestDir": ".plugin",
     "harnessLeaf": ".aidlc",
     "kind": "store",
-    "installRoots": [
-      ".aidlc",
-      ".github",
-      ".gitignore",
-      "AGENTS.md",
-      "aidlc"
-    ]
+    "installRoots": [".aidlc", ".github", ".gitignore", "AGENTS.md", "aidlc"]
   },
   "cursor": {
     "harnessName": "cursor",
@@ -54,24 +38,14 @@
     "manifestDir": ".kiro-plugin",
     "harnessLeaf": ".kiro",
     "kind": "kiro",
-    "installRoots": [
-      ".gitignore",
-      ".kiro",
-      "AGENTS.md",
-      "aidlc"
-    ]
+    "installRoots": [".gitignore", ".kiro", "AGENTS.md", "aidlc"]
   },
   "kiro-ide": {
     "harnessName": "kiro-ide",
     "manifestDir": ".kiro-plugin",
     "harnessLeaf": ".kiro",
     "kind": "kiro-ide",
-    "installRoots": [
-      ".gitignore",
-      ".kiro",
-      "AGENTS.md",
-      "aidlc"
-    ]
+    "installRoots": [".gitignore", ".kiro", "AGENTS.md", "aidlc"]
   },
   "opencode": {
     "harnessName": "opencode",

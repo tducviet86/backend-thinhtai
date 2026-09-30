@@ -29,4 +29,5 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for concurrency and domain deci
 ## Intentional next slices
 
 The schema anticipates CMS, review moderation, manual booking price overrides, room-change/extension history, webhooks, and media storage, but their complete admin CRUD/workflows are not exposed yet. Redis is intentionally not required for correctness; introduce it behind catalog/SEO cache interfaces when operational load justifies it. A production gateway integration must implement provider-specific signature verification and idempotent webhook processing before accepting online payment callbacks.
+
 # backend-thinhtai

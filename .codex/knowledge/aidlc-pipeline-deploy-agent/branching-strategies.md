@@ -24,6 +24,7 @@ main ─────────────────────────
 **When to use.** Default for most teams. Especially when CI pipeline duration is short (under 30 minutes) and observability is good enough to detect production issues quickly.
 
 **Common problems.**
+
 - Teams with infrequent releases find it hard to "hold" features for a release window. Feature flags are the answer, not branches.
 - Teams without good test coverage shouldn't trunk-base — every commit hits production-shaped pipelines, so flaky tests block everyone.
 
@@ -64,6 +65,7 @@ main ─────────────────────────
 **When to use.** Teams that want trunk-based discipline but need longer-lived feature branches. Open-source projects often use this.
 
 **Common problems.**
+
 - Branches that live too long accumulate merge debt. Discipline required to either land or close.
 - Without feature flags, in-flight features block release of unrelated work.
 
@@ -106,6 +108,7 @@ develop ─────┴───────────┴──────
 **When to use.** Teams with strict release management — quarterly releases, regulated deployments, stable production while integration continues. Common in enterprise + financial services.
 
 **Common problems.**
+
 - Long-lived `develop` accumulates merge debt against `main` over a release cycle. Painful merges at release-cut time.
 - Hotfixes require dual-merging (to both `main` and `develop`) — easy to miss the second merge.
 
@@ -150,6 +153,7 @@ release/v1.0 ┴──── (frozen for stabilisation) ──────►
 **When to use.** Teams shipping versioned software where release stability matters more than continuous deployment — desktop apps, embedded software, enterprise products with hard release dates.
 
 **Common problems.**
+
 - Bug fixes on release branch must be cherry-picked or merged back to `main` so they don't regress in the next release.
 - Long stabilisation periods can block feature work waiting for the release branch to merge back.
 
@@ -189,6 +193,7 @@ main ─────────────────────────
 **When to use.** Teams with multiple closely-coupled services that benefit from atomic cross-service changes. Tooling support required: Nx, Turborepo, Pants.
 
 **Common problems.**
+
 - CI must be path-aware (only test packages with changes). Monolithic CI defeats the purpose.
 - Cross-package changes can't be parallelised cleanly — they require coordinated merges.
 
@@ -298,12 +303,12 @@ If none of `project.md`, `team.md`, or `org.md` provides a branching practice, t
 
 ## Quick decision matrix
 
-| You want... | Use |
-|---|---|
-| Default for a new project | Trunk-Based |
-| OSS-style PRs with longer-lived branches | GitHub Flow |
-| Enterprise release management | GitFlow |
-| Versioned releases with stabilisation periods | Release Branches |
-| Multiple services in one repo | Monorepo (on top of one of the above) |
+| You want...                                   | Use                                   |
+| --------------------------------------------- | ------------------------------------- |
+| Default for a new project                     | Trunk-Based                           |
+| OSS-style PRs with longer-lived branches      | GitHub Flow                           |
+| Enterprise release management                 | GitFlow                               |
+| Versioned releases with stabilisation periods | Release Branches                      |
+| Multiple services in one repo                 | Monorepo (on top of one of the above) |
 
 If unsure, choose Trunk-Based. It's the lowest-overhead strategy with the strongest CI/CD ecosystem support, and AIDLC's Construction worktrees are designed for it as the default.

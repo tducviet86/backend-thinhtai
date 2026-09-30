@@ -34,10 +34,7 @@ import {
   scanPluginFiles,
   walkPluginFiles,
 } from "./aidlc-plugin-validate.ts";
-import {
-  TRUSTED_ROUTE_NAMESPACE,
-  trustedCommand,
-} from "./aidlc-command.ts";
+import { TRUSTED_ROUTE_NAMESPACE, trustedCommand } from "./aidlc-command.ts";
 import { runWithOwnerStampedLock } from "./aidlc-lib.ts";
 
 export type PluginTargetKind = "store" | "kiro" | "kiro-ide" | "cursor";
@@ -86,11 +83,7 @@ const CONTENT_DIRS = [
 ] as const;
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value)
-  );
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function canonicalOutputPath(path: string): string {
@@ -181,12 +174,10 @@ export function readPluginTargets(path: string): PluginTargetTable {
 
 export function pluginReviewerAgents(pluginRoot: string): Set<string> {
   const reviewers = new Set<string>();
-  for (const file of walkPluginFiles(join(pluginRoot, "stages")).filter((path) =>
-    path.endsWith(".md"),
+  for (const file of walkPluginFiles(join(pluginRoot, "stages")).filter(
+    (path) => path.endsWith(".md"),
   )) {
-    const match = readFileSync(file, "utf-8").match(
-      /^reviewer:\s*(\S+)\s*$/m,
-    );
+    const match = readFileSync(file, "utf-8").match(/^reviewer:\s*(\S+)\s*$/m);
     if (match) reviewers.add(match[1]);
   }
   return reviewers;
@@ -241,10 +232,7 @@ function injectDelegatedKnowledgePreflight(
   );
 }
 
-function projectCursorPluginAgent(
-  source: string,
-  sourcePath: string,
-): string {
+function projectCursorPluginAgent(source: string, sourcePath: string): string {
   const match = source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   if (!match) {
     throw new Error(
@@ -261,15 +249,9 @@ function projectCursorPluginAgent(
 }
 
 function readPluginManifest(pluginRoot: string): Record<string, unknown> {
-  const manifestPath = join(
-    pluginRoot,
-    ".aidlc-plugin",
-    "plugin.json",
-  );
+  const manifestPath = join(pluginRoot, ".aidlc-plugin", "plugin.json");
   try {
-    const parsed = JSON.parse(
-      readFileSync(manifestPath, "utf-8"),
-    ) as unknown;
+    const parsed = JSON.parse(readFileSync(manifestPath, "utf-8")) as unknown;
     if (!isPlainRecord(parsed)) {
       throw new Error("manifest root must be an object");
     }
@@ -487,9 +469,7 @@ function assertBuildPathHasNoSymlinks(
   }
 
   let current = boundary;
-  for (const segment of boundaryRelative
-    .split(sep)
-    .filter(Boolean)) {
+  for (const segment of boundaryRelative.split(sep).filter(Boolean)) {
     current = join(current, segment);
     let currentStat: ReturnType<typeof lstatSync>;
     try {
@@ -530,11 +510,7 @@ export function assertPluginBuildOutput(
   const resolvedOut = isAbsolute(outArg)
     ? outArg
     : resolve(process.cwd(), outArg);
-  assertBuildPathHasNoSymlinks(
-    outDir,
-    resolvedOut,
-    outputBoundary,
-  );
+  assertBuildPathHasNoSymlinks(outDir, resolvedOut, outputBoundary);
   if (!existsSync(resolvedOut)) return;
   if (!statSync(resolvedOut).isDirectory()) {
     throw new Error(
@@ -562,10 +538,7 @@ export function assertPluginBuildOutput(
         "Point at a fresh/empty directory.",
     );
   }
-  if (
-    marker.plugin !== pluginName ||
-    marker.harness !== target.harnessName
-  ) {
+  if (marker.plugin !== pluginName || marker.harness !== target.harnessName) {
     throw new Error(
       `refusing to replace "${outDir}" - its ${PLUGIN_PROJECTION_MARKER} belongs to ` +
         `plugin "${marker.plugin}" for harness "${marker.harness}", not plugin "${pluginName}" ` +

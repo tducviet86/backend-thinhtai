@@ -199,9 +199,7 @@ function artifactBasisKey(basis: ArtifactBasis): string {
   return [basis.artifact, basis.producer].join("\u0000");
 }
 
-function sortedArtifactBases(
-  bases: readonly ArtifactBasis[],
-): ArtifactBasis[] {
+function sortedArtifactBases(bases: readonly ArtifactBasis[]): ArtifactBasis[] {
   return [...bases].sort((left, right) =>
     artifactBasisKey(left).localeCompare(artifactBasisKey(right)),
   );
@@ -450,7 +448,11 @@ export function parseStageValidationBasis(
   if (!raw) return null;
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed)
+    ) {
       return null;
     }
     const candidate = parsed as Record<string, unknown>;
@@ -557,7 +559,9 @@ function artifactBasisChanges(
   before: readonly ArtifactBasis[],
   after: readonly ArtifactBasis[],
 ): string[] {
-  const previous = new Map(before.map((item) => [artifactBasisKey(item), item]));
+  const previous = new Map(
+    before.map((item) => [artifactBasisKey(item), item]),
+  );
   const current = new Map(after.map((item) => [artifactBasisKey(item), item]));
   const keys = new Set([...previous.keys(), ...current.keys()]);
   const changes: string[] = [];
@@ -582,7 +586,9 @@ export function diffStageValidationBasis(
   }
   if (before.projectType !== after.projectType) changes.push("project-type");
   changes.push(...artifactBasisChanges("input", before.inputs, after.inputs));
-  changes.push(...artifactBasisChanges("output", before.outputs, after.outputs));
+  changes.push(
+    ...artifactBasisChanges("output", before.outputs, after.outputs),
+  );
   return changes;
 }
 

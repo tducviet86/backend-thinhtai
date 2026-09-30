@@ -77,7 +77,8 @@ export function stripWorkspaceManifestComments(raw: string): string {
         output += raw[i] === "\n" ? "\n" : " ";
         i++;
       }
-      if (!closed) throw new Error("repos.json contains an unterminated block comment.");
+      if (!closed)
+        throw new Error("repos.json contains an unterminated block comment.");
       continue;
     }
 
@@ -101,14 +102,22 @@ export function parseWorkspaceManifest(raw: string): WorkspaceManifest {
     value.org.trim().length === 0 ||
     !Array.isArray(value.repos)
   ) {
-    throw new Error('repos.json must have a non-empty string "org" and an array "repos".');
+    throw new Error(
+      'repos.json must have a non-empty string "org" and an array "repos".',
+    );
   }
 
   const repos: WorkspaceRepoEntry[] = [];
   const names = new Set<string>();
   for (const entry of value.repos) {
-    if (!isObject(entry) || typeof entry.name !== "string" || entry.name.length === 0) {
-      throw new Error('every repos.json entry needs a non-empty string "name".');
+    if (
+      !isObject(entry) ||
+      typeof entry.name !== "string" ||
+      entry.name.length === 0
+    ) {
+      throw new Error(
+        'every repos.json entry needs a non-empty string "name".',
+      );
     }
     if (!isValidRepoName(entry.name)) {
       throw new Error(
@@ -116,7 +125,9 @@ export function parseWorkspaceManifest(raw: string): WorkspaceManifest {
       );
     }
     if (names.has(entry.name)) {
-      throw new Error(`repos.json contains duplicate repo name "${entry.name}".`);
+      throw new Error(
+        `repos.json contains duplicate repo name "${entry.name}".`,
+      );
     }
     names.add(entry.name);
 

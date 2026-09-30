@@ -411,8 +411,7 @@ export interface UnitClaimAskDirective extends AskDirectiveBase {
   recovery_choice?: undefined;
 }
 
-export interface LegacyPlanApprovalRecoveryAskDirective
-  extends AskDirectiveBase {
+export interface LegacyPlanApprovalRecoveryAskDirective extends AskDirectiveBase {
   ask_type: "legacy-plan-approval-recovery";
   response_route: "next";
   recovery_choice: "Recover Plan Approval";
@@ -533,8 +532,7 @@ export type Directive = DirectivePayload & {
 };
 
 export type ValidationResult =
-  | { valid: true; data: Directive }
-  | { valid: false; errors: string[] };
+  { valid: true; data: Directive } | { valid: false; errors: string[] };
 
 // --- Exported constants (imported by tests) ---
 
@@ -557,7 +555,13 @@ export const VALID_KINDS = [
 // The mode enum carried by run-stage / dispatch-subagent. Mirrors
 // aidlc-stage-schema.ts VALID_MODES (the directive's mode is read straight off
 // the stage node, so the value set is identical).
-export const VALID_MODES = ["inline", "subagent", "pipeline", "mob", "agent-team"] as const;
+export const VALID_MODES = [
+  "inline",
+  "subagent",
+  "pipeline",
+  "mob",
+  "agent-team",
+] as const;
 export const VALID_REVIEW_CLASSES = ["adversarial", "advisory"] as const;
 
 // Per-kind allowed-key sets. A field outside its kind's set is rejected as an
@@ -673,22 +677,28 @@ const CHANGE_NOTICES_FIELD = "change_notices" as const;
 // Every kind's set gains `narration`, so the per-kind literals above stay the
 // record of what is kind-SPECIFIC and this one helper adds what is universal.
 function withNarration(fields: readonly string[]): readonly string[] {
-  return [...fields, NARRATION_FIELD, STAGE_VALIDITY_FIELD, CHANGE_NOTICES_FIELD];
+  return [
+    ...fields,
+    NARRATION_FIELD,
+    STAGE_VALIDITY_FIELD,
+    CHANGE_NOTICES_FIELD,
+  ];
 }
 
-const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> = {
-  "load-steering": withNarration(LOAD_STEERING_FIELDS),
-  "run-stage": withNarration(RUN_STAGE_FIELDS),
-  "dispatch-subagent": withNarration(DISPATCH_SUBAGENT_FIELDS),
-  "invoke-swarm": withNarration(INVOKE_SWARM_FIELDS),
-  "present-gate": withNarration(PRESENT_GATE_FIELDS),
-  ask: withNarration(ASK_FIELDS),
-  print: withNarration(PRINT_FIELDS),
-  error: withNarration(ERROR_FIELDS),
-  done: withNarration(DONE_FIELDS),
-  parked: withNarration(PARKED_FIELDS),
-  notice: withNarration(NOTICE_FIELDS),
-};
+const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> =
+  {
+    "load-steering": withNarration(LOAD_STEERING_FIELDS),
+    "run-stage": withNarration(RUN_STAGE_FIELDS),
+    "dispatch-subagent": withNarration(DISPATCH_SUBAGENT_FIELDS),
+    "invoke-swarm": withNarration(INVOKE_SWARM_FIELDS),
+    "present-gate": withNarration(PRESENT_GATE_FIELDS),
+    ask: withNarration(ASK_FIELDS),
+    print: withNarration(PRINT_FIELDS),
+    error: withNarration(ERROR_FIELDS),
+    done: withNarration(DONE_FIELDS),
+    parked: withNarration(PARKED_FIELDS),
+    notice: withNarration(NOTICE_FIELDS),
+  };
 
 // --- Validator ---
 
@@ -824,7 +834,9 @@ export function validateDirective(obj: unknown): ValidationResult {
       }
       if (o.ask_type === "new-work-routing") {
         if (o.response_route !== "next") {
-          errors.push(`${kind}: new-work-routing response_route must be "next"`);
+          errors.push(
+            `${kind}: new-work-routing response_route must be "next"`,
+          );
         }
         checkString(o, "new_work_description", kind, errors);
         checkString(o, "proposed_scope", kind, errors);
@@ -841,9 +853,7 @@ export function validateDirective(obj: unknown): ValidationResult {
           "state_signature",
         ] as const) {
           if (field in o) {
-            errors.push(
-              `${kind}: ${field} is not valid for new-work-routing`,
-            );
+            errors.push(`${kind}: ${field} is not valid for new-work-routing`);
           }
         }
       } else if (o.ask_type === "unit-claim") {
@@ -1026,10 +1036,7 @@ function checkRunStageShared(
   if ("review_class" in o && typeof o.reviewer !== "string") {
     errors.push(`${kind}: review_class requires reviewer`);
   }
-  if (
-    typeof o.reviewer === "string" &&
-    typeof o.review_artifact !== "string"
-  ) {
+  if (typeof o.reviewer === "string" && typeof o.review_artifact !== "string") {
     errors.push(`${kind}: reviewer requires review_artifact`);
   }
   if (
@@ -1048,13 +1055,7 @@ function checkRunStageShared(
   // value must be a string; absent is valid.
   checkOptionalString(o, "unit", kind, errors);
   checkOptionalString(o, "unit_gate", kind, errors);
-  checkEnum(
-    o,
-    "unit_gate",
-    ["per-stage", "unit-end"] as const,
-    kind,
-    errors,
-  );
+  checkEnum(o, "unit_gate", ["per-stage", "unit-end"] as const, kind, errors);
   if ("unit_gate" in o && typeof o.unit !== "string") {
     errors.push(`${kind}: unit_gate requires unit`);
   }
@@ -1079,7 +1080,9 @@ function checkOptionalStageValidity(
   if (!(STAGE_VALIDITY_FIELD in o)) return;
   const raw = o[STAGE_VALIDITY_FIELD];
   if (!isPlainObject(raw)) {
-    errors.push(`${kind}: ${STAGE_VALIDITY_FIELD} must be object, got ${describe(raw)}`);
+    errors.push(
+      `${kind}: ${STAGE_VALIDITY_FIELD} must be object, got ${describe(raw)}`,
+    );
     return;
   }
   const allowed = new Set([
@@ -1095,7 +1098,9 @@ function checkOptionalStageValidity(
       errors.push(`${kind}: ${STAGE_VALIDITY_FIELD} unknown key: ${key}`);
     }
   }
-  if (!(["drifted", "untracked", "unavailable"] as unknown[]).includes(raw.state)) {
+  if (
+    !(["drifted", "untracked", "unavailable"] as unknown[]).includes(raw.state)
+  ) {
     errors.push(
       `${kind}: ${STAGE_VALIDITY_FIELD}.state must be drifted, untracked, or unavailable`,
     );
@@ -1106,8 +1111,13 @@ function checkOptionalStageValidity(
     "untracked",
   ] as const) {
     const value = raw[field];
-    if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
-      errors.push(`${kind}: ${STAGE_VALIDITY_FIELD}.${field} must be string array`);
+    if (
+      !Array.isArray(value) ||
+      value.some((item) => typeof item !== "string")
+    ) {
+      errors.push(
+        `${kind}: ${STAGE_VALIDITY_FIELD}.${field} must be string array`,
+      );
     }
   }
   if (
@@ -1187,18 +1197,29 @@ function checkGuardRemedies(
       );
     }
     if (typeof remedy.action !== "string" || remedy.action.length === 0) {
-      errors.push(`${kind}: remedies[${index}].action must be non-empty string`);
+      errors.push(
+        `${kind}: remedies[${index}].action must be non-empty string`,
+      );
     }
     if ("command" in remedy) {
-      if (typeof remedy.command !== "string" || remedy.command.trim().length === 0) {
-        errors.push(`${kind}: remedies[${index}].command must be non-empty string`);
+      if (
+        typeof remedy.command !== "string" ||
+        remedy.command.trim().length === 0
+      ) {
+        errors.push(
+          `${kind}: remedies[${index}].command must be non-empty string`,
+        );
       } else {
         if (/<[A-Za-z][^<>]*>/.test(remedy.command)) {
           errors.push(
             `${kind}: remedies[${index}].command must not contain unresolved placeholders`,
           );
         }
-        if (!/^bun \.[A-Za-z0-9_.-]+\/tools\/aidlc-[A-Za-z0-9-]+\.ts(?:\s|$)/.test(remedy.command)) {
+        if (
+          !/^bun \.[A-Za-z0-9_.-]+\/tools\/aidlc-[A-Za-z0-9-]+\.ts(?:\s|$)/.test(
+            remedy.command,
+          )
+        ) {
           errors.push(
             `${kind}: remedies[${index}].command must be a bun-qualified packaged AIDLC tool invocation`,
           );
@@ -1280,9 +1301,7 @@ function checkOptionalLegacyPlanApprovalChoices(
   }
   for (const key of Object.keys(value)) {
     if (key !== "approve" && key !== "request_changes") {
-      errors.push(
-        `${kind}: legacy_plan_approval_choices unknown key: ${key}`,
-      );
+      errors.push(`${kind}: legacy_plan_approval_choices unknown key: ${key}`);
     }
   }
   const approve = value.approve;
@@ -1299,8 +1318,9 @@ function checkOptionalLegacyPlanApprovalChoices(
   }
   if (typeof approve !== "string" || typeof requestChanges !== "string") return;
   const approveMatch = /^Approve Plan \[([0-9a-f]{12})\]$/.exec(approve);
-  const changesMatch =
-    /^Request Changes \[([0-9a-f]{12})\]$/.exec(requestChanges);
+  const changesMatch = /^Request Changes \[([0-9a-f]{12})\]$/.exec(
+    requestChanges,
+  );
   if (!approveMatch || !changesMatch || approveMatch[1] !== changesMatch[1]) {
     errors.push(
       `${kind}: legacy_plan_approval_choices must carry matching protected choice labels`,
@@ -1351,7 +1371,9 @@ function checkOptionalTrue(
 ): void {
   if (!(field in o)) return;
   if (o[field] !== true) {
-    errors.push(`${kind}: ${field} must be true when present, got ${describe(o[field])}`);
+    errors.push(
+      `${kind}: ${field} must be true when present, got ${describe(o[field])}`,
+    );
   }
 }
 
@@ -1653,11 +1675,9 @@ function checkOptionalWave(
     }
     if (
       item.review_iteration !== null &&
-      (
-        typeof item.review_iteration !== "number" ||
+      (typeof item.review_iteration !== "number" ||
         !Number.isInteger(item.review_iteration) ||
-        item.review_iteration < 1
-      )
+        item.review_iteration < 1)
     ) {
       errors.push(
         `${prefix}.review_iteration must be a positive integer or null, got ${describe(item.review_iteration)}`,
@@ -1665,7 +1685,9 @@ function checkOptionalWave(
     }
     for (const key of ["unit_memory_path"] as const) {
       if (typeof item[key] !== "string") {
-        errors.push(`${prefix}.${key} must be string, got ${describe(item[key])}`);
+        errors.push(
+          `${prefix}.${key} must be string, got ${describe(item[key])}`,
+        );
       }
     }
     for (const key of ["consumes", "produces", "required_produces"] as const) {
@@ -1745,7 +1767,9 @@ function checkStringArray(
   const arr: unknown[] = v;
   arr.forEach((item: unknown, i: number) => {
     if (typeof item !== "string") {
-      errors.push(`${kind}: ${field}[${i}] must be string, got ${describe(item)}`);
+      errors.push(
+        `${kind}: ${field}[${i}] must be string, got ${describe(item)}`,
+      );
     }
   });
 }
@@ -1761,7 +1785,9 @@ function checkEnum(
   const v = o[field];
   if (typeof v !== "string") return; // type error already reported by checkString
   if (!allowed.includes(v)) {
-    errors.push(`${kind}: ${field} must be one of ${allowed.join(" | ")}, got "${v}"`);
+    errors.push(
+      `${kind}: ${field} must be one of ${allowed.join(" | ")}, got "${v}"`,
+    );
   }
 }
 
@@ -1787,18 +1813,13 @@ function checkUnitClaimRows(
     if (typeof record.unit !== "string") {
       errors.push(`${kind}: ${field}[${i}].unit must be a string`);
     }
-    if (
-      valueField === "holder" &&
-      typeof record.holder !== "string"
-    ) {
+    if (valueField === "holder" && typeof record.holder !== "string") {
       errors.push(`${kind}: ${field}[${i}].holder must be a string`);
     }
     if (
       valueField === "blocked_by" &&
-      (
-        !Array.isArray(record.blocked_by) ||
-        !record.blocked_by.every((entry) => typeof entry === "string")
-      )
+      (!Array.isArray(record.blocked_by) ||
+        !record.blocked_by.every((entry) => typeof entry === "string"))
     ) {
       errors.push(`${kind}: ${field}[${i}].blocked_by must be a string array`);
     }
@@ -1822,7 +1843,10 @@ if (import.meta.main) {
       part: 1,
       parts: 2,
       rules_content: [
-        { path: "aidlc-org.md", text: "## Testing Posture\n\nTests are first-class.\n" },
+        {
+          path: "aidlc-org.md",
+          text: "## Testing Posture\n\nTests are first-class.\n",
+        },
       ],
       continue_token: "opaque-token",
     },
@@ -1866,8 +1890,12 @@ if (import.meta.main) {
       inline_context_paths: [],
       gate: false,
       memory_path: "aidlc-docs/construction/auth/code-generation/memory.md",
-      consumes: ["aidlc-docs/construction/auth/functional-design/functional-design.md"],
-      produces: ["aidlc-docs/construction/auth/code-generation/code-manifest.md"],
+      consumes: [
+        "aidlc-docs/construction/auth/functional-design/functional-design.md",
+      ],
+      produces: [
+        "aidlc-docs/construction/auth/code-generation/code-manifest.md",
+      ],
       rules_in_context: ["aidlc-org.md", "aidlc-phase-construction.md"],
       sensors_applicable: ["linter", "type-check"],
       ceremony: { sensors: "on", learnings: "on", summary_confirmation: "on" },
@@ -1890,11 +1918,21 @@ if (import.meta.main) {
       phase: "inception",
       memory_path: "aidlc-docs/inception/domain-design/memory.md",
     },
-    { kind: "ask", question: "Resume from the last checkpoint, or start fresh?" },
+    {
+      kind: "ask",
+      question: "Resume from the last checkpoint, or start fresh?",
+    },
     { kind: "print", message: "AIDLC framework version 0.0.0" },
     { kind: "error", message: 'Unknown scope: "frobnicate"' },
-    { kind: "done", reason: "Workflow complete — all in-scope stages approved." },
-    { kind: "parked", reason: 'Workflow parked at "feasibility". Resume with /aidlc --resume.', stage: "feasibility" },
+    {
+      kind: "done",
+      reason: "Workflow complete — all in-scope stages approved.",
+    },
+    {
+      kind: "parked",
+      reason: 'Workflow parked at "feasibility". Resume with /aidlc --resume.',
+      stage: "feasibility",
+    },
     { kind: "notice", message: "Team Unit fan-out is active." },
     // The classify-round-trip skeleton case: gate is the unresolved sentinel,
     // and the first run-stage of a workflow also carries the conductor persona.
@@ -1910,13 +1948,17 @@ if (import.meta.main) {
         ".claude/agents/aidlc-developer-agent.md",
       ],
       gate: GATE_UNRESOLVED,
-      memory_path: "aidlc-docs/construction/{unit-name}/functional-design/memory.md",
+      memory_path:
+        "aidlc-docs/construction/{unit-name}/functional-design/memory.md",
       consumes: [],
-      produces: ["aidlc-docs/construction/{unit-name}/functional-design/functional-spec.md"],
+      produces: [
+        "aidlc-docs/construction/{unit-name}/functional-design/functional-spec.md",
+      ],
       rules_in_context: ["aidlc-org.md", "aidlc-phase-construction.md"],
       sensors_applicable: ["required-sections"],
       ceremony: { sensors: "on", learnings: "on", summary_confirmation: "on" },
-      stage_file: ".claude/aidlc-common/stages/construction/functional-design.md",
+      stage_file:
+        ".claude/aidlc-common/stages/construction/functional-design.md",
       conductor_persona: "# The Conductor's Craft …",
     },
   ];

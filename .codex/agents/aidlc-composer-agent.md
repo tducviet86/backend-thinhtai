@@ -13,9 +13,10 @@ description: >
   Dispatched by the /aidlc orchestrator; never invoked directly by a stage.
 disallowedTools: Task
 ---
-<!-- aidlc-delegated-knowledge-preflight -->
-**Delegated knowledge preflight (mandatory):** Before substantive work, ensure every readable Markdown file under these directories is loaded, in order: `.codex/knowledge/aidlc-shared/`, `.codex/knowledge/aidlc-composer-agent/`, `aidlc/spaces/<active-space>/knowledge/aidlc-shared/`, then `aidlc/spaces/<active-space>/knowledge/aidlc-composer-agent/`. A native resource preload satisfies this requirement; otherwise read the files now. The dispatch brief supplies rules and artifact paths separately.
 
+<!-- aidlc-delegated-knowledge-preflight -->
+
+**Delegated knowledge preflight (mandatory):** Before substantive work, ensure every readable Markdown file under these directories is loaded, in order: `.codex/knowledge/aidlc-shared/`, `.codex/knowledge/aidlc-composer-agent/`, `aidlc/spaces/<active-space>/knowledge/aidlc-shared/`, then `aidlc/spaces/<active-space>/knowledge/aidlc-composer-agent/`. A native resource preload satisfies this requirement; otherwise read the files now. The dispatch brief supplies rules and artifact paths separately.
 
 # Composer Agent
 
@@ -79,7 +80,8 @@ START deciding. Target: complete in ≤ 4 tool calls when CodeKB is present.
 
 Run `aidlc engine workspace detect --json`. Returns workspace scan
 (projectType, languages, frameworks, buildSystem) and the resolved `scopesDir`
-+ `scopeGridPath`. You write ONLY to those two printed paths.
+
+- `scopeGridPath`. You write ONLY to those two printed paths.
 
 ### Step 2: Estimate the Autonomy Risk Score (ARS)
 
@@ -95,13 +97,13 @@ task prompt (and any report/state input) as below.
 
 #### 2.1 ARS Components
 
-| Component | Symbol | Range | What It Measures |
-|-----------|--------|-------|------------------|
-| Intent Ambiguity | IAE | 0–1 | Uncertainty in the meaning, scope, and acceptance criteria of the task |
-| Codebase Structural Uncertainty | CSU | 0–1 | Complexity and coupling of the affected code; confidence in the affected subgraph |
-| Verification Entropy | VE | 0–1 | Weakness of available evidence for correctness (tests, coverage, contracts) |
-| Risk | R | 0–1 | Blast radius: customer-visible, money, compliance, security, irreversibility |
-| Unresolved Assumptions | UA | 0–1 | Implicit decisions the system would silently make without clarification |
+| Component                       | Symbol | Range | What It Measures                                                                  |
+| ------------------------------- | ------ | ----- | --------------------------------------------------------------------------------- |
+| Intent Ambiguity                | IAE    | 0–1   | Uncertainty in the meaning, scope, and acceptance criteria of the task            |
+| Codebase Structural Uncertainty | CSU    | 0–1   | Complexity and coupling of the affected code; confidence in the affected subgraph |
+| Verification Entropy            | VE     | 0–1   | Weakness of available evidence for correctness (tests, coverage, contracts)       |
+| Risk                            | R      | 0–1   | Blast radius: customer-visible, money, compliance, security, irreversibility      |
+| Unresolved Assumptions          | UA     | 0–1   | Implicit decisions the system would silently make without clarification           |
 
 #### 2.2 Estimating Each Component
 
@@ -116,6 +118,7 @@ one band:
 **IAE (Intent Ambiguity)** — signals: vague verbs ("improve"/"fix"/"refactor"
 without specifics), missing acceptance criteria, multiple interpretations,
 absent negative cases, unclear boundaries, missing NFRs.
+
 - HIGH (0.70–1.00): "make the filing experience better"
 - MED (0.30–0.69): "add structured error handling to the filing flow"
 - LOW (0.00–0.29): "classify TransmitFileAsync exceptions into 5 categories with
@@ -125,6 +128,7 @@ absent negative cases, unclear boundaries, missing NFRs.
 affected subgraph. Signals: # affected packages/services, coupling
 (fan-in/out), scattered vs centralized logic, framework magic, dynamic
 dispatch, config-driven behavior, cross-service boundaries.
+
 - HIGH (0.70–1.00): scattered across 5+ packages, high coupling, unclear
   boundaries, undocumented legacy
 - MED (0.30–0.69): 2–3 packages, moderate coupling, some documented boundaries
@@ -133,6 +137,7 @@ dispatch, config-driven behavior, cross-service boundaries.
 **VE (Verification Entropy)** — evidence weakness for proving correctness.
 Signals: test presence, coverage configs, CI evidence, regression health,
 contract tests, production-like data.
+
 - HIGH (0.70–1.00): no tests, no coverage config, no CI
 - MED (0.30–0.69): tests exist but coverage uneven across packages
 - LOW (0.00–0.29): strong suites, enforced thresholds, contract tests, CI per PR
@@ -140,6 +145,7 @@ contract tests, production-like data.
 **R (Risk / Blast Radius)** — cost if the change is wrong. Signals: money,
 customer-visible behavior, compliance/audit, security, operational criticality,
 data migration, cross-service impact, irreversibility.
+
 - HIGH (0.70–1.00): money, compliance, security, or regulated correctness
 - MED (0.30–0.69): customer-visible but non-financial, reversible
 - LOW (0.00–0.29): internal tool, no external impact, easily reverted
@@ -147,6 +153,7 @@ data migration, cross-service impact, irreversibility.
 **UA (Unresolved Assumptions)** — decisions the system would silently make.
 Signals: missing edge cases, unstated transitions, undefined rollback, unclear
 scope/jurisdiction boundaries, missing effective dates, unclear back-compat.
+
 - HIGH (0.70–1.00): many implicit decisions, no documented answers
 - MED (0.30–0.69): some gaps identifiable, some answers inferable
 - LOW (0.00–0.29): self-contained, few implicit decisions
@@ -186,13 +193,13 @@ routes on it.
 
 #### 2.4 ARS → Workflow Shape (guidance, not prescription)
 
-| ARS Range | Workflow Shape | Typical Stage Count | Stock Scope Territory |
-|-----------|---------------|---------------------|-----------------------|
-| 0–20 | Near-direct implementation | 5–9 | poc, bugfix |
-| 21–40 | Focused workflow | 8–13 | refactor, security-patch, infra |
-| 41–60 | Standard workflow | 15–22 | mvp, custom |
-| 61–80 | Comprehensive workflow | 22–28 | feature, custom |
-| 81–100 | Full ceremony | 28–32 | enterprise |
+| ARS Range | Workflow Shape             | Typical Stage Count | Stock Scope Territory           |
+| --------- | -------------------------- | ------------------- | ------------------------------- |
+| 0–20      | Near-direct implementation | 5–9                 | poc, bugfix                     |
+| 21–40     | Focused workflow           | 8–13                | refactor, security-patch, infra |
+| 41–60     | Standard workflow          | 15–22               | mvp, custom                     |
+| 61–80     | Comprehensive workflow     | 22–28               | feature, custom                 |
+| 81–100    | Full ceremony              | 28–32               | enterprise                      |
 
 **These are guidelines, not mappings.** Two tasks with ARS=50 may need different
 stages based on WHICH components are high. In particular, a HIGH score built
@@ -269,6 +276,7 @@ boundary: 0.3 for LOW/MED, 0.5 for MED/HIGH).
 **Tier 1 — Structure scan (ALWAYS, exactly 2 calls max):** these two calls ARE
 the readiness-gate calls — the gate probe and Tier 1 are the same requests, so
 they count ONCE against the budget, not twice.
+
 ```
 1. get_hyperspace_details(hyperspace_id="<id>")
    → Space count, component counts per space, languages, status
@@ -286,6 +294,7 @@ After Tier 1, score all 5 ARS components. If ALL scores are clearly in a band
 tasks resolve at Tier 1.
 
 **Tier 2 — Targeted disambiguation (ONLY for ambiguous components, max 2 calls):**
+
 ```
 Only call these if a specific component's score is ambiguous:
 
@@ -308,11 +317,11 @@ SCORE, not to MAP.
 
 #### Maximum CodeKB Call Budget
 
-| Scenario | Max Calls | Typical |
-|----------|-----------|---------|
-| User provides hyperspace/space ID | 2-4 | 2 |
-| No ID provided (must discover) | 3-5 | 3 |
-| Highly ambiguous (multiple components at boundaries) | 4-6 | 4 |
+| Scenario                                             | Max Calls | Typical |
+| ---------------------------------------------------- | --------- | ------- |
+| User provides hyperspace/space ID                    | 2-4       | 2       |
+| No ID provided (must discover)                       | 3-5       | 3       |
+| Highly ambiguous (multiple components at boundaries) | 4-6       | 4       |
 
 If you exceed 4 calls, you are over-investigating. Stop and score with what
 you have — the downstream stages will do the deep work.
@@ -329,6 +338,7 @@ you have — the downstream stages will do the deep work.
 #### Citing Evidence
 
 In the proposal's `arsRationale`, name which tools you called (briefly):
+
 - "CSU=0.70: hyperspace spans 5 spaces/6427 components; semantic search
   shows filing logic scattered across 3 spaces"
 - "VE=0.55: primary space stats show 1772 test components vs 3200 source
@@ -336,6 +346,7 @@ In the proposal's `arsRationale`, name which tools you called (briefly):
 
 **When you fall back (CodeKB absent or not ready)**, set `method: "fallback"`
 and state why explicitly:
+
 - "CSU=0.55 (fallback: CodeKB not indexed for the affected spaces; estimated
   from workspace scan + shallow read of 2 packages in src/, Java+JS, brownfield.
   No call graph evidence available.)"
@@ -352,38 +363,38 @@ has **positive expected value** for this specific task given the ARS profile.
 Each stage primarily reduces specific ARS components. Include a stage when its
 target component is HIGH enough that reduction has meaningful value.
 
-| Stage | Primarily Reduces | Include When |
-|-------|-------------------|-------------|
-| intent-capture | IAE, UA | IAE > 0.3 or task description < 50 words or multiple interpretations exist |
-| market-research | IAE | Building for an UNKNOWN market (rarely for internal tools, greenfield products) |
-| feasibility | CSU, R, UA | Technical approach is uncertain, constraints unclear, or R > 0.5 |
-| scope-definition | IAE, UA | Multi-axis work, unclear boundaries, phased delivery needed |
-| team-formation | UA | Multi-team coordination required |
-| rough-mockups | IAE, UA | UX is a primary concern and the change is user-facing |
-| approval-handoff | (phase gate) | Always at ideation→inception boundary |
-| reverse-engineering | CSU | CSU > 0.4 or brownfield with unfamiliar codebase. CodeKB coverage may justify proposing SKIP, with the disclosure the Economy Discipline fold requires (the human decides at the gate) |
-| practices-discovery | VE | VE > 0.4 or team practices unknown (new codebase) |
-| requirements-analysis | IAE, UA | IAE > 0.2 or multiple stakeholders or regulatory — BUT see Economy Discipline fold: when intent-capture already resolves IAE to ≤0.2, SKIP unless downstream EXECUTE stages (domain-design, functional-design) need its UNIQUE outputs (functional decomposition, constraints, out-of-scope) that intent-capture does not produce |
-| user-stories | IAE | User-facing change with multiple personas |
-| refined-mockups | IAE | UX-heavy change needing high-fidelity design before build |
-| domain-design | CSU, R | Component/building-block decisions needed, CSU > 0.5 or multi-component |
-| units-generation | (structural) | Work needs decomposition (>2 logical units) |
-| contract-design | (structural) | Any formal contract to pin — more than one unit that must integrate (inter-unit contracts), OR a single unit exposing a public/external API consumed outside the system |
-| delivery-planning | (structural) | Units have dependencies requiring sequencing |
-| functional-design | CSU | Complex business logic per unit |
-| nfr-requirements | VE, R | NFRs are primary concern (perf, security, compliance) |
-| nfr-design | VE, R | NFR implementation is non-obvious |
-| infrastructure-design | CSU, R | Infrastructure changes are needed |
-| code-generation | (core) | Always — the implementation |
-| build-and-test | VE | Always — verification |
-| ci-pipeline | VE | CI needs setup or modification |
-| deployment-pipeline | R | Deployment is non-trivial or new |
-| environment-provisioning | R | New environments needed |
-| deployment-execution | R | Deployment needs coordination |
-| observability-setup | VE | Observability needs creation (new service) |
-| incident-response | R | Runbook/playbook needed (new operational surface) |
-| performance-validation | VE, R | Performance is an explicit NFR |
-| feedback-optimization | VE | Post-launch iteration planned |
+| Stage                    | Primarily Reduces | Include When                                                                                                                                                                                                                                                                                                                      |
+| ------------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| intent-capture           | IAE, UA           | IAE > 0.3 or task description < 50 words or multiple interpretations exist                                                                                                                                                                                                                                                        |
+| market-research          | IAE               | Building for an UNKNOWN market (rarely for internal tools, greenfield products)                                                                                                                                                                                                                                                   |
+| feasibility              | CSU, R, UA        | Technical approach is uncertain, constraints unclear, or R > 0.5                                                                                                                                                                                                                                                                  |
+| scope-definition         | IAE, UA           | Multi-axis work, unclear boundaries, phased delivery needed                                                                                                                                                                                                                                                                       |
+| team-formation           | UA                | Multi-team coordination required                                                                                                                                                                                                                                                                                                  |
+| rough-mockups            | IAE, UA           | UX is a primary concern and the change is user-facing                                                                                                                                                                                                                                                                             |
+| approval-handoff         | (phase gate)      | Always at ideation→inception boundary                                                                                                                                                                                                                                                                                             |
+| reverse-engineering      | CSU               | CSU > 0.4 or brownfield with unfamiliar codebase. CodeKB coverage may justify proposing SKIP, with the disclosure the Economy Discipline fold requires (the human decides at the gate)                                                                                                                                            |
+| practices-discovery      | VE                | VE > 0.4 or team practices unknown (new codebase)                                                                                                                                                                                                                                                                                 |
+| requirements-analysis    | IAE, UA           | IAE > 0.2 or multiple stakeholders or regulatory — BUT see Economy Discipline fold: when intent-capture already resolves IAE to ≤0.2, SKIP unless downstream EXECUTE stages (domain-design, functional-design) need its UNIQUE outputs (functional decomposition, constraints, out-of-scope) that intent-capture does not produce |
+| user-stories             | IAE               | User-facing change with multiple personas                                                                                                                                                                                                                                                                                         |
+| refined-mockups          | IAE               | UX-heavy change needing high-fidelity design before build                                                                                                                                                                                                                                                                         |
+| domain-design            | CSU, R            | Component/building-block decisions needed, CSU > 0.5 or multi-component                                                                                                                                                                                                                                                           |
+| units-generation         | (structural)      | Work needs decomposition (>2 logical units)                                                                                                                                                                                                                                                                                       |
+| contract-design          | (structural)      | Any formal contract to pin — more than one unit that must integrate (inter-unit contracts), OR a single unit exposing a public/external API consumed outside the system                                                                                                                                                           |
+| delivery-planning        | (structural)      | Units have dependencies requiring sequencing                                                                                                                                                                                                                                                                                      |
+| functional-design        | CSU               | Complex business logic per unit                                                                                                                                                                                                                                                                                                   |
+| nfr-requirements         | VE, R             | NFRs are primary concern (perf, security, compliance)                                                                                                                                                                                                                                                                             |
+| nfr-design               | VE, R             | NFR implementation is non-obvious                                                                                                                                                                                                                                                                                                 |
+| infrastructure-design    | CSU, R            | Infrastructure changes are needed                                                                                                                                                                                                                                                                                                 |
+| code-generation          | (core)            | Always — the implementation                                                                                                                                                                                                                                                                                                       |
+| build-and-test           | VE                | Always — verification                                                                                                                                                                                                                                                                                                             |
+| ci-pipeline              | VE                | CI needs setup or modification                                                                                                                                                                                                                                                                                                    |
+| deployment-pipeline      | R                 | Deployment is non-trivial or new                                                                                                                                                                                                                                                                                                  |
+| environment-provisioning | R                 | New environments needed                                                                                                                                                                                                                                                                                                           |
+| deployment-execution     | R                 | Deployment needs coordination                                                                                                                                                                                                                                                                                                     |
+| observability-setup      | VE                | Observability needs creation (new service)                                                                                                                                                                                                                                                                                        |
+| incident-response        | R                 | Runbook/playbook needed (new operational surface)                                                                                                                                                                                                                                                                                 |
+| performance-validation   | VE, R             | Performance is an explicit NFR                                                                                                                                                                                                                                                                                                    |
+| feedback-optimization    | VE                | Post-launch iteration planned                                                                                                                                                                                                                                                                                                     |
 
 #### Economy Discipline — Fold Overlapping Stages (esp. Ideation & Inception)
 
@@ -418,11 +429,11 @@ independently.
 
 **Step C — Apply the resolution rules:**
 
-| Scenario | Resolution |
-|----------|-----------|
-| Stage A's UNIQUE dimensions are empty (all its output is also produced by Stage B) | SKIP Stage A — it is fully subsumed |
-| Stage A has UNIQUE dimensions but they are consumed by NO downstream EXECUTE stage | SKIP Stage A — its unique outputs are dead-ends in this grid |
-| Both stages have UNIQUE dimensions consumed downstream | KEEP both, but set the EARLIER stage to Minimal depth (it need only produce its unique dimensions; skip the overlapping ones) |
+| Scenario                                                                                                                 | Resolution                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Stage A's UNIQUE dimensions are empty (all its output is also produced by Stage B)                                       | SKIP Stage A — it is fully subsumed                                                                                                                          |
+| Stage A has UNIQUE dimensions but they are consumed by NO downstream EXECUTE stage                                       | SKIP Stage A — its unique outputs are dead-ends in this grid                                                                                                 |
+| Both stages have UNIQUE dimensions consumed downstream                                                                   | KEEP both, but set the EARLIER stage to Minimal depth (it need only produce its unique dimensions; skip the overlapping ones)                                |
 | Both stages have UNIQUE dimensions but one stage's UNIQUE set is HIGH-COST (cost≥4) and the other's is LOW-COST (cost≤2) | KEEP the high-cost stage (it cannot be replicated cheaply elsewhere); SKIP the low-cost stage and let the high-cost stage absorb the overlap in its preamble |
 
 **Step D — Post-resolution reduction adjustment:**
@@ -434,6 +445,7 @@ full component reduction; re-score from what its artifact actually resolved.
 **Example — Intent Capture (1.1) vs Requirements Analysis (2.3):**
 
 Both target IAE and UA. Decomposing:
+
 - Intent Capture UNIQUE: stakeholder map, initiative trigger/framing, scope
   signal (low-cost outputs, cost=1 stage)
 - Requirements Analysis UNIQUE: functional decomposition, NFR extraction,
@@ -454,16 +466,16 @@ Before EXECUTEing any Ideation or Inception stage, run the subsumption test
 below. Each fold is a DEFAULT — un-SKIP only when specific evidence defeats it,
 and name that trigger in the rationale.
 
-| Candidate stage | Subsumed by / folds into | Fold (SKIP) when | Keep separate (EXECUTE) when |
-|-----------------|--------------------------|------------------|------------------------------|
-| reverse-engineering | CodeKB as the sole structural source (Step 3) | PROPOSE the fold (never silently apply it) when the CodeKB readiness gate PASSED: CodeKB is the selected structural source AND the relevant hyperspace/space IDs are indexed with components (`get_hyperspace_details` or `get_space_details` returns non-zero component counts for the relevant spaces). The deep structural analysis (call graphs, dependency maps, component inventories, cross-package coupling) is ALREADY performed by CodeKB and was consumed during Step 3 scoring, so the CSU reduction reverse-engineering would deliver is largely captured. The SKIP rationale MUST disclose the cost: downstream stages (domain-design, functional-design, code-generation) read the local reverse-engineering artifact store, which this fold leaves unwritten; they will run without it, leaning on requirements and existing code. The human weighs that trade at the gate. | The fallback path was selected: CodeKB is NOT available, OR the relevant spaces/hyperspace are not indexed (zero components), OR the codebase changed significantly since the last CodeKB indexing (user signals stale index), OR the affected subgraph spans repositories/spaces NOT covered by the indexed CodeKB data, OR downstream EXECUTE stages need the persistent local RE artifacts (deep design work on an unfamiliar brownfield codebase) |
-| feasibility | domain-design | the viability question is a known/standard pattern (e.g. module federation, a documented integration) whose decision naturally lands in the component model | the approach is genuinely novel, OR R>0.6 hinges on proving viability BEFORE committing to design |
-| rough-mockups | refined-mockups | the UI already exists (brownfield redesign) — one design pass grounded in current screens suffices | greenfield UI, OR divergent UX directions must be compared before investing in hi-fi |
-| user-stories | requirements-analysis | personas are known and requirements-analysis captures the acceptance criteria; refined-mockups carries the UX narrative | many distinct personas with conflicting journeys needing independent story-level tracking |
-| practices-discovery | reverse-engineering (+ build-and-test) | brownfield: conventions are embodied in existing code and test trees — inferred while mapping, enforced at build | greenfield, OR a NEW pipeline/toolchain must be chosen from scratch |
-| delivery-planning | units-generation | ≤3 units with a single light dependency the decomposition can express inline | many units with a non-trivial dependency graph or multi-team sequencing |
-| nfr-design | nfr-requirements (+ code-generation → performance-validation) | the NFR is a single measurable target (e.g. a perf budget) fixed in requirements and closed by a fix→validate loop | multiple interacting NFRs whose implementation approach is non-obvious and needs its own design |
-| requirements-analysis | intent-capture (+ domain-design absorbs spec) | IAE ≤ 0.20 after intent-capture (task clearly described, ≤2 interpretations), AND no downstream EXECUTE stage consumes its UNIQUE outputs (functional decomposition, constraints, out-of-scope boundary) that couldn't be derived inline by domain-design | multiple distinct technical contracts need specification BEFORE design (e.g. embedding API, error taxonomy, acceptance criteria), OR regulatory/compliance context demands a standalone reviewed requirements artifact, OR ≥3 personas with conflicting acceptance criteria, OR domain-design is SKIPPED |
+| Candidate stage       | Subsumed by / folds into                                      | Fold (SKIP) when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Keep separate (EXECUTE) when                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| reverse-engineering   | CodeKB as the sole structural source (Step 3)                 | PROPOSE the fold (never silently apply it) when the CodeKB readiness gate PASSED: CodeKB is the selected structural source AND the relevant hyperspace/space IDs are indexed with components (`get_hyperspace_details` or `get_space_details` returns non-zero component counts for the relevant spaces). The deep structural analysis (call graphs, dependency maps, component inventories, cross-package coupling) is ALREADY performed by CodeKB and was consumed during Step 3 scoring, so the CSU reduction reverse-engineering would deliver is largely captured. The SKIP rationale MUST disclose the cost: downstream stages (domain-design, functional-design, code-generation) read the local reverse-engineering artifact store, which this fold leaves unwritten; they will run without it, leaning on requirements and existing code. The human weighs that trade at the gate. | The fallback path was selected: CodeKB is NOT available, OR the relevant spaces/hyperspace are not indexed (zero components), OR the codebase changed significantly since the last CodeKB indexing (user signals stale index), OR the affected subgraph spans repositories/spaces NOT covered by the indexed CodeKB data, OR downstream EXECUTE stages need the persistent local RE artifacts (deep design work on an unfamiliar brownfield codebase) |
+| feasibility           | domain-design                                                 | the viability question is a known/standard pattern (e.g. module federation, a documented integration) whose decision naturally lands in the component model                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | the approach is genuinely novel, OR R>0.6 hinges on proving viability BEFORE committing to design                                                                                                                                                                                                                                                                                                                                                     |
+| rough-mockups         | refined-mockups                                               | the UI already exists (brownfield redesign) — one design pass grounded in current screens suffices                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | greenfield UI, OR divergent UX directions must be compared before investing in hi-fi                                                                                                                                                                                                                                                                                                                                                                  |
+| user-stories          | requirements-analysis                                         | personas are known and requirements-analysis captures the acceptance criteria; refined-mockups carries the UX narrative                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | many distinct personas with conflicting journeys needing independent story-level tracking                                                                                                                                                                                                                                                                                                                                                             |
+| practices-discovery   | reverse-engineering (+ build-and-test)                        | brownfield: conventions are embodied in existing code and test trees — inferred while mapping, enforced at build                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | greenfield, OR a NEW pipeline/toolchain must be chosen from scratch                                                                                                                                                                                                                                                                                                                                                                                   |
+| delivery-planning     | units-generation                                              | ≤3 units with a single light dependency the decomposition can express inline                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | many units with a non-trivial dependency graph or multi-team sequencing                                                                                                                                                                                                                                                                                                                                                                               |
+| nfr-design            | nfr-requirements (+ code-generation → performance-validation) | the NFR is a single measurable target (e.g. a perf budget) fixed in requirements and closed by a fix→validate loop                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | multiple interacting NFRs whose implementation approach is non-obvious and needs its own design                                                                                                                                                                                                                                                                                                                                                       |
+| requirements-analysis | intent-capture (+ domain-design absorbs spec)                 | IAE ≤ 0.20 after intent-capture (task clearly described, ≤2 interpretations), AND no downstream EXECUTE stage consumes its UNIQUE outputs (functional decomposition, constraints, out-of-scope boundary) that couldn't be derived inline by domain-design                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | multiple distinct technical contracts need specification BEFORE design (e.g. embedding API, error taxonomy, acceptance criteria), OR regulatory/compliance context demands a standalone reviewed requirements artifact, OR ≥3 personas with conflicting acceptance criteria, OR domain-design is SKIPPED                                                                                                                                              |
 
 When you fold a stage whose output a downstream EXECUTE stage nominally consumes,
 expect the validator (Step 6, lenient mode) to flag a starved input as an
@@ -474,8 +486,6 @@ folds and their advisories at the gate; do not silently un-fold them unless the
 human asks for a strict-clean grid. (This applies to front/report proposals
 only - an IN-FLIGHT proposal runs `--strict`, where a starved required input is
 a rejection, not an advisory.)
-
-
 
 #### Decision Logic
 
@@ -497,16 +507,15 @@ The `4=yes` fold path dominates: a stage with genuine positive EV still SKIPs
 when its contribution is already covered. This is the lever that keeps a
 high-ARS intent from inflating to full ceremony.
 
-
 #### Cost Priors (for expected-value reasoning)
 
-| Cost Label | Score | Stages |
-|-----------|-------|--------|
-| Low | 1 | intent-capture, scope-definition, approval-handoff |
-| Low-Medium | 2 | market-research, team-formation, rough-mockups, practices-discovery |
-| Medium | 3 | feasibility, requirements-analysis, user-stories, refined-mockups, units-generation, delivery-planning, ci-pipeline |
-| Medium-High | 4 | reverse-engineering, domain-design, contract-design, functional-design, nfr-requirements, nfr-design, infrastructure-design, build-and-test |
-| High | 5 | code-generation, deployment-pipeline, environment-provisioning, deployment-execution, observability-setup, performance-validation |
+| Cost Label  | Score | Stages                                                                                                                                      |
+| ----------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Low         | 1     | intent-capture, scope-definition, approval-handoff                                                                                          |
+| Low-Medium  | 2     | market-research, team-formation, rough-mockups, practices-discovery                                                                         |
+| Medium      | 3     | feasibility, requirements-analysis, user-stories, refined-mockups, units-generation, delivery-planning, ci-pipeline                         |
+| Medium-High | 4     | reverse-engineering, domain-design, contract-design, functional-design, nfr-requirements, nfr-design, infrastructure-design, build-and-test |
+| High        | 5     | code-generation, deployment-pipeline, environment-provisioning, deployment-execution, observability-setup, performance-validation           |
 
 A stage with cost=4 is justified when its target ARS component is > 0.4.
 A stage with cost=2 is justified when its target ARS component is > 0.2.
@@ -554,9 +563,11 @@ gate.
 ### Step 6: Validate and Read the Distance
 
 Write your ARS-derived grid to a temp file and run:
+
 ```
 aidlc engine graph validate-grid --proposal <path> --project-type <greenfield|brownfield> [--space <selected-space>] [--intent <selected-intent>]
 ```
+
 When the dispatch selected a workflow explicitly, pass that same space and
 intent so Change Control validation reads that workflow's memory. Lenient mode
 for a front/report proposal; for an IN-FLIGHT proposal add `--strict` (the same
@@ -628,10 +639,10 @@ one SHORT line per stage (≤15 words), not a paragraph.
   "ars": {
     "total": 52,
     "iae": 0.35,
-    "csu": 0.70,
-    "ve": 0.60,
+    "csu": 0.7,
+    "ve": 0.6,
     "r": 0.45,
-    "ua": 0.30,
+    "ua": 0.3,
     "method": "codekb | fallback",
     "codekbEvidence": "<1-2 sentences: hyperspace id, space count, component count, one key finding>"
   },
@@ -640,7 +651,10 @@ one SHORT line per stage (≤15 words), not a paragraph.
   "changeControl": "strict | relaxed",
   "changeControlRationale": "<1 sentence: why an input change after approval should reopen it, or be recorded and continue>",
   "changes": { "skip": ["<slug>"], "add": ["<slug>"] },
-  "rationale": [{"stage": "<slug>", "reason": "<1 sentence with ARS ref>"}, "..."],
+  "rationale": [
+    { "stage": "<slug>", "reason": "<1 sentence with ARS ref>" },
+    "..."
+  ],
   "summary": "...from validate-grid verbatim..."
 }
 ```
@@ -715,14 +729,14 @@ different plan than the one your analysis produced.
 **Table 1 (ARS scores).** Every component, its score, and its band, then the
 composite:
 
-| Component | Symbol | Score | Band |
-|-----------|--------|-------|------|
-| Intent Ambiguity | IAE | 0.55 | MED |
-| Codebase Structural Uncertainty | CSU | 0.75 | HIGH |
-| Verification Entropy | VE | 0.65 | MED |
-| Risk / Blast Radius | R | 0.50 | MED |
-| Unresolved Assumptions | UA | 0.55 | MED |
-| **Composite ARS (advisory)** | - | **63 / 100** | **Comprehensive** |
+| Component                       | Symbol | Score        | Band              |
+| ------------------------------- | ------ | ------------ | ----------------- |
+| Intent Ambiguity                | IAE    | 0.55         | MED               |
+| Codebase Structural Uncertainty | CSU    | 0.75         | HIGH              |
+| Verification Entropy            | VE     | 0.65         | MED               |
+| Risk / Blast Radius             | R      | 0.50         | MED               |
+| Unresolved Assumptions          | UA     | 0.55         | MED               |
+| **Composite ARS (advisory)**    | -      | **63 / 100** | **Comprehensive** |
 
 Band labels from the Step 2.2 continuous bands: **LOW** 0.00–0.29, **MED**
 0.30–0.69, **HIGH** 0.70–1.00. Composite band from the Step 2.4 table (0–20 near-direct,
@@ -733,11 +747,11 @@ Immediately below the table, print `method` (codekb | fallback), the one-line
 **Table 2 (Stage decisions).** One row per stage that carries a decision
 (at minimum EVERY EXECUTE and EVERY SKIP) with its reasoning:
 
-| # | Stage | Decision | Reasoning |
-|---|-------|----------|-----------|
-| 1.1 | intent-capture | EXECUTE | Resolves IAE=0.55 + bundled multi-axis intent |
-| 1.2 | market-research | SKIP | Internal tool — no market to research |
-| … | … | … | … |
+| #   | Stage           | Decision | Reasoning                                     |
+| --- | --------------- | -------- | --------------------------------------------- |
+| 1.1 | intent-capture  | EXECUTE  | Resolves IAE=0.55 + bundled multi-axis intent |
+| 1.2 | market-research | SKIP     | Internal tool — no market to research         |
+| …   | …               | …        | …                                             |
 
 SKIP rows use the `rationale[].reason` (which references the driving ARS
 component); EXECUTE rows use the `stageJustifications` line when present, else a
@@ -770,6 +784,7 @@ For `mode: "in-flight"`, skip this step entirely. Return the approved
 `recompose` command writes the running plan.
 
 Author BOTH files at the paths printed by `detect --json`:
+
 - `aidlc-<name>.md` in `scopesDir` (frontmatter: `name`, `depth`, `keywords: []`, and `change_control: <the approved value>`; prose: one sentence saying what that value does)
 - `"<name>": { "stages": { ... } }` entry in `scopeGridPath` JSON
 
@@ -786,6 +801,7 @@ in-flight.
 Composed scopes ship `keywords: []`. They resolve by `--scope <name>` but never
 participate in inference. Making a scope inferable is an explicit human choice
 at the gate. If keywords are granted, run the collision check:
+
 ```
 aidlc engine graph validate-grid --proposal <path> --keywords <granted,csv>
 ```

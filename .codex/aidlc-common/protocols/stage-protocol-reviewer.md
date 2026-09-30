@@ -62,7 +62,7 @@ Everything else in this section is silent. Nothing is said about invoking, handi
    stdout as `Prior findings (carry IDs forward)` for the dispatch brief. The
    tool renders the previous review record (or a legacy embedded section) with
    durable human dispositions from the audit ledger overlaid, so `Accepted
-   risk` and `Rejected: <reason>` survive without touching any artifact.
+risk` and `Rejected: <reason>` survive without touching any artifact.
 
    Then delegate to the reviewer agent named in `directive.reviewer`. The
    request remains unmatched while the reviewer runs, so the approval gate and
@@ -92,8 +92,16 @@ Everything else in this section is silent. Nothing is said about invoking, handi
    **Dispatch record (per-unit stages; enforcement-capable harnesses only).** This record is required only when the current harness registers reviewer-scope PreToolUse enforcement (Claude Code, Kiro CLI, Codex CLI, opencode, Cursor, and GitHub Copilot today). Immediately before invoking a per-unit reviewer (`directive.unit` present) on one of those harnesses, write `<record>/.aidlc-engine/reviewer-dispatch.json`:
 
    ```json
-   {"reviewer": "<directive.reviewer>", "stage": "<stage slug>", "unit": "<directive.unit>",
-    "exempt": ["<each resolved directive.consumes path>", "<stage file path>", "<Q&A file path>"]}
+   {
+     "reviewer": "<directive.reviewer>",
+     "stage": "<stage slug>",
+     "unit": "<directive.unit>",
+     "exempt": [
+       "<each resolved directive.consumes path>",
+       "<stage file path>",
+       "<Q&A file path>"
+     ]
+   }
    ```
 
    When the current unit's design explicitly names an integration point in a sibling unit's file, resolve that single owning file via the shared contracts and append its path to `exempt` - the record is where the spot-check carve-out is granted. The `stage` field appears verbatim in any `REVIEWER_SCOPE_BLOCKED` audit row; use the current stage slug. The reviewer-scope PreToolUse hook reads this record to enforce the read-scope bound deterministically while the review is in flight; on a NOT-READY re-invoke (step 3 back to step 1), write a fresh record. Single-stage reviews (no `directive.unit`) write no record. On a harness without reviewer-scope enforcement (Kiro IDE today), do not write the record; the reviewer read-scope bound remains mandatory prose in the delegated task and reviewer persona.
@@ -110,6 +118,7 @@ Everything else in this section is silent. Nothing is said about invoking, handi
    another review iteration. Never use `--retry-pending` after a verdict; a
    receipt-invalidating write creates a new recovery request at the next
    ordinal, not a retry of the completed one.
+
 2. **Reviewer executes.** An `adversarial` review runs under the **adversarial review contract**:
 
    - **Refute, don't confirm.** The reviewer's job is to refute the artifact, not to confirm it. It assumes defects exist and hunts for them; READY is the verdict it fails to reach after trying to break the artifact, not the default it starts from.

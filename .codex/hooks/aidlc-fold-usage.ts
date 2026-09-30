@@ -33,7 +33,9 @@ import { existsSync, readFileSync } from "node:fs";
 // replicating aidlc-continue-workflow.ts's currentStageSlug so byStage keys agree. Returns ""
 // when the field is absent.
 function currentStageSlug(stateContent: string): string {
-  const stageMatch = stateContent.match(/Current Stage\*{0,2}:?\s*`?([^\n`]*)`?/);
+  const stageMatch = stateContent.match(
+    /Current Stage\*{0,2}:?\s*`?([^\n`]*)`?/,
+  );
   return (stageMatch?.[1] ?? "").trim();
 }
 
@@ -58,7 +60,8 @@ export async function run(input: string): Promise<number> {
   if (
     Object.hasOwn(process.env, "AIDLC_DISABLE_USAGE_TRACKING") &&
     process.env.AIDLC_DISABLE_USAGE_TRACKING === "1"
-  ) return 0;
+  )
+    return 0;
   let sessionId = "";
   let transcriptPath: string | null = null;
   let hookEvent = "";
@@ -69,12 +72,12 @@ export async function run(input: string): Promise<number> {
     if (raw !== null && typeof raw === "object") {
       const obj = raw as Record<string, unknown>;
       if (typeof obj.session_id === "string") sessionId = obj.session_id;
-      hookEvent = typeof obj.hook_event_name === "string"
-        ? obj.hook_event_name
-        : "";
+      hookEvent =
+        typeof obj.hook_event_name === "string" ? obj.hook_event_name : "";
       toolName = typeof obj.tool_name === "string" ? obj.tool_name : "";
       toolInput = obj.tool_input;
-      if (typeof obj.transcript_path === "string") transcriptPath = obj.transcript_path;
+      if (typeof obj.transcript_path === "string")
+        transcriptPath = obj.transcript_path;
     }
   } catch {
     return 0;
@@ -100,11 +103,12 @@ export async function run(input: string): Promise<number> {
   if (usageTrackingDisabled()) return 0;
   sessionId = validSessionId(sessionId) ?? "";
   const projectDir = resolveProjectDirFromHook(import.meta.url);
-  const foldMode = hookEvent === "PreToolUse"
-    ? await isLifecycleBoundaryToolCall(toolName, toolInput)
-      ? "flush-all"
-      : "seal-main"
-    : "holdback";
+  const foldMode =
+    hookEvent === "PreToolUse"
+      ? (await isLifecycleBoundaryToolCall(toolName, toolInput))
+        ? "flush-all"
+        : "seal-main"
+      : "holdback";
   let currentStage: string | null = null;
   try {
     const selection = resolveWorkflowSelection(projectDir, {

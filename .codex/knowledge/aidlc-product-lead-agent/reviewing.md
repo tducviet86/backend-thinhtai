@@ -12,6 +12,7 @@ When invoked as a reviewer, your role changes. You are NOT building — you are 
 ## What to Check
 
 ### Requirements
+
 - Is every requirement testable? (pass/fail criterion exists)
 - Is every requirement traceable to user need or business value?
 - Are there gaps? (things the intent implies but aren't covered)
@@ -20,6 +21,7 @@ When invoked as a reviewer, your role changes. You are NOT building — you are 
 - Is scope bounded? (what's explicitly out?)
 
 ### User Stories
+
 - INVEST criteria met? (Independent, Negotiable, Valuable, Estimable, Small, Testable)
 - Acceptance criteria specific enough to implement without guessing?
 - Edge cases covered? (errors, empty states, boundaries)
@@ -27,6 +29,7 @@ When invoked as a reviewer, your role changes. You are NOT building — you are 
 - Stories trace to requirements?
 
 ### Mockups/Wireframes
+
 - All user stories have corresponding screens?
 - Navigation flow complete? (every feature reachable)
 - Error and empty states shown?
@@ -59,11 +62,11 @@ Use this exact format:
 
 ### Findings
 
-| ID | Severity | Location | Finding | Required action | Status |
-|---|---|---|---|---|---|
-| R-01 | Critical | aidlc/spaces/<space>/intents/<intent-record>/inception/requirements-analysis/requirements.md > FR-3 | No acceptance criteria defined | Add a measurable pass/fail criterion to FR-3 | New |
-| R-02 | Major | aidlc/spaces/<space>/intents/<intent-record>/inception/user-stories/stories.md > Stories S-4 and S-7 | S-4 and S-7 overlap in scope | Merge the stories or state a non-overlapping boundary for each | New |
-| R-03 | Minor | aidlc/spaces/<space>/intents/<intent-record>/inception/requirements-analysis/requirements.md > NFR-2 | "High availability" is vague | Replace it with a measurable availability target, such as 99.9% | New |
+| ID   | Severity | Location                                                                                             | Finding                        | Required action                                                 | Status |
+| ---- | -------- | ---------------------------------------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------- | ------ |
+| R-01 | Critical | aidlc/spaces/<space>/intents/<intent-record>/inception/requirements-analysis/requirements.md > FR-3  | No acceptance criteria defined | Add a measurable pass/fail criterion to FR-3                    | New    |
+| R-02 | Major    | aidlc/spaces/<space>/intents/<intent-record>/inception/user-stories/stories.md > Stories S-4 and S-7 | S-4 and S-7 overlap in scope   | Merge the stories or state a non-overlapping boundary for each  | New    |
+| R-03 | Minor    | aidlc/spaces/<space>/intents/<intent-record>/inception/requirements-analysis/requirements.md > NFR-2 | "High availability" is vague   | Replace it with a measurable availability target, such as 99.9% | New    |
 
 ### Summary
 
@@ -74,11 +77,11 @@ For the `Date` field, obtain a real UTC timestamp by running `date -u +"%Y-%m-%d
 
 ### Severity Levels
 
-| Severity | Meaning | Blocks READY? |
-|---|---|---|
-| Critical | Cannot implement from this — fundamental gap or contradiction | Yes |
-| Major | Implementable but will cause rework or confusion downstream | Yes (if >2 major findings) |
-| Minor | Improvement opportunity, not blocking | No |
+| Severity | Meaning                                                       | Blocks READY?              |
+| -------- | ------------------------------------------------------------- | -------------------------- |
+| Critical | Cannot implement from this — fundamental gap or contradiction | Yes                        |
+| Major    | Implementable but will cause rework or confusion downstream   | Yes (if >2 major findings) |
+| Minor    | Improvement opportunity, not blocking                         | No                         |
 
 ### Verdict Rules
 
@@ -88,6 +91,7 @@ For the `Date` field, obtain a real UTC timestamp by running `date -u +"%Y-%m-%d
 ### On Subsequent Iterations
 
 When the dispatch brief includes `Prior findings (carry IDs forward)`:
+
 - Treat that table as authoritative for prior human dispositions; it is
   rendered from the audit ledger without rewriting the reviewed artifact.
 - Reproduce every prior row with the same ID; never renumber, reuse, or drop an ID.

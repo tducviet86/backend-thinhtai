@@ -7,6 +7,7 @@ Overview of major compliance frameworks, their requirements, and practical imple
 **Applies to**: Any system that stores, processes, or transmits cardholder data.
 
 **Key Requirements** (organized by the 12 requirements):
+
 1. **Network security**: Use security groups and NACLs to segment the cardholder data environment (CDE). No public internet access to CDE resources.
 2. **Default credentials**: Change all vendor-supplied defaults. Automate with hardened AMIs and container images.
 3. **Protect stored data**: Encrypt cardholder data at rest with KMS (AES-256). Implement data retention and disposal policies.
@@ -27,6 +28,7 @@ Overview of major compliance frameworks, their requirements, and practical imple
 **Applies to**: Organizations handling Protected Health Information (PHI) in the US healthcare context.
 
 **Key Requirements**:
+
 - **BAA (Business Associate Agreement)**: Required with AWS before storing PHI. AWS offers BAAs for eligible services.
 - **HIPAA-eligible services only**: Not all AWS services are HIPAA-eligible. Verify each service on the AWS HIPAA page.
 - **Encryption**: PHI must be encrypted at rest (KMS) and in transit (TLS). This satisfies the Safe Harbor provision.
@@ -42,10 +44,12 @@ Overview of major compliance frameworks, their requirements, and practical imple
 **Applies to**: Service providers that store or process customer data. Increasingly expected by enterprise customers.
 
 **Type I vs Type II**:
+
 - **Type I**: Point-in-time assessment. "Controls are properly designed as of a specific date." Faster to achieve.
 - **Type II**: Assessment over a period (usually 6-12 months). "Controls operated effectively during the review period." More rigorous and more valued.
 
 **Trust Service Criteria**:
+
 1. **Security** (required): Protection against unauthorized access. Covers firewalls, access controls, encryption, monitoring.
 2. **Availability**: System is operational and accessible per SLA commitments.
 3. **Processing Integrity**: System processing is complete, valid, accurate, and timely.
@@ -59,6 +63,7 @@ Overview of major compliance frameworks, their requirements, and practical imple
 **Applies to**: Any organization processing personal data of EU/EEA residents, regardless of where the organization is located.
 
 **Core Principles**:
+
 - **Lawfulness**: Process data only with a legal basis (consent, contract, legitimate interest, legal obligation).
 - **Purpose limitation**: Collect data only for specified, explicit purposes.
 - **Data minimization**: Process only the data necessary for the stated purpose.
@@ -67,6 +72,7 @@ Overview of major compliance frameworks, their requirements, and practical imple
 - **Integrity and confidentiality**: Protect data with appropriate security measures.
 
 **Data Subject Rights**:
+
 - Right of access (provide a copy of their data)
 - Right to rectification (correct inaccurate data)
 - Right to erasure ("right to be forgotten")

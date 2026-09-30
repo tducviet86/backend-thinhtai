@@ -58,6 +58,7 @@ outputs: slo-report.md, cost-analysis.md, drift-report.md, feedback-loop.md, fee
 ### Step 2: Generate Questions
 
 Create questions file covering:
+
 - Are SLOs being met? What is the error budget burn rate?
 - Are there cost optimization opportunities?
 - Is there configuration or infrastructure drift?

@@ -85,7 +85,10 @@ function repointKiroAgentResources(raw: string, space: string): string | null {
   const target = `file://${spaceMemoryRel(space)}/**/*.md`;
   let changed = false;
   const rewritten = json.resources.map((r) => {
-    if (typeof r === "string" && /^file:\/\/aidlc\/spaces\/[^/]+\/memory\/\*\*\/\*\.md$/.test(r)) {
+    if (
+      typeof r === "string" &&
+      /^file:\/\/aidlc\/spaces\/[^/]+\/memory\/\*\*\/\*\.md$/.test(r)
+    ) {
       if (r !== target) changed = true;
       return target;
     }
@@ -98,7 +101,10 @@ function repointKiroAgentResources(raw: string, space: string): string | null {
 }
 
 /** Rewrite live memory references in Kiro IDE's always-included steering file. */
-function repointKiroSteeringReferences(raw: string, space: string): string | null {
+function repointKiroSteeringReferences(
+  raw: string,
+  space: string,
+): string | null {
   const target = spaceMemoryRel(space);
   const next = raw.replace(
     /(#\[\[file:)aidlc\/spaces\/[^/]+\/memory\//g,
@@ -122,7 +128,10 @@ function repointCodexConfig(raw: string, space: string): string | null {
  *  the given space, preserving comments, trailing commas, and every byte
  *  outside the one matching string. Returns null when there is no method glob
  *  or it already matches. */
-function repointOpencodeInstructions(raw: string, space: string): string | null {
+function repointOpencodeInstructions(
+  raw: string,
+  space: string,
+): string | null {
   const target = `${spaceMemoryRel(space)}/**/*.md`;
   const next = raw.replace(
     /(")aidlc\/spaces\/[^/"]+\/memory\/\*\*\/\*\.md(")/g,
@@ -173,7 +182,10 @@ function repointFile(
  *  Returns the workspace-relative paths it actually rewrote (for --doctor /
  *  audit / tests). Pass an explicit `space` to bypass the cursor; omitted → the
  *  active-space cursor (`activeSpace(projectDir)`, cursorless → `default`). */
-export function repointHarnessIncludes(projectDir: string, space?: string): string[] {
+export function repointHarnessIncludes(
+  projectDir: string,
+  space?: string,
+): string[] {
   const sp = space ?? activeSpace(projectDir);
   const harness = harnessDir(); // ".claude" | ".kiro" | ".codex" | open-set
   const harnessRoot = join(projectDir, harness);
@@ -184,7 +196,14 @@ export function repointHarnessIncludes(projectDir: string, space?: string): stri
     if (existsSync(stubPath)) {
       const raw = readSafe(stubPath);
       if (raw !== null) {
-        repointFile(stubPath, join(harness, "rules", "aidlc.md"), raw, sp, repointClaudeStub, written);
+        repointFile(
+          stubPath,
+          join(harness, "rules", "aidlc.md"),
+          raw,
+          sp,
+          repointClaudeStub,
+          written,
+        );
       }
     }
     return written;
@@ -241,7 +260,14 @@ export function repointHarnessIncludes(projectDir: string, space?: string): stri
         const p = join(agentsDir, name);
         const raw = readSafe(p);
         if (raw === null) continue;
-        repointFile(p, join(harness, "agents", name), raw, sp, repointKiroAgentResources, written);
+        repointFile(
+          p,
+          join(harness, "agents", name),
+          raw,
+          sp,
+          repointKiroAgentResources,
+          written,
+        );
       }
     }
     // Kiro IDE binding surface: workspace steering is inherited by delegated
@@ -272,7 +298,14 @@ export function repointHarnessIncludes(projectDir: string, space?: string): stri
     if (existsSync(configPath)) {
       const raw = readSafe(configPath);
       if (raw !== null) {
-        repointFile(configPath, join(harness, "config.toml"), raw, sp, repointCodexConfig, written);
+        repointFile(
+          configPath,
+          join(harness, "config.toml"),
+          raw,
+          sp,
+          repointCodexConfig,
+          written,
+        );
       }
     }
     return written;
@@ -288,7 +321,14 @@ export function repointHarnessIncludes(projectDir: string, space?: string): stri
     if (existsSync(agentsMdPath)) {
       const raw = readSafe(agentsMdPath);
       if (raw !== null) {
-        repointFile(agentsMdPath, "AGENTS.md", raw, sp, repointClaudeStub, written);
+        repointFile(
+          agentsMdPath,
+          "AGENTS.md",
+          raw,
+          sp,
+          repointClaudeStub,
+          written,
+        );
       }
     }
     // opencode: the project-root opencode.json/jsonc `instructions` glob.

@@ -14,15 +14,15 @@ to the normal directive, review, and completion evidence paths.
 
 Every file uses stable IDs:
 
-| Prefix | Meaning | Example |
-|--------|---------|---------|
-| `FR{n}` / `FR{n}.{m}` | Functional requirement | `FR1`, `FR1.2` |
-| `NFR{n}` | Inception non-functional requirement | `NFR2` |
-| `US{n}.{m}` | User story | `US1.3` |
-| `AC{n}.{m}.{seq}` | Acceptance criterion | `AC1.3.2` |
-| `U{n}` / `u{n}-{description}` | Unit ID / construction directory | `U1`, `u1-auth` |
-| `BR{group}.{seq}` | Business rule | `BR1.1` |
-| `NFRx.y` | Detailed NFR requirement | `NFR2.1` |
+| Prefix                        | Meaning                              | Example         |
+| ----------------------------- | ------------------------------------ | --------------- |
+| `FR{n}` / `FR{n}.{m}`         | Functional requirement               | `FR1`, `FR1.2`  |
+| `NFR{n}`                      | Inception non-functional requirement | `NFR2`          |
+| `US{n}.{m}`                   | User story                           | `US1.3`         |
+| `AC{n}.{m}.{seq}`             | Acceptance criterion                 | `AC1.3.2`       |
+| `U{n}` / `u{n}-{description}` | Unit ID / construction directory     | `U1`, `u1-auth` |
+| `BR{group}.{seq}`             | Business rule                        | `BR1.1`         |
+| `NFRx.y`                      | Detailed NFR requirement             | `NFR2.1`        |
 
 The JSON shape is:
 
@@ -31,9 +31,7 @@ The JSON shape is:
   "stage": "functional-design",
   "unit": "u1-auth",
   "upstream_ids": ["AC1.1.1"],
-  "coverage": [
-    { "id": "AC1.1.1", "status": "OK", "target": "BR1.1" }
-  ],
+  "coverage": [{ "id": "AC1.1.1", "status": "OK", "target": "BR1.1" }],
   "reverse": [
     { "id": "BR1.3", "status": "N/A", "target": "technical validation rule" }
   ]
@@ -47,17 +45,18 @@ where possible, and derives functional-design business-rule orphans.
 
 ## When Verification Runs
 
-| Trigger | What's Checked |
-|---------|---------------|
-| **Ideation → Inception** | Intent → Scope → Intent Backlog consistency; all scope items have feasibility backing |
+| Trigger                      | What's Checked                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Ideation → Inception**     | Intent → Scope → Intent Backlog consistency; all scope items have feasibility backing                               |
 | **Inception → Construction** | Requirements → Stories → Architecture alignment; all stories trace to requirements; architecture covers all stories |
-| **Construction → Operation** | Architecture → Code → Tests alignment; all code traces to design; test coverage against acceptance criteria |
-| **On demand** | Human can request verification at any point |
-| **Stage output write** | Validate the stage's element-level coverage and targets |
+| **Construction → Operation** | Architecture → Code → Tests alignment; all code traces to design; test coverage against acceptance criteria         |
+| **On demand**                | Human can request verification at any point                                                                         |
+| **Stage output write**       | Validate the stage's element-level coverage and targets                                                             |
 
 ## Phase Check Output
 
 Each phase boundary check produces `<record>/verification/phase-check-<phase>.md`:
+
 - Coverage percentages (requirements with stories, stories with components, etc.)
 - Warnings (incomplete mappings)
 - Consistency checks (no contradictions between phases)

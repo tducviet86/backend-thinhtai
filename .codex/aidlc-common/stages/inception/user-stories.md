@@ -61,10 +61,12 @@ This stage runs `mode: mob` (stage-protocol-ensemble.md §5 "Multi-agent stages"
 ### Step 2: Validate User Stories Are Needed
 
 Assess whether user stories add value for this project. Provide reasoning:
+
 - **Execute if**: user-facing features, multiple user personas, complex business logic, cross-team coordination needed
 - **Skip if**: pure refactoring, isolated bug fixes, infrastructure-only, developer tooling
 
 Create `<record>/inception/user-stories/user-stories-assessment.md` documenting the assessment:
+
 - Decision: Execute or Skip
 - Rationale: Why user stories are or are not needed for this project
 - Factors considered: project type, user-facing scope, complexity signals
@@ -87,6 +89,7 @@ The engine records the skip and advances to the next in-scope stage.
 ### Step 4: Create Story Plan with Questions
 
 Create a story plan in `<record>/inception/user-stories/user-stories-questions.md` containing:
+
 - **Persona development approach** — Who are the users? What are their goals?
 - **Story format** — Using INVEST criteria (Independent, Negotiable, Valuable, Estimable, Small, Testable)
 - **Story prioritization** — Assign MoSCoW priority (Must Have / Should Have / Could Have / Won't Have) to each story based on requirements analysis. The MVP boundary will be formally decided during Delivery Planning; story priorities inform that decision.
@@ -100,6 +103,7 @@ Collect answers following stage-protocol.md §3 question flow (offer interaction
 ### Step 6: Analyze Answers
 
 MANDATORY ambiguity analysis:
+
 - Scan ALL responses for vague language ("mix of", "not sure", "depends", "probably")
 - Check for contradictions between answers
 - Identify missing details
@@ -124,10 +128,12 @@ participants, and the Product Leader reviews afterwards (`stage-protocol-reviewe
 **Round 0 — lead drafts.** As the lead, based on the approved plan, draft:
 
 **`<record>/inception/user-stories/personas.md`:**
+
 - User persona definitions (name, role, goals, pain points, context)
 - Persona relationships and priority ranking
 
 **`<record>/inception/user-stories/stories.md`:**
+
 - User stories in standard format: "As a [persona], I want [goal], so that [benefit]". Give each story a stable `US{group}.{seq}` ID (for example `US1.1`).
 - Acceptance criteria for each story. Give each criterion a three-segment `AC{story-group}.{story-seq}.{criterion-seq}` ID (for example `AC1.1.1`).
 - Story priority (Must Have / Should Have / Could Have / Won't Have)
@@ -186,6 +192,7 @@ evidence before presenting the human gate.
 ### Step 10: Present Completion & Request Approval
 
 Use stage-protocol.md completion template with completion emoji: :books:
+
 - Summary of personas and stories produced
 - Review path: `<record>/inception/user-stories/`
 - Structured approval question with options: Approve / Request Changes. On the Approve option's description write `Continue to <next stage name>`, taking that name from the run-stage directive's `next_stage` field (`Complete workflow` when it is null) - the user sees the real stage name, never a field name.

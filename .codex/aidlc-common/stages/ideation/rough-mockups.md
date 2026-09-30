@@ -49,6 +49,7 @@ outputs: wireframes.md, user-flow.md, rough-mockups-questions.md (under this sta
 ### Step 2: Generate Clarifying Questions
 
 Create `<record>/ideation/rough-mockups/rough-mockups-questions.md` with questions:
+
 - What are the primary user entry points and key screens/views?
 - What is the core user flow (happy path)?
 - What does the information hierarchy look like?

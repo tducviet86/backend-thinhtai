@@ -1,1 +1,12 @@
-import{Module}from'@nestjs/common';import{AdminSeoController}from'./admin-seo.controller';import{SeoValidationService}from'./seo-validation.service';import{SeoController}from'./seo.controller';import{SeoService}from'./seo.service';import{StructuredDataService}from'./structured-data.service';@Module({controllers:[SeoController,AdminSeoController],providers:[SeoService,SeoValidationService,StructuredDataService],exports:[SeoService]})export class SeoModule{}
+import { Module } from "@nestjs/common";
+import { AdminSeoController } from "./admin-seo.controller";
+import { SeoValidationService } from "./seo-validation.service";
+import { SeoController } from "./seo.controller";
+import { SeoService } from "./seo.service";
+import { StructuredDataService } from "./structured-data.service";
+@Module({
+  controllers: [SeoController, AdminSeoController],
+  providers: [SeoService, SeoValidationService, StructuredDataService],
+  exports: [SeoService],
+})
+export class SeoModule {}

@@ -74,9 +74,25 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, posix, relative, resolve, sep } from "node:path";
+import {
+  basename,
+  dirname,
+  join,
+  posix,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry } from "./aidlc-audit.ts";
 import {
@@ -138,7 +154,8 @@ const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 // The typed reason enum the conductor branches on. budget-exhausted stays valid
 // for the ultracode driver's token ceiling; cap-exhausted is the loop-ended-
 // without-convergence sense; error covers a tamper / lying-claim / plumbing fault.
-type FailureReason = "unsatisfiable" | "budget-exhausted" | "cap-exhausted" | "error";
+type FailureReason =
+  "unsatisfiable" | "budget-exhausted" | "cap-exhausted" | "error";
 
 // The driver the conductor degraded away from (records the loud downgrade).
 type DriverName = "subagent" | "ultracode";
@@ -149,7 +166,11 @@ const DRIVER_VALUES: DriverName[] = ["subagent", "ultracode"];
 // (D-I) — the tool only records it, exactly as it records --claimed and
 // --degraded-from. `error` is excluded: it is the tool's OWN verdict for a
 // claimed-but-red / tampered unit, never a conductor-supplied attribution.
-const DECLINED_REASONS: FailureReason[] = ["unsatisfiable", "budget-exhausted", "cap-exhausted"];
+const DECLINED_REASONS: FailureReason[] = [
+  "unsatisfiable",
+  "budget-exhausted",
+  "cap-exhausted",
+];
 
 interface UnitResult {
   unit: string;
@@ -193,12 +214,22 @@ interface ToolRun {
   stderr: string;
 }
 
-function runTool(toolFile: string, args: string[], projectDir: string): ToolRun {
+function runTool(
+  toolFile: string,
+  args: string[],
+  projectDir: string,
+): ToolRun {
   const executable = compiledExecutable();
   const noun = toolFile.replace(/^aidlc-/, "").replace(/\.ts$/, "");
   const command = executable
     ? [executable, "engine", noun, ...args, "--project-dir", projectDir]
-    : [process.execPath, join(TOOLS_DIR, toolFile), "--project-dir", projectDir, ...args];
+    : [
+        process.execPath,
+        join(TOOLS_DIR, toolFile),
+        "--project-dir",
+        projectDir,
+        ...args,
+      ];
   const result = spawnSync(command[0], command.slice(1), {
     encoding: "utf-8",
     cwd: projectDir,
@@ -280,7 +311,7 @@ function verdictFor(
   unit: string,
   projectDir: string,
   checkCmd: string,
-  testFile?: string
+  testFile?: string,
 ): Verdict {
   const wt = worktreePath(projectDir, swarmBoltSlug(unit));
   if (!existsSync(wt)) {
@@ -314,7 +345,8 @@ interface ReviewerRequirement {
 
 function reviewerRequirement(projectDir: string): ReviewerRequirement {
   try {
-    const stage = getField(readStateFile(projectDir), "Current Stage")?.trim() ?? "";
+    const stage =
+      getField(readStateFile(projectDir), "Current Stage")?.trim() ?? "";
     if (!stage) {
       return {
         stage: "",
@@ -342,7 +374,7 @@ function reviewerRequirement(projectDir: string): ReviewerRequirement {
       maxIterations:
         reviewClass === "advisory"
           ? 1
-          : definition.reviewer_max_iterations ?? 2,
+          : (definition.reviewer_max_iterations ?? 2),
     };
   } catch (e) {
     return {
@@ -374,27 +406,29 @@ function reviewerReceiptError(
       (row) =>
         row.event === "WORKTREE_CREATED" &&
         auditBlockField(row.block, "Bolt slug") === boltSlug &&
-        (
-          auditBlockField(row.block, "Worktree path") !== null &&
-          resolveAuditWorktreePath(
-            projectDir,
-            auditBlockField(row.block, "Worktree path") as string,
-          ) === wt
-        ),
+        auditBlockField(row.block, "Worktree path") !== null &&
+        resolveAuditWorktreePath(
+          projectDir,
+          auditBlockField(row.block, "Worktree path") as string,
+        ) === wt,
     )
     .sort((a, b) => {
-      if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+      if (a.timestamp !== b.timestamp)
+        return a.timestamp < b.timestamp ? -1 : 1;
       if (a.shard === b.shard) return a.pos - b.pos;
       return a.shard < b.shard ? -1 : 1;
     });
   const creationBlock = creationRows.at(-1)?.block ?? null;
-  const creationBaseCommit = creationBlock === null
-    ? null
-    : auditBlockField(creationBlock, "Base commit");
-  const creationBaseListing = creationBlock === null
-    ? null
-    : auditBlockField(creationBlock, "Base Source Listing");
-  const creationModern = creationBaseCommit !== null || creationBaseListing !== null;
+  const creationBaseCommit =
+    creationBlock === null
+      ? null
+      : auditBlockField(creationBlock, "Base commit");
+  const creationBaseListing =
+    creationBlock === null
+      ? null
+      : auditBlockField(creationBlock, "Base Source Listing");
+  const creationModern =
+    creationBaseCommit !== null || creationBaseListing !== null;
 
   const reviewAttempt = worktreeReviewAttemptProjection(
     wt,
@@ -416,10 +450,14 @@ function reviewerReceiptError(
 
   const boltStartBlock = reviewAttempt.boltStart.block;
   const baseCommit = auditBlockField(boltStartBlock, "Base commit");
-  const baseSourceListing = auditBlockField(boltStartBlock, "Base Source Listing");
+  const baseSourceListing = auditBlockField(
+    boltStartBlock,
+    "Base Source Listing",
+  );
   if (
     creationModern &&
-    (baseCommit !== creationBaseCommit || baseSourceListing !== creationBaseListing)
+    (baseCommit !== creationBaseCommit ||
+      baseSourceListing !== creationBaseListing)
   ) {
     return {
       error: `claimed converged but modern WORKTREE_CREATED attestation was not propagated to BOLT_STARTED for unit "${unit}"`,
@@ -432,29 +470,41 @@ function reviewerReceiptError(
     try {
       meta = JSON.parse(readFileSync(metaPath, "utf-8"));
     } catch {
-      return { error: `claimed converged but worktree base-commit metadata is missing or malformed for unit "${unit}"` };
+      return {
+        error: `claimed converged but worktree base-commit metadata is missing or malformed for unit "${unit}"`,
+      };
     }
     if (
-      typeof meta !== "object" || meta === null || Array.isArray(meta) ||
+      typeof meta !== "object" ||
+      meta === null ||
+      Array.isArray(meta) ||
       (meta as Record<string, unknown>).baseCommit !== baseCommit ||
       baseSourceListing === null ||
       (meta as Record<string, unknown>).baseSourceListing !== baseSourceListing
     ) {
-      return { error: `claimed converged but worktree Base commit/source listing does not match its BOLT_STARTED attestation for unit "${unit}"` };
+      return {
+        error: `claimed converged but worktree Base commit/source listing does not match its BOLT_STARTED attestation for unit "${unit}"`,
+      };
     }
     const listingPath = join(wt, ".aidlc", "base-source-listing.tsv");
     let serialized: string;
     try {
       serialized = readFileSync(listingPath, "utf-8");
     } catch {
-      return { error: `claimed converged but worktree base source listing is missing for unit "${unit}"` };
+      return {
+        error: `claimed converged but worktree base source listing is missing for unit "${unit}"`,
+      };
     }
     if (`sha256:${sourceListingSha256(serialized)}` !== baseSourceListing) {
-      return { error: `claimed converged but worktree base source listing hash does not match for unit "${unit}"` };
+      return {
+        error: `claimed converged but worktree base source listing hash does not match for unit "${unit}"`,
+      };
     }
     verifiedBaseListing = parseSourceListing(serialized);
     if (verifiedBaseListing === null) {
-      return { error: `claimed converged but worktree base source listing is malformed for unit "${unit}"` };
+      return {
+        error: `claimed converged but worktree base source listing is malformed for unit "${unit}"`,
+      };
     }
   }
 
@@ -475,7 +525,10 @@ function reviewerReceiptError(
   }
 
   const definition = resolveStage(stage);
-  const recordedArtifactFp = auditBlockField(latestTerminal.block, "Artifact Fingerprint");
+  const recordedArtifactFp = auditBlockField(
+    latestTerminal.block,
+    "Artifact Fingerprint",
+  );
   const currentArtifactFp = definition
     ? reviewArtifactFingerprint(wt, definition, unit, {
         requireRequiredArtifacts: true,
@@ -497,7 +550,10 @@ function reviewerReceiptError(
   if (!definition?.workspace_requires) {
     return { error: null, artifactFingerprint: recordedArtifactFp };
   }
-  const recordedSourceFp = auditBlockField(latestTerminal.block, "Source Fingerprint");
+  const recordedSourceFp = auditBlockField(
+    latestTerminal.block,
+    "Source Fingerprint",
+  );
   if (process.env.AIDLC_SKIP_SOURCE_FRESHNESS === "1") {
     return { error: null, artifactFingerprint: recordedArtifactFp };
   }
@@ -538,7 +594,11 @@ function reviewerReceiptError(
     const bindingBypass =
       auditBlockField(latestTerminal.block, "Unit Source Binding Bypass") ===
       "true";
-    if (bindingBypass || recordedUnitFp === null || recordedUnitFp === UNBINDABLE_FINGERPRINT) {
+    if (
+      bindingBypass ||
+      recordedUnitFp === null ||
+      recordedUnitFp === UNBINDABLE_FINGERPRINT
+    ) {
       return {
         error:
           `claimed converged but unit "${unit}" has no verifiable modern Unit Source Fingerprint; ` +
@@ -566,25 +626,36 @@ function reviewerReceiptError(
       claims: manifest.claims,
       prefixes: manifest.prefixes,
     };
-    const idx = join(tmpdir(), `aidlc-swarm-footprint-${process.pid}-${randomUUID().slice(0, 8)}`);
+    const idx = join(
+      tmpdir(),
+      `aidlc-swarm-footprint-${process.pid}-${randomUUID().slice(0, 8)}`,
+    );
     const env = { ...process.env, GIT_INDEX_FILE: idx };
-    const git = (args: string[]) => spawnSync("git", ["-C", wt, ...args], {
-      env,
-      encoding: "utf-8",
-      maxBuffer: 512 * 1024 * 1024,
-    });
+    const git = (args: string[]) =>
+      spawnSync("git", ["-C", wt, ...args], {
+        env,
+        encoding: "utf-8",
+        maxBuffer: 512 * 1024 * 1024,
+      });
     try {
-      if (git(["read-tree", "HEAD"]).status !== 0 || git(["add", "-A"]).status !== 0) {
-        return { error: `claimed converged but the worktree footprint could not be computed for unit "${unit}"` };
+      if (
+        git(["read-tree", "HEAD"]).status !== 0 ||
+        git(["add", "-A"]).status !== 0
+      ) {
+        return {
+          error: `claimed converged but the worktree footprint could not be computed for unit "${unit}"`,
+        };
       }
       if (shapeSourceSnapshotIndex(wt, idx, true) === null) {
         return {
-          error:
-            `claimed converged but the reviewed source boundary could not be applied to unit "${unit}"'s footprint`,
+          error: `claimed converged but the reviewed source boundary could not be applied to unit "${unit}"'s footprint`,
         };
       }
       const tree = git(["write-tree"]);
-      if (tree.status !== 0 || !tree.stdout.trim()) return { error: `claimed converged but the worktree footprint tree could not be written for unit "${unit}"` };
+      if (tree.status !== 0 || !tree.stdout.trim())
+        return {
+          error: `claimed converged but the worktree footprint tree could not be written for unit "${unit}"`,
+        };
       const diff = git([
         "diff",
         "--name-only",
@@ -593,15 +664,16 @@ function reviewerReceiptError(
         baseCommit,
         tree.stdout.trim(),
       ]);
-      if (diff.status !== 0) return { error: `claimed converged but the worktree footprint could not be compared for unit "${unit}"` };
-      const outside = new Set(
-        diff.stdout
-          .split("\0")
-          .filter(Boolean),
-      );
+      if (diff.status !== 0)
+        return {
+          error: `claimed converged but the worktree footprint could not be compared for unit "${unit}"`,
+        };
+      const outside = new Set(diff.stdout.split("\0").filter(Boolean));
       const currentListing = workspaceSourceListing(wt);
       if (verifiedBaseListing === null || currentListing === null) {
-        return { error: `claimed converged but raw-aware worktree footprint evidence is unavailable for unit "${unit}"` };
+        return {
+          error: `claimed converged but raw-aware worktree footprint evidence is unavailable for unit "${unit}"`,
+        };
       }
       for (const [path, oid] of verifiedBaseListing) {
         if (!sourceListingEntriesEqual(currentListing.get(path), oid)) {
@@ -609,13 +681,18 @@ function reviewerReceiptError(
         }
       }
       for (const path of currentListing.keys()) {
-        if (!verifiedBaseListing.has(path)) outside.add(path.slice(path.indexOf("\0") + 1));
+        if (!verifiedBaseListing.has(path))
+          outside.add(path.slice(path.indexOf("\0") + 1));
       }
-      const outsideClaims = [...outside]
-        .filter((path) => !sourceClaimCovers(`\0${path}`, reviewedClaims));
+      const outsideClaims = [...outside].filter(
+        (path) => !sourceClaimCovers(`\0${path}`, reviewedClaims),
+      );
       if (outsideClaims.length > 0) {
-        const rendered = outsideClaims.slice(0, 10).join(", ") +
-          (outsideClaims.length > 10 ? ` … and ${outsideClaims.length - 10} more` : "");
+        const rendered =
+          outsideClaims.slice(0, 10).join(", ") +
+          (outsideClaims.length > 10
+            ? ` … and ${outsideClaims.length - 10} more`
+            : "");
         return {
           error:
             `claimed converged but the worktree wrote application-source paths outside unit "${unit}"'s ` +
@@ -647,7 +724,9 @@ function captureReviewedRecordSnapshot(
     captureBytes: true,
   });
   if (artifacts === null) {
-    return { error: `cannot snapshot required record artifacts for unit "${unit}"` };
+    return {
+      error: `cannot snapshot required record artifacts for unit "${unit}"`,
+    };
   }
   if (
     receipt.artifactFingerprint !== undefined &&
@@ -664,8 +743,7 @@ function captureReviewedRecordSnapshot(
   for (const artifact of artifacts.entries) {
     if (artifact.state === "not-file") {
       return {
-        error:
-          `record artifact ${artifact.logicalPath} for unit "${unit}" is not a regular file`,
+        error: `record artifact ${artifact.logicalPath} for unit "${unit}" is not a regular file`,
       };
     }
     if (artifact.state === "file" && artifact.bytes === undefined) {
@@ -682,7 +760,9 @@ function captureReviewedRecordSnapshot(
   if (receipt.unitSourceFingerprint !== undefined) {
     const wtRecord = recordDir(wt);
     if (wtRecord === null) {
-      return { error: `cannot resolve reviewed source evidence for unit "${unit}"` };
+      return {
+        error: `cannot resolve reviewed source evidence for unit "${unit}"`,
+      };
     }
     const manifest = readUnitSourceManifest(wt, stage.slug, unit, {
       worktreeRelative: true,
@@ -722,11 +802,13 @@ function captureReviewedRecordSnapshot(
         `source manifest for unit ${unit}`,
       );
     } catch {
-      return { error: `cannot capture reviewed source evidence for unit "${unit}"` };
+      return {
+        error: `cannot capture reviewed source evidence for unit "${unit}"`,
+      };
     }
     if (
       createHash("sha256").update(manifestBytes).digest("hex") !==
-        manifest.rawBytesSha256
+      manifest.rawBytesSha256
     ) {
       return {
         error:
@@ -738,12 +820,15 @@ function captureReviewedRecordSnapshot(
     // manifest alone lands a claim whose content nothing can verify, so the unit
     // would resolve `unverifiable` on main (aidlc-attest.ts) even though it was
     // reviewed. Its sha256 IS the receipt's Unit Source Fingerprint.
-    const hex = /^sha256:([0-9a-f]{64})$/.exec(receipt.unitSourceFingerprint)?.[1];
+    const hex = /^sha256:([0-9a-f]{64})$/.exec(
+      receipt.unitSourceFingerprint,
+    )?.[1];
     if (hex === undefined) {
-      return { error: `unit "${unit}" carries a malformed Unit Source Fingerprint` };
+      return {
+        error: `unit "${unit}" carries a malformed Unit Source Fingerprint`,
+      };
     }
-    const evidenceLogicalPath =
-      `construction/${unit}/${stage.slug}/reviewed-source-${hex.slice(0, 12)}.tsv`;
+    const evidenceLogicalPath = `construction/${unit}/${stage.slug}/reviewed-source-${hex.slice(0, 12)}.tsv`;
     const evidencePath = reviewedSourceEvidencePath(
       wtRecord,
       unit,
@@ -784,8 +869,7 @@ function captureReviewedRecordSnapshot(
     }
     entries.push(
       {
-        logicalPath:
-          `construction/${unit}/${stage.slug}/source-manifest.json`,
+        logicalPath: `construction/${unit}/${stage.slug}/source-manifest.json`,
         bytes: manifestBytes,
       },
       { logicalPath: evidenceLogicalPath, bytes: evidenceBytes },
@@ -801,7 +885,8 @@ function mergeReviewedRecordSnapshot(
   snapshot: ReviewedRecordSnapshot,
 ): string | null {
   const record = recordDir(projectDir);
-  if (record === null) return `cannot resolve the main record directory for unit "${unit}"`;
+  if (record === null)
+    return `cannot resolve the main record directory for unit "${unit}"`;
   let root: string;
   try {
     root = assertNoSymlinkInChainOrThrow(
@@ -912,9 +997,7 @@ function mergeReviewedRecordSnapshot(
 // merge carries application source only. Recompute the fingerprint after the
 // object is written to close a concurrent-edit window; the validated value is
 // the one carried to the convergence row.
-function recoverableSubmoduleUrls(
-  repoDir: string,
-): Map<string, string> | null {
+function recoverableSubmoduleUrls(repoDir: string): Map<string, string> | null {
   const modulesPath = join(repoDir, ".gitmodules");
   if (!existsSync(modulesPath)) return new Map();
   const paths = spawnSync(
@@ -938,7 +1021,10 @@ function recoverableSubmoduleUrls(
     const separator = line.indexOf(" ");
     if (separator <= 0) return null;
     const key = line.slice(0, separator);
-    const path = line.slice(separator + 1).trim().replace(/\\/g, "/");
+    const path = line
+      .slice(separator + 1)
+      .trim()
+      .replace(/\\/g, "/");
     if (!key.endsWith(".path") || !path) return null;
     const urlKey = `${key.slice(0, -".path".length)}.url`;
     const url = spawnSync(
@@ -1018,10 +1104,7 @@ function resolveRelativeSubmoduleUrl(
       return null;
     }
   }
-  if (
-    !/^[A-Za-z]:[\\/]/.test(parentUrl) &&
-    /^[^/\\:]+:.+/.test(parentUrl)
-  ) {
+  if (!/^[A-Za-z]:[\\/]/.test(parentUrl) && /^[^/\\:]+:.+/.test(parentUrl)) {
     const colon = parentUrl.indexOf(":");
     const host = parentUrl.slice(0, colon);
     const remotePath = parentUrl.slice(colon + 1);
@@ -1073,9 +1156,7 @@ function remainingNewGitlinkRecoveryMs(
     budget.deadlineMs = Date.now() + budget.budgetMs;
   }
   const remaining = budget.deadlineMs - Date.now();
-  return remaining <= 0
-    ? null
-    : Math.min(budget.commandTimeoutMs, remaining);
+  return remaining <= 0 ? null : Math.min(budget.commandTimeoutMs, remaining);
 }
 
 function newGitlinkRecoveryError(
@@ -1124,10 +1205,7 @@ function newGitlinkRecoveryError(
     },
   );
   if (advertised.status !== 0) {
-    if (
-      budget.deadlineMs !== null &&
-      Date.now() >= budget.deadlineMs
-    ) {
+    if (budget.deadlineMs !== null && Date.now() >= budget.deadlineMs) {
       return `new submodule recovery deadline exceeded (${budget.budgetMs}ms cumulative per finalize)`;
     }
     return `new submodule ${path} recovery endpoint is unavailable`;
@@ -1203,10 +1281,7 @@ function newGitlinkRecoveryError(
       },
     );
     if (fetched.status !== 0) {
-      if (
-        budget.deadlineMs !== null &&
-        Date.now() >= budget.deadlineMs
-      ) {
+      if (budget.deadlineMs !== null && Date.now() >= budget.deadlineMs) {
         return `new submodule recovery deadline exceeded (${budget.budgetMs}ms cumulative per finalize)`;
       }
       return `cannot fetch advertised recovery history for new submodule ${path}`;
@@ -1292,11 +1367,10 @@ function initializedSubmoduleSourceError(
     }
   }
 
-  const gitlinks = spawnSync(
-    "git",
-    ["-C", subDir, "ls-files", "-s", "-z"],
-    { encoding: "utf-8", maxBuffer: 512 * 1024 * 1024 },
-  );
+  const gitlinks = spawnSync("git", ["-C", subDir, "ls-files", "-s", "-z"], {
+    encoding: "utf-8",
+    maxBuffer: 512 * 1024 * 1024,
+  });
   if (gitlinks.status !== 0) {
     return `cannot enumerate nested submodules for ${displayPath}`;
   }
@@ -1351,7 +1425,10 @@ function bindReviewedSource(
   recoveryBudget: NewGitlinkRecoveryBudget,
 ): { binding?: SourceBinding; error?: string } {
   const wt = worktreePath(projectDir, unit);
-  const idx = join(tmpdir(), `aidlc-swarm-source-${process.pid}-${randomUUID().slice(0, 8)}`);
+  const idx = join(
+    tmpdir(),
+    `aidlc-swarm-source-${process.pid}-${randomUUID().slice(0, 8)}`,
+  );
   // commit-tree is an internal snapshot operation, not a user-authored commit.
   // Give it a framework-owned identity so finalize does not depend on ambient
   // user.name/user.email configuration (CI and fresh automation often have none).
@@ -1363,15 +1440,18 @@ function bindReviewedSource(
     GIT_COMMITTER_NAME: "AI-DLC",
     GIT_COMMITTER_EMAIL: "aidlc@localhost",
   };
-  const git = (args: string[]) => spawnSync("git", ["-C", wt, ...args], {
-    env,
-    encoding: "utf-8",
-    maxBuffer: 512 * 1024 * 1024,
-  });
+  const git = (args: string[]) =>
+    spawnSync("git", ["-C", wt, ...args], {
+      env,
+      encoding: "utf-8",
+      maxBuffer: 512 * 1024 * 1024,
+    });
   try {
     const head = git(["rev-parse", "HEAD^{commit}"]);
-    if (head.status !== 0 || !head.stdout.trim()) return { error: "cannot resolve the Bolt HEAD commit" };
-    if (git(["read-tree", "HEAD"]).status !== 0) return { error: "cannot seed the source snapshot index" };
+    if (head.status !== 0 || !head.stdout.trim())
+      return { error: "cannot resolve the Bolt HEAD commit" };
+    if (git(["read-tree", "HEAD"]).status !== 0)
+      return { error: "cannot seed the source snapshot index" };
     const initialSubmodules = git(["ls-files", "-s", "-z"]);
     if (initialSubmodules.status !== 0) {
       return { error: "cannot enumerate pre-shape submodule state" };
@@ -1385,18 +1465,20 @@ function bindReviewedSource(
       }
       initialGitlinkPaths.add(record.slice(tab + 1).replace(/\\/g, "/"));
     }
-    if (git(["add", "-A"]).status !== 0) return { error: "cannot stage the reviewed source snapshot" };
+    if (git(["add", "-A"]).status !== 0)
+      return { error: "cannot stage the reviewed source snapshot" };
     const shape = shapeSourceSnapshotIndex(wt, idx, true);
     if (shape === null) {
-      return { error: "cannot apply the reviewed source boundary to the snapshot" };
+      return {
+        error: "cannot apply the reviewed source boundary to the snapshot",
+      };
     }
     if (shape.externalSymlinkPaths.length > 0) {
-      const rendered = shape.externalSymlinkPaths.slice(0, 10).join(", ") +
-        (
-          shape.externalSymlinkPaths.length > 10
-            ? ` ... and ${shape.externalSymlinkPaths.length - 10} more`
-            : ""
-        );
+      const rendered =
+        shape.externalSymlinkPaths.slice(0, 10).join(", ") +
+        (shape.externalSymlinkPaths.length > 10
+          ? ` ... and ${shape.externalSymlinkPaths.length - 10} more`
+          : "");
       return {
         error:
           `cannot bind external source symlink target${shape.externalSymlinkPaths.length === 1 ? "" : "s"} ` +
@@ -1428,12 +1510,14 @@ function bindReviewedSource(
     // out at another commit remains representable: `git add -A` staged its new
     // gitlink above.
     const submodules = git(["ls-files", "-s", "-z"]);
-    if (submodules.status !== 0) return { error: "cannot verify reviewed submodule state" };
+    if (submodules.status !== 0)
+      return { error: "cannot verify reviewed submodule state" };
     const visitedSubmodules = new Set<string>();
     for (const record of submodules.stdout.split("\0")) {
       if (!record.startsWith("160000 ")) continue;
       const tab = record.indexOf("\t");
-      if (tab === -1) return { error: "cannot parse a reviewed submodule gitlink" };
+      if (tab === -1)
+        return { error: "cannot parse a reviewed submodule gitlink" };
       const commit = record.slice(0, tab).split(" ")[1] ?? "";
       if (!/^[0-9a-f]{40,64}$/.test(commit)) {
         return { error: "cannot parse a reviewed submodule commit" };
@@ -1475,31 +1559,60 @@ function bindReviewedSource(
       idx,
       shape.includedRegularPaths,
     );
-    if (rawEntries === null) return { error: "cannot bind raw bytes for filtered source paths" };
+    if (rawEntries === null)
+      return { error: "cannot bind raw bytes for filtered source paths" };
     for (const entry of rawEntries) {
       const indexed = git(["ls-files", "-s", "-z", "--", entry.path]);
-      const mode = indexed.status === 0 ? indexed.stdout.slice(0, indexed.stdout.indexOf(" ")) : "";
+      const mode =
+        indexed.status === 0
+          ? indexed.stdout.slice(0, indexed.stdout.indexOf(" "))
+          : "";
       if (!/^100(?:644|755)$/.test(mode)) {
-        return { error: `cannot resolve the index mode for filtered path ${entry.path}` };
+        return {
+          error: `cannot resolve the index mode for filtered path ${entry.path}`,
+        };
       }
       const raw = git(["hash-object", "-w", "--no-filters", "--", entry.path]);
       if (raw.status !== 0 || raw.stdout.trim() !== entry.sha) {
-        return { error: `cannot materialize raw reviewed bytes for filtered path ${entry.path}` };
+        return {
+          error: `cannot materialize raw reviewed bytes for filtered path ${entry.path}`,
+        };
       }
-      if (git(["update-index", "--cacheinfo", mode, entry.sha, entry.path]).status !== 0) {
-        return { error: `cannot bind raw reviewed bytes for filtered path ${entry.path}` };
+      if (
+        git(["update-index", "--cacheinfo", mode, entry.sha, entry.path])
+          .status !== 0
+      ) {
+        return {
+          error: `cannot bind raw reviewed bytes for filtered path ${entry.path}`,
+        };
       }
     }
     const tree = git(["write-tree"]);
-    if (tree.status !== 0 || !tree.stdout.trim()) return { error: "cannot write the reviewed source tree" };
-    const commit = git(["commit-tree", tree.stdout.trim(), "-p", head.stdout.trim(), "-m", `Reviewed source for Bolt ${unit}`]);
-    if (commit.status !== 0 || !commit.stdout.trim()) return { error: "cannot create the immutable reviewed-source commit" };
+    if (tree.status !== 0 || !tree.stdout.trim())
+      return { error: "cannot write the reviewed source tree" };
+    const commit = git([
+      "commit-tree",
+      tree.stdout.trim(),
+      "-p",
+      head.stdout.trim(),
+      "-m",
+      `Reviewed source for Bolt ${unit}`,
+    ]);
+    if (commit.status !== 0 || !commit.stdout.trim())
+      return { error: "cannot create the immutable reviewed-source commit" };
     const after = worktreeSourceFingerprint(wt);
     if (after === null || after !== fingerprint) {
-      return { error: "source-fingerprint mismatch while binding the reviewed source; re-run the reviewer" };
+      return {
+        error:
+          "source-fingerprint mismatch while binding the reviewed source; re-run the reviewer",
+      };
     }
     const commitSha = commit.stdout.trim();
-    const retained = git(["update-ref", reviewedSourceRef(unit, commitSha), commitSha]);
+    const retained = git([
+      "update-ref",
+      reviewedSourceRef(unit, commitSha),
+      commitSha,
+    ]);
     if (retained.status !== 0) {
       return { error: "cannot retain the immutable reviewed-source commit" };
     }
@@ -1535,14 +1648,18 @@ function emitSwarmStarted(
       Stage: attempt.stage,
       "Run floor": attempt.floor,
     },
-    pd
+    pd,
   );
 }
 
 // Loud-degrade: AIDLC_USE_SWARM=1 was requested but the Workflow tool was
 // unavailable, so the conductor ran the subagent floor. The referee makes the
 // substrate difference invisible to convergence, but the downgrade is recorded.
-function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): void {
+function emitSwarmDegraded(
+  pd: string,
+  batch: string,
+  requested: DriverName,
+): void {
   appendAuditEntry(
     "SWARM_DEGRADED",
     {
@@ -1550,7 +1667,7 @@ function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): vo
       "Requested driver": requested,
       "Fallback driver": "subagent",
     },
-    pd
+    pd,
   );
 }
 
@@ -1581,7 +1698,7 @@ function emitUnitConverged(
           ? { "Source Freshness Bypass": "true" }
           : {}),
     },
-    pd
+    pd,
   );
 }
 
@@ -1589,12 +1706,12 @@ function emitUnitFailed(
   pd: string,
   batch: string,
   unit: string,
-  reason: FailureReason
+  reason: FailureReason,
 ): void {
   appendAuditEntry(
     "SWARM_UNIT_FAILED",
     { "Batch number": batch, "Unit name": unit, Reason: reason },
-    pd
+    pd,
   );
 }
 
@@ -1602,12 +1719,12 @@ function emitBatonReturned(
   pd: string,
   batch: string,
   unit: string,
-  reason: FailureReason
+  reason: FailureReason,
 ): void {
   appendAuditEntry(
     "SWARM_BATON_RETURNED",
     { "Batch number": batch, "Unit name": unit, Reason: reason },
-    pd
+    pd,
   );
 }
 
@@ -1615,7 +1732,7 @@ function emitSwarmCompleted(
   pd: string,
   batch: string,
   convergedCount: number,
-  failedCount: number
+  failedCount: number,
 ): void {
   appendAuditEntry(
     "SWARM_COMPLETED",
@@ -1624,7 +1741,7 @@ function emitSwarmCompleted(
       "Converged count": String(convergedCount),
       "Failed count": String(failedCount),
     },
-    pd
+    pd,
   );
 }
 
@@ -1636,8 +1753,16 @@ function emitSwarmCompleted(
 function emitBoltFailed(pd: string, unit: string, errorSummary: string): void {
   runTool(
     "aidlc-bolt.ts",
-    ["fail", "--name", unit, "--slug", swarmBoltSlug(unit), "--error", errorSummary],
-    pd
+    [
+      "fail",
+      "--name",
+      unit,
+      "--slug",
+      swarmBoltSlug(unit),
+      "--error",
+      errorSummary,
+    ],
+    pd,
   );
 }
 
@@ -1719,7 +1844,9 @@ function handlePrepare(rest: string[]): void {
         dag.unitKinds?.get(unit) ?? null,
       ).length === 0
     ) {
-      fail(`prepare unit "${unit}" has no applicable required outputs for stage "${stage}"`);
+      fail(
+        `prepare unit "${unit}" has no applicable required outputs for stage "${stage}"`,
+      );
     }
   }
   assertUniqueSwarmBoltSlugs(dag.units);
@@ -1732,7 +1859,12 @@ function handlePrepare(rest: string[]): void {
   let repoCwd: string;
   let repoName: string | null;
   try {
-    const resolved = resolveConstructionRepo(projectDir, flags.repo, flags.intent, flags.space);
+    const resolved = resolveConstructionRepo(
+      projectDir,
+      flags.repo,
+      flags.intent,
+      flags.space,
+    );
     repoCwd = resolved.cwd;
     repoName = resolved.repo;
   } catch (e) {
@@ -1792,7 +1924,7 @@ function handlePrepare(rest: string[]): void {
         attempt.floor,
         ...repoArgs,
       ],
-      projectDir
+      projectDir,
     );
     if (!created.ok) {
       prepared.push({
@@ -1815,8 +1947,18 @@ function handlePrepare(rest: string[]): void {
     }
     const started = runTool(
       "aidlc-bolt.ts",
-      ["start", "--worktree", "--slug", boltSlug, "--batch", flags.batch, "--name", unit, ...repoArgs],
-      projectDir
+      [
+        "start",
+        "--worktree",
+        "--slug",
+        boltSlug,
+        "--batch",
+        flags.batch,
+        "--name",
+        unit,
+        ...repoArgs,
+      ],
+      projectDir,
     );
     if (!started.ok) {
       prepared.push({
@@ -1834,7 +1976,9 @@ function handlePrepare(rest: string[]): void {
   // before creation would let a failed re-prepare in a later stage attempt
   // relabel an old preserved worktree with the current attempt, allowing stale
   // data to pass finalize's exact-attempt check.
-  const readyUnits = prepared.filter((unit) => unit.ok).map((unit) => unit.unit);
+  const readyUnits = prepared
+    .filter((unit) => unit.ok)
+    .map((unit) => unit.unit);
   if (readyUnits.length > 0) {
     emitSwarmStarted(
       projectDir,
@@ -1853,11 +1997,13 @@ function handlePrepare(rest: string[]): void {
         base,
         concurrency: Number(concurrency),
         units: prepared,
-        ...(swarmChangeNotices.length > 0 ? { change_notices: swarmChangeNotices } : {}),
+        ...(swarmChangeNotices.length > 0
+          ? { change_notices: swarmChangeNotices }
+          : {}),
       },
       null,
-      2
-    )
+      2,
+    ),
   );
   // Exit 2 if any worktree failed to fork — the conductor must take the baton.
   process.exit(prepared.some((p) => !p.ok) ? 2 : 0);
@@ -1871,14 +2017,21 @@ function handleCheck(rest: string[]): void {
 
   const unit = positional[0] ?? flags.unit;
   if (!unit) {
-    fail("check requires a unit name (positional `check <unit>` or --unit <unit>)");
+    fail(
+      "check requires a unit name (positional `check <unit>` or --unit <unit>)",
+    );
   }
   swarmBoltSlug(unit);
   if (!flags["check-cmd"]) {
     fail("check requires --check-cmd <shell command; exit 0 = converged>");
   }
 
-  const verdict = verdictFor(unit, projectDir, flags["check-cmd"], flags["test-file"]);
+  const verdict = verdictFor(
+    unit,
+    projectDir,
+    flags["check-cmd"],
+    flags["test-file"],
+  );
   if (!verdict.exists) {
     fail(`no worktree for unit "${unit}" — run \`prepare\` first`);
   }
@@ -1890,7 +2043,7 @@ function handleCheck(rest: string[]): void {
         tampered: false,
         reason: "error",
         detail: verdict.confineError,
-      })
+      }),
     );
     process.exit(1);
   }
@@ -1928,7 +2081,9 @@ function handleFinalize(rest: string[]): void {
   const allUnits = flags.units ? splitCsv(flags.units) : claimed.slice();
   const dag = resolveBoltDag(projectDir, flags.intent, flags.space);
   if (dag.state !== "ok") fail("finalize requires a current resolved Unit DAG");
-  const currentStage = (getField(readStateFile(projectDir), "Current Stage") ?? "")
+  const currentStage = (
+    getField(readStateFile(projectDir), "Current Stage") ?? ""
+  )
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "-");
@@ -1946,7 +2101,9 @@ function handleFinalize(rest: string[]): void {
         dag.unitKinds?.get(unit) ?? null,
       ).length === 0
     ) {
-      fail(`finalize unit "${unit}" has no applicable required outputs for stage "${currentStage}"`);
+      fail(
+        `finalize unit "${unit}" has no applicable required outputs for stage "${currentStage}"`,
+      );
     }
   }
   const claimedSet = new Set(claimed);
@@ -1974,7 +2131,9 @@ function handleFinalize(rest: string[]): void {
       swarmBoltSlug(unit);
       const reason = pair.slice(eq + 1).trim() as FailureReason;
       if (!DECLINED_REASONS.includes(reason)) {
-        fail(`--reasons reason for "${unit}" must be one of: ${DECLINED_REASONS.join(", ")}`);
+        fail(
+          `--reasons reason for "${unit}" must be one of: ${DECLINED_REASONS.join(", ")}`,
+        );
       }
       declinedReasons[unit] = reason;
     }
@@ -1993,11 +2152,7 @@ function handleFinalize(rest: string[]): void {
   for (const unit of allUnits) {
     if (claimedSet.has(unit)) {
       const verdict = verdictFor(unit, projectDir, checkCmd, testFile);
-      const preparedAttempt = preparedSwarmAttempt(
-        projectDir,
-        batch,
-        unit,
-      );
+      const preparedAttempt = preparedSwarmAttempt(projectDir, batch, unit);
       if (!preparedAttempt) {
         results.push({
           unit,
@@ -2028,7 +2183,12 @@ function handleFinalize(rest: string[]): void {
           detail: "no worktree on re-verify (prepare not run?)",
         });
       } else if (verdict.confineError) {
-        results.push({ unit, status: "failed", reason: "error", detail: verdict.confineError });
+        results.push({
+          unit,
+          status: "failed",
+          reason: "error",
+          detail: verdict.confineError,
+        });
       } else if (verdict.tampered) {
         results.push({
           unit,
@@ -2079,7 +2239,9 @@ function handleFinalize(rest: string[]): void {
               unit,
               status: "failed",
               reason: "error",
-              detail: captured.error ?? `cannot snapshot record artifacts for unit "${unit}"`,
+              detail:
+                captured.error ??
+                `cannot snapshot record artifacts for unit "${unit}"`,
             });
           } else if (bound.error) {
             results.push({
@@ -2103,7 +2265,8 @@ function handleFinalize(rest: string[]): void {
           unit,
           status: "failed",
           reason: "error",
-          detail: "claimed converged but the check command did not pass on re-verify",
+          detail:
+            "claimed converged but the check command did not pass on re-verify",
         });
       }
     } else {
@@ -2144,11 +2307,23 @@ function handleFinalize(rest: string[]): void {
     runTool("aidlc-bolt.ts", ["release-merge", "--slug", boltSlug], projectDir);
     const merged = runTool(
       "aidlc-bolt.ts",
-      ["complete", "--merge", "--slug", boltSlug, "--batch", batch, "--name", unit],
-      projectDir
+      [
+        "complete",
+        "--merge",
+        "--slug",
+        boltSlug,
+        "--batch",
+        batch,
+        "--name",
+        unit,
+      ],
+      projectDir,
     );
     if (!merged.ok) {
-      mergeFailures.push({ unit, detail: merged.stderr.trim() || merged.stdout.trim() });
+      mergeFailures.push({
+        unit,
+        detail: merged.stderr.trim() || merged.stdout.trim(),
+      });
     }
   }
 
@@ -2179,7 +2354,11 @@ function handleFinalize(rest: string[]): void {
       }
     } else {
       emitUnitFailed(projectDir, batch, r.unit, r.reason ?? "error");
-      emitBoltFailed(projectDir, r.unit, r.detail ?? `unit "${r.unit}" failed: ${r.reason}`);
+      emitBoltFailed(
+        projectDir,
+        r.unit,
+        r.detail ?? `unit "${r.unit}" failed: ${r.reason}`,
+      );
     }
   }
   const failedResults = results.filter((r) => r.status === "failed");
@@ -2328,8 +2507,12 @@ function legacyPreparedSwarmAttempt(
   const fork = findAllEvents(worktreeAudit, "AUDIT_FORKED")
     .filter((event) => auditBlockField(event.block, "Bolt slug") === boltSlug)
     .at(-1);
-  const boundaryRaw = fork ? auditBlockField(fork.block, "Fork Boundary") : null;
-  const sourceHash = fork ? auditBlockField(fork.block, "Source Audit Hash") : null;
+  const boundaryRaw = fork
+    ? auditBlockField(fork.block, "Fork Boundary")
+    : null;
+  const sourceHash = fork
+    ? auditBlockField(fork.block, "Source Audit Hash")
+    : null;
   if (!boundaryRaw || !sourceHash || !/^[0-9]+$/.test(boundaryRaw)) return null;
 
   const mainDir = auditShardDir(projectDir);
@@ -2342,7 +2525,11 @@ function legacyPreparedSwarmAttempt(
     return null;
   }
   const boundary = Number(boundaryRaw);
-  if (!Number.isSafeInteger(boundary) || boundary < 0 || mainBytes.length < boundary) {
+  if (
+    !Number.isSafeInteger(boundary) ||
+    boundary < 0 ||
+    mainBytes.length < boundary
+  ) {
     return null;
   }
   const frozenBytes = mainBytes.subarray(0, boundary);
@@ -2381,8 +2568,8 @@ function legacyPreparedSwarmAttempt(
     }
   }
   const hasPreparationSequence = legacyStarts.some((started) =>
-    boltStarts.some((bolt) =>
-      bolt > started && stateForks.some((forked) => forked > bolt),
+    boltStarts.some(
+      (bolt) => bolt > started && stateForks.some((forked) => forked > bolt),
     ),
   );
   if (!hasPreparationSequence) return null;
@@ -2419,7 +2606,11 @@ export function main(argv: string[]): void {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a.startsWith("--")) {
-      if (!a.includes("=") && i + 1 < argv.length && !argv[i + 1].startsWith("--")) {
+      if (
+        !a.includes("=") &&
+        i + 1 < argv.length &&
+        !argv[i + 1].startsWith("--")
+      ) {
         i++;
       }
       continue;
@@ -2428,7 +2619,10 @@ export function main(argv: string[]): void {
     subIndex = i;
     break;
   }
-  const rest = subIndex >= 0 ? [...argv.slice(0, subIndex), ...argv.slice(subIndex + 1)] : argv;
+  const rest =
+    subIndex >= 0
+      ? [...argv.slice(0, subIndex), ...argv.slice(subIndex + 1)]
+      : argv;
   switch (subcommand) {
     case "prepare":
       handlePrepare(rest);
@@ -2443,7 +2637,7 @@ export function main(argv: string[]): void {
       console.error(
         JSON.stringify({
           error: `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: prepare, check, finalize`,
-        })
+        }),
       );
       process.exit(1);
   }

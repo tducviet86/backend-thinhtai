@@ -20,7 +20,16 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
-import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  posix,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { sha256Bytes } from "./aidlc-distribution.ts";
 import {
   isMachineOwnedPath,
@@ -29,7 +38,13 @@ import {
 } from "./aidlc-install-paths.ts";
 
 export type TransactionOperation =
-  | { kind: "write"; path: string; data: string; mode?: number; expected?: string | "absent" }
+  | {
+      kind: "write";
+      path: string;
+      data: string;
+      mode?: number;
+      expected?: string | "absent";
+    }
   | {
       kind: "copy";
       path: string;
@@ -46,7 +61,12 @@ export type TransactionOperation =
       expected?: string | "absent";
     }
   | { kind: "remove"; path: string; expected?: string }
-  | { kind: "symlink"; path: string; target: string; expected?: string | "absent" };
+  | {
+      kind: "symlink";
+      path: string;
+      target: string;
+      expected?: string | "absent";
+    };
 
 export type TransactionPlan = {
   schemaVersion: 1;
@@ -64,12 +84,16 @@ export type TransactionOptions = {
 };
 
 function normalizedRelative(path: string): string {
-  if (!path || isAbsolute(path)) throw new Error(`transaction path must be root-relative: ${path}`);
+  if (!path || isAbsolute(path))
+    throw new Error(`transaction path must be root-relative: ${path}`);
   const raw = path.replaceAll("\\", "/");
-  if (raw.split("/").includes("..")) throw new Error(`transaction path escapes root: ${path}`);
+  if (raw.split("/").includes(".."))
+    throw new Error(`transaction path escapes root: ${path}`);
   const normalized = posix.normalize(raw).replace(/^\.\//, "");
   if (!normalized || normalized === ".") {
-    throw new Error(`transaction path must name an entry below the root: ${path}`);
+    throw new Error(
+      `transaction path must name an entry below the root: ${path}`,
+    );
   }
   if (
     normalized === ".aidlc-transaction.lock" ||
@@ -98,7 +122,10 @@ function canonicalRoot(path: string): string {
 
 function withinRoot(path: string, root: string): boolean {
   const rel = relative(root, path);
-  return rel === "" || (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`));
+  return (
+    rel === "" ||
+    (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`))
+  );
 }
 
 // A project-and-machine route commits its project and machine changes as
@@ -135,28 +162,30 @@ function enforceRouteMutationPlan(
   for (const operation of operations) {
     const rel = normalizedRelative(operation.path);
     const target = canonicalRoot(targetPath(root, rel));
-    const isMachine = isMachineOwnedPath(target) ||
-      machineControlPaths.includes(target);
-    const isProject = !isMachine &&
-      Boolean(projectRoot && withinRoot(target, projectRoot));
-    const isUserHome = !isMachine &&
-      Boolean(homeRoot && withinRoot(target, homeRoot));
+    const isMachine =
+      isMachineOwnedPath(target) || machineControlPaths.includes(target);
+    const isProject =
+      !isMachine && Boolean(projectRoot && withinRoot(target, projectRoot));
+    const isUserHome =
+      !isMachine && Boolean(homeRoot && withinRoot(target, homeRoot));
     const permitted =
       (scope === "project" && isProject) ||
       (scope === "machine" && isMachine) ||
-      (scope === "project-and-machine" && (machineRooted ? isMachine : isProject)) ||
+      (scope === "project-and-machine" &&
+        (machineRooted ? isMachine : isProject)) ||
       (scope === "user-home" && isUserHome);
     if (!permitted) {
       const rootClass = isMachine
         ? "machine"
         : isProject
-        ? "project"
-        : isUserHome
-        ? "user-home"
-        : "outside";
-      const plan = scope === "project-and-machine"
-        ? ` from a ${machineRooted ? "machine" : "project"}-rooted plan`
-        : "";
+          ? "project"
+          : isUserHome
+            ? "user-home"
+            : "outside";
+      const plan =
+        scope === "project-and-machine"
+          ? ` from a ${machineRooted ? "machine" : "project"}-rooted plan`
+          : "";
       throw new Error(
         `route ${route} with ${scope} mutation scope cannot mutate ${rootClass} path ${target}${plan}`,
       );
@@ -175,8 +204,10 @@ function pathExists(path: string): boolean {
 
 function pendingWindowsUninstallBlocks(root: string): boolean {
   try {
-    return root === canonicalRoot(machineTransactionRoot()) &&
-      pathExists(windowsUninstallFencePath());
+    return (
+      root === canonicalRoot(machineTransactionRoot()) &&
+      pathExists(windowsUninstallFencePath())
+    );
   } catch {
     return false;
   }
@@ -187,7 +218,9 @@ function nearestExisting(path: string): string {
   while (!pathExists(current)) {
     const parent = dirname(current);
     if (parent === current) {
-      throw new Error(`transaction path has no existing filesystem ancestor: ${path}`);
+      throw new Error(
+        `transaction path has no existing filesystem ancestor: ${path}`,
+      );
     }
     current = parent;
   }
@@ -225,7 +258,9 @@ function validateTreeSource(path: string): void {
       const child = join(current, entry);
       const stat = lstatSync(child);
       if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile())) {
-        throw new Error(`${child}: transaction tree contains a link or special file`);
+        throw new Error(
+          `${child}: transaction tree contains a link or special file`,
+        );
       }
       if (stat.isDirectory()) visit(child);
     }
@@ -236,7 +271,8 @@ function validateTreeSource(path: string): void {
 export function transactionSourceHash(path: string): string {
   const root = lstatSync(path);
   if (root.isFile()) return sha256Bytes(readFileSync(path));
-  if (!root.isDirectory()) throw new Error(`${path}: transaction source must be a file or directory`);
+  if (!root.isDirectory())
+    throw new Error(`${path}: transaction source must be a file or directory`);
   const rows = [`directory . ${root.mode & 0o777}`];
   const visit = (directory: string, prefix: string): void => {
     for (const entry of readdirSync(directory).sort()) {
@@ -247,9 +283,13 @@ export function transactionSourceHash(path: string): string {
         rows.push(`directory ${rel} ${stat.mode & 0o777}`);
         visit(child, rel);
       } else if (stat.isFile()) {
-        rows.push(`file ${rel} ${stat.mode & 0o777} ${sha256Bytes(readFileSync(child))}`);
+        rows.push(
+          `file ${rel} ${stat.mode & 0o777} ${sha256Bytes(readFileSync(child))}`,
+        );
       } else {
-        throw new Error(`${child}: transaction tree contains a link or special file`);
+        throw new Error(
+          `${child}: transaction tree contains a link or special file`,
+        );
       }
     }
   };
@@ -258,14 +298,17 @@ export function transactionSourceHash(path: string): string {
 }
 
 function verifyPlan(plan: TransactionPlan, root: string): void {
-  if (plan.schemaVersion !== 1) throw new Error(`unsupported transaction schema ${plan.schemaVersion}`);
+  if (plan.schemaVersion !== 1)
+    throw new Error(`unsupported transaction schema ${plan.schemaVersion}`);
   const seen = new Set<string>();
   const rootDevice = lstatSync(nearestExisting(root)).dev;
   for (const operation of plan.operations) {
     const rel = normalizedRelative(operation.path);
     if (
       seen.has(rel) ||
-      [...seen].some((other) => rel.startsWith(`${other}/`) || other.startsWith(`${rel}/`))
+      [...seen].some(
+        (other) => rel.startsWith(`${other}/`) || other.startsWith(`${rel}/`),
+      )
     ) {
       throw new Error(`transaction operations overlap at ${rel}`);
     }
@@ -273,13 +316,16 @@ function verifyPlan(plan: TransactionPlan, root: string): void {
     const target = targetPath(root, rel);
     const existing = nearestExisting(target);
     if (lstatSync(existing).dev !== rootDevice) {
-      throw new Error(`${rel}: transaction destination crosses a filesystem boundary`);
+      throw new Error(
+        `${rel}: transaction destination crosses a filesystem boundary`,
+      );
     }
     if (operation.expected && transactionState(target) !== operation.expected) {
       throw new Error(`${rel}: source changed after planning`);
     }
     if (operation.kind === "copy" || operation.kind === "tree") {
-      if (!isAbsolute(operation.source)) throw new Error(`${rel}: copy source must be absolute`);
+      if (!isAbsolute(operation.source))
+        throw new Error(`${rel}: copy source must be absolute`);
       const sourceStat = lstatSync(operation.source);
       if (operation.kind === "copy" && !sourceStat.isFile()) {
         throw new Error(`${rel}: copy source must be a regular file`);
@@ -300,7 +346,8 @@ function verifyPlan(plan: TransactionPlan, root: string): void {
 
 export function validateTransactionPlan(plan: TransactionPlan): void {
   const root = canonicalRoot(plan.root);
-  if (plan.operations.length > 0) enforceRouteMutationPlan(root, plan.operations);
+  if (plan.operations.length > 0)
+    enforceRouteMutationPlan(root, plan.operations);
   verifyPlan(plan, root);
 }
 
@@ -378,7 +425,11 @@ type HeldLock = {
   identity: string;
 };
 
-function acquireLock(root: string, lockPath: string, staging: string): HeldLock {
+function acquireLock(
+  root: string,
+  lockPath: string,
+  staging: string,
+): HeldLock {
   for (let attempt = 0; attempt < 2; attempt++) {
     const candidate = join(root, `.aidlc-lock-${randomUUID()}`);
     let descriptor: number | null = null;
@@ -393,7 +444,8 @@ function acquireLock(root: string, lockPath: string, staging: string): HeldLock 
     } catch (error) {
       if (descriptor !== null) closeSync(descriptor);
       rmSync(candidate, { force: true });
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST" || attempt > 0) throw error;
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST" || attempt > 0)
+        throw error;
       clearStaleLock(lockPath);
     }
   }
@@ -424,7 +476,10 @@ function snapshot(target: string, backup: string): void {
   });
 }
 
-function stageCandidate(operation: TransactionOperation, candidate: string): void {
+function stageCandidate(
+  operation: TransactionOperation,
+  candidate: string,
+): void {
   mkdirSync(dirname(candidate), { recursive: true, mode: 0o700 });
   if (operation.kind === "write") {
     writeFileSync(candidate, Buffer.from(operation.data, "base64"), {
@@ -434,7 +489,10 @@ function stageCandidate(operation: TransactionOperation, candidate: string): voi
     copyFileSync(operation.source, candidate);
     if (operation.mode !== undefined) chmodSync(candidate, operation.mode);
   } else if (operation.kind === "tree") {
-    cpSync(operation.source, candidate, { recursive: true, preserveTimestamps: true });
+    cpSync(operation.source, candidate, {
+      recursive: true,
+      preserveTimestamps: true,
+    });
   } else if (operation.kind === "symlink") {
     symlinkSync(operation.target, candidate);
   }
@@ -442,7 +500,9 @@ function stageCandidate(operation: TransactionOperation, candidate: string): voi
     (operation.kind === "copy" || operation.kind === "tree") &&
     transactionSourceHash(candidate) !== operation.sourceHash
   ) {
-    throw new Error(`${operation.path}: transaction source changed while staging`);
+    throw new Error(
+      `${operation.path}: transaction source changed while staging`,
+    );
   }
 }
 
@@ -524,7 +584,10 @@ export function executePlan(
       const boundary = `${index + 1}:${operation.kind}`;
       failpoint(options, `before-stage:${boundary}`);
       if (operation.kind !== "remove") {
-        stageCandidate(operation, join(candidates, normalizedRelative(operation.path)));
+        stageCandidate(
+          operation,
+          join(candidates, normalizedRelative(operation.path)),
+        );
       }
       failpoint(options, `after-stage:${boundary}`);
     }
@@ -586,7 +649,9 @@ export function executePlan(
       committedCount++;
       failpoint(options, `after-commit:${boundary}`);
       if (failAfter > 0 && committedCount === failAfter) {
-        throw new Error(`injected transaction failure after operation ${committedCount}`);
+        throw new Error(
+          `injected transaction failure after operation ${committedCount}`,
+        );
       }
     }
     failpoint(options, "before-committed-validation");

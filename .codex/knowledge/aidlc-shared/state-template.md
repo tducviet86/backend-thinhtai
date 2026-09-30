@@ -8,10 +8,12 @@ file in `<record>/project-description.json`; the `Project` field below is its
 safe single-line preview.
 
 Authoritative generated views:
+
 - Stage graph: `aidlc engine gen stage-table`
 - Scope grid: `aidlc engine gen scope-table`
 
 ## Project Information
+
 - **Project**: [single-line project description preview]
 - **Project Description Source**: project-description.json
 - **Project Type**: [Greenfield/Brownfield]
@@ -24,6 +26,7 @@ Authoritative generated views:
 - **Practices Affirmed Timestamp**: [ISO 8601 timestamp on affirmation]
 
 ## Scope Configuration
+
 - **Stages to Execute**: [comma-separated stage numbers included in scope]
 - **Stages to Skip**: [comma-separated stage numbers with reasons, or none]
 - **Depth**: [Minimal/Standard/Comprehensive]
@@ -34,33 +37,39 @@ Authoritative generated views:
 - **Summary Confirmation**: [on/off, then its source in parentheses: `(from scope <name>)` or `(set by you)`; written at intent creation with the scope default, rewritten by `/aidlc --summary-confirmation`, read by value only]
 
 ## Workspace State
+
 - **Project Root**: [project-relative path, normally `.`; re-derived at runtime, never trusted as an absolute path]
 - **Languages**: [detected languages]
 - **Frameworks**: [detected frameworks]
 - **Build System**: [detected build system]
 
 ## Execution Plan Summary
+
 - **Total Stages**: [count of EXECUTE stages]
 - **Completed**: [count of completed EXECUTE stages]
 - **In Progress**: [current stage slug]
 
 ## Runtime State
+
 - **Revision Count**: [integer]
 - **Unit Ownership**: [solo/team; optional, exact `team` activates the derived grid]
 - **Unit Gate Rhythm**: [per-stage/unit-end; optional, defaults to per-stage under team ownership]
 
 ## Phase Progress
+
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
 - **[Phase]**: [Pending/Active/Verified/Skipped]
 
 ## Stage Progress
+
 <!-- Checkbox states: [ ] pending, [-] in-progress, [?] awaiting approval, [R] revising, [x] completed, [S] skipped -->
 
 The engine emits one phase heading per compiled phase, then one checkbox row per
 compiled stage in that phase:
 
 ### [PHASE] PHASE
+
 - [ ] stage-slug — [EXECUTE/SKIP: reason]
 
 ## Unit Progress
@@ -70,9 +79,9 @@ unit-major`. This table is an engine-owned, derived projection of the Unit DAG,
 artifact coverage, lifecycle receipts, and unit gate events. It is rewritten on
 every `next`; hand edits are never routing or completion evidence.
 
-| unit | owner | [per-unit Construction stage columns in graph order] | gate |
-| --- | --- | --- | --- |
-| [Unit name] | - | [[ ]/[-]/[?]/[R]/[x]/[S] per stage] | [[ ]/[-]/[?]/[R]/[x]] |
+| unit        | owner | [per-unit Construction stage columns in graph order] | gate                  |
+| ----------- | ----- | ---------------------------------------------------- | --------------------- |
+| [Unit name] | -     | [[ ]/[-]/[?]/[R]/[x]/[S] per stage]                  | [[ ]/[-]/[?]/[R]/[x]] |
 
 The stage columns use the same checkbox vocabulary as `## Stage Progress`.
 `owner` remains `-` until the claim increment supplies ownership. `gate`
@@ -81,6 +90,7 @@ Gate Rhythm. Stage Progress rows are derived complete only when their Unit
 Progress column and required team gates are complete.
 
 ## Current Status
+
 - **Lifecycle Phase**: [READY/INITIALIZATION/IDEATION/INCEPTION/CONSTRUCTION/OPERATION]
 - **Current Stage**: [stage slug or status text]
 - **Next Stage**: [next stage slug or none]
@@ -89,6 +99,7 @@ Progress column and required team gates are complete.
 - **Last Updated**: [ISO 8601 timestamp]
 
 ## Session Resume Point
+
 - **Last Completed Stage**: [stage slug]
 - **Next Action**: [what to do next]
 - **Pending Artifacts**: [any incomplete artifacts or none]

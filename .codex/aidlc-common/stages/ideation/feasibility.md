@@ -52,6 +52,7 @@ outputs: feasibility-assessment.md, constraint-register.md, raid-log.md, feasibi
 ### Step 2: Generate Clarifying Questions
 
 Create `<record>/ideation/feasibility/feasibility-questions.md` with questions:
+
 - What existing systems must this integrate with?
 - Are there regulatory/compliance requirements (PCI, HIPAA, SOC2, data residency)?
 - What is the team's current tech stack and skill profile?

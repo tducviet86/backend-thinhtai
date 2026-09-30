@@ -61,15 +61,18 @@ per-agent KB that consumes them. Match by **topic**, not by exact-string
 heading.
 
 For the **way of working / branching / merge** topic:
+
 - Prefer an exact `## Way of Working` heading.
 - Fall back to any `## ` heading containing `branch`, `merge`, or `way`
   (case-insensitive).
 
 For the **walking skeleton** topic:
+
 - Prefer `## Walking Skeleton`.
 - Fall back to any heading containing `skeleton` (case-insensitive).
 
 For the **testing** topic:
+
 - Prefer `## Testing Posture`.
 - Fall back to any heading containing `test` (case-insensitive).
 - For Code Generation, resolve the explicit `Methodology` and `Ordering`
@@ -79,11 +82,13 @@ For the **testing** topic:
   methodology is an error under the strict-additive model.
 
 For the **deployment** topic:
+
 - Prefer `## Deployment`.
 - Fall back to any heading containing `deploy` or `release`
   (case-insensitive).
 
 For the **code style** topic:
+
 - Prefer `## Code Style`.
 - Fall back to any heading containing `style` or `format`
   (case-insensitive).
@@ -114,13 +119,13 @@ admission error, not an override.
 
 Hardcoded defaults are:
 
-| Topic | Default |
-|---|---|
-| Way of Working | trunk-based development; base `main`, target `main`; squash-merge |
+| Topic            | Default                                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| Way of Working   | trunk-based development; base `main`, target `main`; squash-merge                               |
 | Walking Skeleton | scope-dependent; the active scope file's `skeleton:` field supplies the default ceremony stance |
-| Testing Posture | test-after ordering when no methodology is affirmed; the test-strategy axis governs volume |
-| Deployment | trunk-based with on-merge staging deploy; production gate is human-approved |
-| Code Style | defer to project linter/formatter configuration |
+| Testing Posture  | test-after ordering when no methodology is affirmed; the test-strategy axis governs volume      |
+| Deployment       | trunk-based with on-merge staging deploy; production gate is human-approved                     |
+| Code Style       | defer to project linter/formatter configuration                                                 |
 
 When the fallback chain has to descend to layer 4, emit
 `PRACTICES_SECTION_EMPTY` (advisory-only) so doctor and downstream

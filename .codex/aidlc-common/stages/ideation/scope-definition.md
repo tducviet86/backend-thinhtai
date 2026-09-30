@@ -46,6 +46,7 @@ outputs: scope-document.md, intent-backlog.md, scope-definition-questions.md (un
 ### Step 2: Generate Clarifying Questions
 
 Create `<record>/ideation/scope-definition/scope-definition-questions.md` with questions:
+
 - What is the minimum viable scope that delivers value?
 - What capabilities are must-have vs. nice-to-have?
 - What are the dependencies between capabilities?

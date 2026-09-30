@@ -12,9 +12,14 @@ export type ArchiveEntry = {
 const MAX_ARCHIVE_BYTES = 1024 * 1024 * 1024;
 
 function octal(buffer: Buffer, start: number, length: number): number {
-  const value = buffer.subarray(start, start + length).toString("ascii").replace(/\0.*$/, "").trim();
+  const value = buffer
+    .subarray(start, start + length)
+    .toString("ascii")
+    .replace(/\0.*$/, "")
+    .trim();
   if (!value) return 0;
-  if (!/^[0-7]+$/.test(value)) throw new Error(`invalid tar octal field "${value}"`);
+  if (!/^[0-7]+$/.test(value))
+    throw new Error(`invalid tar octal field "${value}"`);
   return Number.parseInt(value, 8);
 }
 
@@ -24,7 +29,9 @@ function safePath(value: string): string {
   if (
     !value ||
     value.includes("\0") ||
-    slashPath.split("/").some((segment) => segment === "." || segment === "..") ||
+    slashPath
+      .split("/")
+      .some((segment) => segment === "." || segment === "..") ||
     isAbsolute(value) ||
     /^[A-Za-z]:\//.test(normalized) ||
     normalized.startsWith("//") ||
@@ -42,8 +49,14 @@ export function readTarGz(
   options: { maxBytes?: number } = {},
 ): ArchiveEntry[] {
   const maxBytes = options.maxBytes ?? MAX_ARCHIVE_BYTES;
-  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0 || maxBytes > MAX_ARCHIVE_BYTES) {
-    throw new Error("archive byte limit must be a positive integer no greater than 1 GiB");
+  if (
+    !Number.isSafeInteger(maxBytes) ||
+    maxBytes <= 0 ||
+    maxBytes > MAX_ARCHIVE_BYTES
+  ) {
+    throw new Error(
+      "archive byte limit must be a positive integer no greater than 1 GiB",
+    );
   }
   if (statSync(path).size > maxBytes) {
     throw new Error("compressed archive exceeds the archive byte limit");
@@ -69,23 +82,33 @@ export function readTarGz(
     const checksumHeader = Buffer.from(header);
     checksumHeader.fill(0x20, 148, 156);
     const actual = checksumHeader.reduce((sum, byte) => sum + byte, 0);
-    if (stored !== actual) throw new Error(`tar header checksum mismatch at byte ${offset}`);
+    if (stored !== actual)
+      throw new Error(`tar header checksum mismatch at byte ${offset}`);
     const name = header.subarray(0, 100).toString("utf-8").replace(/\0.*$/, "");
-    const prefix = header.subarray(345, 500).toString("utf-8").replace(/\0.*$/, "");
+    const prefix = header
+      .subarray(345, 500)
+      .toString("utf-8")
+      .replace(/\0.*$/, "");
     const entryPath = safePath(prefix ? `${prefix}/${name}` : name);
-    if (seen.has(entryPath)) throw new Error(`duplicate archive destination: ${entryPath}`);
+    if (seen.has(entryPath))
+      throw new Error(`duplicate archive destination: ${entryPath}`);
     seen.add(entryPath);
     const size = octal(header, 124, 12);
     const mode = octal(header, 100, 8) || 0o644;
     const typeFlag = String.fromCharCode(header[156] || 0);
     if (!["\0", "0", "5"].includes(typeFlag)) {
-      throw new Error(`archive entry ${entryPath} has unsupported link/special type ${typeFlag}`);
+      throw new Error(
+        `archive entry ${entryPath} has unsupported link/special type ${typeFlag}`,
+      );
     }
     const dataStart = offset + 512;
     const dataEnd = dataStart + size;
-    if (dataEnd > tar.length) throw new Error(`truncated archive entry: ${entryPath}`);
+    if (dataEnd > tar.length)
+      throw new Error(`truncated archive entry: ${entryPath}`);
     if (typeFlag === "5" && size !== 0) {
-      throw new Error(`archive directory ${entryPath} has unexpected file data`);
+      throw new Error(
+        `archive directory ${entryPath} has unexpected file data`,
+      );
     }
     entries.push({
       path: entryPath,
@@ -101,7 +124,9 @@ export function readTarGz(
     for (let index = 1; index < parts.length; index++) {
       const ancestor = parts.slice(0, index).join("/");
       if (types.get(ancestor) === "file") {
-        throw new Error(`archive file ${ancestor} is an ancestor of ${entry.path}`);
+        throw new Error(
+          `archive file ${ancestor} is an ancestor of ${entry.path}`,
+        );
       }
     }
   }
@@ -120,12 +145,17 @@ export function extractTarGz(
   for (const entry of entries) {
     const topLevel = entry.path.split("/", 1)[0].toLowerCase();
     if (reserved.has(topLevel)) {
-      throw new Error(`archive entry uses reserved top-level name: ${entry.path}`);
+      throw new Error(
+        `archive entry uses reserved top-level name: ${entry.path}`,
+      );
     }
   }
   mkdirSync(destination, { recursive: true, mode: 0o700 });
   for (const entry of entries.filter((item) => item.type === "directory")) {
-    mkdirSync(join(destination, entry.path), { recursive: true, mode: entry.mode & 0o777 });
+    mkdirSync(join(destination, entry.path), {
+      recursive: true,
+      mode: entry.mode & 0o777,
+    });
   }
   for (const entry of entries.filter((item) => item.type === "file")) {
     const target = join(destination, entry.path);
@@ -134,19 +164,38 @@ export function extractTarGz(
   }
 }
 
-function tarString(header: Buffer, offset: number, length: number, value: string): void {
+function tarString(
+  header: Buffer,
+  offset: number,
+  length: number,
+  value: string,
+): void {
   const bytes = Buffer.from(value);
   if (bytes.length > length) throw new Error(`tar field is too long: ${value}`);
   bytes.copy(header, offset);
 }
 
-function tarOctal(header: Buffer, offset: number, length: number, value: number): void {
-  tarString(header, offset, length, value.toString(8).padStart(length - 1, "0"));
+function tarOctal(
+  header: Buffer,
+  offset: number,
+  length: number,
+  value: number,
+): void {
+  tarString(
+    header,
+    offset,
+    length,
+    value.toString(8).padStart(length - 1, "0"),
+  );
 }
 
 function tarPath(path: string): { name: string; prefix?: string } {
   if (Buffer.byteLength(path) <= 100) return { name: path };
-  for (let index = path.lastIndexOf("/"); index > 0; index = path.lastIndexOf("/", index - 1)) {
+  for (
+    let index = path.lastIndexOf("/");
+    index > 0;
+    index = path.lastIndexOf("/", index - 1)
+  ) {
     const prefix = path.slice(0, index);
     const name = path.slice(index + 1);
     if (Buffer.byteLength(prefix) <= 155 && Buffer.byteLength(name) <= 100) {
@@ -166,7 +215,8 @@ export function createTarGz(entries: readonly ArchiveEntry[]): Buffer {
     if (source.type === "directory" && source.data.length !== 0) {
       throw new Error(`archive directory ${path} has unexpected file data`);
     }
-    if (seen.has(path)) throw new Error(`duplicate archive destination: ${path}`);
+    if (seen.has(path))
+      throw new Error(`duplicate archive destination: ${path}`);
     seen.add(path);
     const parts = path.split("/");
     for (let index = 1; index < parts.length; index++) {
@@ -186,10 +236,16 @@ export function createTarGz(entries: readonly ArchiveEntry[]): Buffer {
     tarOctal(header, 124, 12, source.type === "file" ? source.data.length : 0);
     tarOctal(header, 136, 12, 0);
     header.fill(0x20, 148, 156);
-    header[156] = source.type === "directory" ? "5".charCodeAt(0) : "0".charCodeAt(0);
+    header[156] =
+      source.type === "directory" ? "5".charCodeAt(0) : "0".charCodeAt(0);
     tarString(header, 257, 6, "ustar");
     tarString(header, 263, 2, "00");
-    tarOctal(header, 148, 8, header.reduce((sum, byte) => sum + byte, 0));
+    tarOctal(
+      header,
+      148,
+      8,
+      header.reduce((sum, byte) => sum + byte, 0),
+    );
     chunks.push(header);
     if (source.type === "file") {
       chunks.push(source.data);

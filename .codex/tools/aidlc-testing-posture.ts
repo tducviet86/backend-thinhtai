@@ -71,7 +71,8 @@ import {
   type WorkspaceSourceState,
 } from "./aidlc-lib.ts";
 
-export type TestingMethodology = "tdd" | "bdd" | "atdd" | "test-after" | "custom";
+export type TestingMethodology =
+  "tdd" | "bdd" | "atdd" | "test-after" | "custom";
 export type TestStrategy = "minimal" | "standard" | "comprehensive";
 export type ProjectType = "greenfield" | "brownfield";
 export type MemoryLayer = "org" | "team" | "project";
@@ -183,7 +184,8 @@ export const PLAN_SOURCE_DRIFT_REMEDY =
 // typing the phrase below as a prompt (the human-turn hook records that typed
 // prompt; a picked option never counts).
 export const PLAN_APPROVAL_OVERRIDE_PHRASE = "Override Plan Approval: <reason>";
-export const PLAN_APPROVAL_OVERRIDE_PHRASE_RE = /^override plan approval:\s*(\S.*)$/i;
+export const PLAN_APPROVAL_OVERRIDE_PHRASE_RE =
+  /^override plan approval:\s*(\S.*)$/i;
 export const PLAN_APPROVAL_BREAK_GLASS_REMEDY =
   "Break glass (human only): type exactly `Override Plan Approval: <reason>` in chat; " +
   "the conductor then runs answer --override with that reason.";
@@ -202,7 +204,8 @@ export class PlanApprovalSourceDriftError extends Error {
 // A source boundary that cannot be bound is not drift: nothing moved, the walk
 // failed. The refusal names that, and its remedies are ordered: repair the
 // boundary first (an ordinary re-fingerprint then works), break glass last.
-export const PLAN_APPROVAL_SOURCE_UNBINDABLE_CODE = "PLAN_APPROVAL_SOURCE_UNBINDABLE";
+export const PLAN_APPROVAL_SOURCE_UNBINDABLE_CODE =
+  "PLAN_APPROVAL_SOURCE_UNBINDABLE";
 export const BREAK_GLASS_REMEDY_OP = "break-glass-override";
 
 export interface PlanApprovalRemedy {
@@ -243,7 +246,9 @@ export class PlanApprovalUnbindableError extends Error {
       `Plan Approval cannot be ${blocked}: the workspace source cannot be bound${workspaceSourceFailureSuffix()}, so ` +
         `${blocked === "presented" ? "no challenge was minted" : "no receipt was written"}. ` +
         "Remedies, in order: " +
-        remedies.map((remedy, index) => `(${index + 1}) ${remedy.action}`).join(" "),
+        remedies
+          .map((remedy, index) => `(${index + 1}) ${remedy.action}`)
+          .join(" "),
     );
     this.name = "PlanApprovalUnbindableError";
     this.remedies = remedies;
@@ -265,14 +270,20 @@ function describeSourceDrift(paths: string[] | null, unbound = false): string {
 }
 
 /** The strict human sentence for source drift after the plan was approved. */
-export function planSourceDriftStrictMessage(paths: string[] | null, unbound = false): string {
+export function planSourceDriftStrictMessage(
+  paths: string[] | null,
+  unbound = false,
+): string {
   return unbound
     ? `${describeSourceDrift(paths, true)} ${PLAN_APPROVAL_REPAIR_SOURCE_BOUNDARY_REMEDY} ${PLAN_APPROVAL_BREAK_GLASS_REMEDY}`
     : `${describeSourceDrift(paths)} Look them over and approve the plan again to continue.`;
 }
 
 /** The relaxed human sentence for source drift after the plan was approved. */
-export function planSourceDriftRelaxedNotice(paths: string[] | null, unbound = false): string {
+export function planSourceDriftRelaxedNotice(
+  paths: string[] | null,
+  unbound = false,
+): string {
   return (
     `${describeSourceDrift(paths, unbound)} Continuing (Change Control: relaxed). ` +
     "Say 'review the plan again' to reopen approval."
@@ -297,11 +308,22 @@ function judgePlanSourceDrift(
   current: WorkspaceSourceState | null,
   trace: boolean,
 ): { accepted: AcceptedChange } | { refusal: PlanApprovalSourceDriftError } {
-  const paths = workspaceSourceChangedPaths(projectDir, CODE_GENERATION_STAGE, recorded, current);
+  const paths = workspaceSourceChangedPaths(
+    projectDir,
+    CODE_GENERATION_STAGE,
+    recorded,
+    current,
+  );
   const unbound = current === null;
-  const resolution = trace ? governedChangeControl(projectDir) : resolveChangeControl(projectDir);
+  const resolution = trace
+    ? governedChangeControl(projectDir)
+    : resolveChangeControl(projectDir);
   if (resolution.value === "strict") {
-    return { refusal: new PlanApprovalSourceDriftError(planSourceDriftStrictMessage(paths, unbound)) };
+    return {
+      refusal: new PlanApprovalSourceDriftError(
+        planSourceDriftStrictMessage(paths, unbound),
+      ),
+    };
   }
   return {
     accepted: {
@@ -321,13 +343,17 @@ function keepWorkspaceSourceSnapshot(
   projectDir: string,
   state: WorkspaceSourceState | null,
 ): void {
-  if (state !== null) writeWorkspaceSourceSnapshot(projectDir, CODE_GENERATION_STAGE, state);
+  if (state !== null)
+    writeWorkspaceSourceSnapshot(projectDir, CODE_GENERATION_STAGE, state);
 }
 
 // Re-baseline the `[Planned Source]` tag in a questions file to `fingerprint`.
 // Used only before the challenge is minted: after that the prompt hash binds
 // the file bytes and the receipt's certified source is the baseline instead.
-function upsertPlannedSourceTag(questions: string, fingerprint: string): string {
+function upsertPlannedSourceTag(
+  questions: string,
+  fingerprint: string,
+): string {
   const eol = questions.includes("\r\n") ? "\r\n" : "\n";
   const raw = questions.split(/\r?\n/);
   const visible = visibleMarkdownLines(questions);
@@ -337,7 +363,9 @@ function upsertPlannedSourceTag(questions: string, fingerprint: string): string 
       return raw.join(eol);
     }
   }
-  throw new Error("Plan Approval questions file has no [Planned Source]: tag to re-baseline");
+  throw new Error(
+    "Plan Approval questions file has no [Planned Source]: tag to re-baseline",
+  );
 }
 
 interface ClassifiedPosture {
@@ -375,7 +403,9 @@ const PLANNED_SOURCE_TAG_RE =
   /^\[Planned Source\]:[ \t]*([0-9a-f]{40}|[0-9a-f]{64}|unbindable)?[ \t]*$/;
 export const APPROVAL_FINGERPRINT_PREFIX = "sha256:v3:";
 
-export function approvalFingerprintIsCurrentFormat(tag: string | null): boolean {
+export function approvalFingerprintIsCurrentFormat(
+  tag: string | null,
+): boolean {
   return tag?.startsWith(APPROVAL_FINGERPRINT_PREFIX) === true;
 }
 
@@ -420,10 +450,7 @@ function hashObject(value: unknown): string {
 }
 
 function normalizeMethodology(value: string): TestingMethodology | null {
-  const normalized = value
-    .toLowerCase()
-    .replace(/[`*_]/g, "")
-    .trim();
+  const normalized = value.toLowerCase().replace(/[`*_]/g, "").trim();
   if (/\b(custom|mixed)\b/.test(normalized)) return "custom";
   if (
     /\batdd\b|acceptance[- ]test[- ]driven|acceptance tests? (?:first|before)/.test(
@@ -457,10 +484,7 @@ function normalizeMethodology(value: string): TestingMethodology | null {
 }
 
 function structuredMethodology(value: string): TestingMethodology {
-  const normalized = value
-    .toLowerCase()
-    .replace(/[`*_]/g, "")
-    .trim();
+  const normalized = value.toLowerCase().replace(/[`*_]/g, "").trim();
   if (
     normalized === "tdd" ||
     normalized === "bdd" ||
@@ -576,16 +600,19 @@ function closesFence(line: string, fence: MarkdownFence): boolean {
   const closing = /^ {0,3}([`~]+)[ \t]*$/.exec(line);
   return Boolean(
     closing &&
-      closing[1][0] === fence.marker &&
-      Array.from(closing[1]).every((marker) => marker === fence.marker) &&
-      closing[1].length >= fence.length,
+    closing[1][0] === fence.marker &&
+    Array.from(closing[1]).every((marker) => marker === fence.marker) &&
+    closing[1].length >= fence.length,
   );
 }
 
 // Remove only rendered HTML comments. Fenced Markdown remains visible content,
 // including literal <!-- tokens inside a fence.
 function markdownWithoutHtmlComments(body: string): string {
-  const lines = body.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").split("\n");
+  const lines = body
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .split("\n");
   const state = { inComment: false, inlineCodeTicks: 0 };
   let fence: MarkdownFence | null = null;
   return lines
@@ -615,7 +642,10 @@ function markdownWithoutHtmlComments(body: string): string {
 }
 
 function structuralMarkdownLines(body: string): string[] {
-  const rawLines = body.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").split("\n");
+  const rawLines = body
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .split("\n");
   const visibleLines = markdownWithoutHtmlComments(body).split("\n");
   return visibleLines.map((line, index) => {
     const rawLine = rawLines[index];
@@ -659,7 +689,10 @@ function classifiablePostureText(section: string): string {
 // and fences remain part of input_sha256 even though classification uses the
 // visible projection above.
 function extractTestingPostureSection(content: string): string {
-  const rawLines = content.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").split("\n");
+  const rawLines = content
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .split("\n");
   const visibleLines = structuralMarkdownLines(content);
   let fence: MarkdownFence | null = null;
   let bodyStart = -1;
@@ -698,21 +731,22 @@ function classifyPosture(section: string): ClassifiedPosture | null {
   const structured = structuredMethod
     ? structuredMethodology(structuredMethod)
     : null;
-  const scan = `${structuredMethod ?? ""}\n${structuredOrdering ?? body}`.toLowerCase();
+  const scan =
+    `${structuredMethod ?? ""}\n${structuredOrdering ?? body}`.toLowerCase();
   const components = new Set<TestingMethodology>();
   for (const methodology of ["tdd", "bdd", "atdd", "test-after"] as const) {
     const detected = normalizeMethodology(
       methodology === "test-after"
-        ? scan.match(
+        ? (scan.match(
             /test[- ]after|tests? after implementation|implementation[- ]first|classic/,
-          )?.[0] ?? ""
-        : scan.match(
+          )?.[0] ?? "")
+        : (scan.match(
             methodology === "tdd"
               ? /\btdd\b|test[- ]driven/
               : methodology === "bdd"
                 ? /\bbdd\b|behaviou?r[- ]driven/
                 : /\batdd\b|acceptance[- ]test[- ]driven/,
-          )?.[0] ?? "",
+          )?.[0] ?? ""),
     );
     if (detected) components.add(detected);
   }
@@ -748,7 +782,7 @@ function classifyPosture(section: string): ClassifiedPosture | null {
     structured ??
     (customSignal || mixedOrdering
       ? "custom"
-      : Array.from(components)[0] ?? null);
+      : (Array.from(components)[0] ?? null));
   if (methodology === null) return null;
 
   if (methodology !== "custom") components.add(methodology);
@@ -756,7 +790,9 @@ function classifyPosture(section: string): ClassifiedPosture | null {
     methodology,
     ordering:
       structuredOrdering ??
-      (methodology === "custom" ? body.replace(/\s+/g, " ").trim() : defaultOrdering(methodology)),
+      (methodology === "custom"
+        ? body.replace(/\s+/g, " ").trim()
+        : defaultOrdering(methodology)),
     components: Array.from(components),
   };
 }
@@ -927,21 +963,20 @@ export function resolveTestingPostureFromSections(
     );
   }
 
-  const selected =
-    classified.project
-      ? { layer: "project" as const, value: classified.project }
-      : classified.team
-        ? { layer: "team" as const, value: classified.team }
-        : classified.org
-          ? { layer: "org" as const, value: classified.org }
-          : {
-              layer: "fallback" as const,
-              value: {
-                methodology: "test-after" as const,
-                ordering: defaultOrdering("test-after"),
-                components: ["test-after" as const],
-              },
-            };
+  const selected = classified.project
+    ? { layer: "project" as const, value: classified.project }
+    : classified.team
+      ? { layer: "team" as const, value: classified.team }
+      : classified.org
+        ? { layer: "org" as const, value: classified.org }
+        : {
+            layer: "fallback" as const,
+            value: {
+              methodology: "test-after" as const,
+              ordering: defaultOrdering("test-after"),
+              components: ["test-after" as const],
+            },
+          };
   const applicableNotes = (["org", "team", "project"] as const)
     .map((layer) => ({
       layer,
@@ -997,12 +1032,18 @@ export function resolveTestingPosture(
   }
   return resolveTestingPostureFromSections(sections, {
     scope: (getField(state, "Scope") ?? "feature").trim().toLowerCase(),
-    testStrategy: normalizeStrategy(getField(state, "Test Strategy") ?? "standard"),
-    projectType: normalizeProjectType(getField(state, "Project Type") ?? "greenfield"),
+    testStrategy: normalizeStrategy(
+      getField(state, "Test Strategy") ?? "standard",
+    ),
+    projectType: normalizeProjectType(
+      getField(state, "Project Type") ?? "greenfield",
+    ),
   });
 }
 
-export function renderTestingContract(contract: TestingPostureContract): string {
+export function renderTestingContract(
+  contract: TestingPostureContract,
+): string {
   return `${CONTRACT_HEADING}\n\n\`\`\`json\n${JSON.stringify(contract, null, 2)}\n\`\`\`\n`;
 }
 
@@ -1027,7 +1068,9 @@ function rawMarkdownSection(content: string, heading: string): string {
   return found ? body.join("\n") : "";
 }
 
-export function parseTestingContract(plan: string): TestingPostureContract | null {
+export function parseTestingContract(
+  plan: string,
+): TestingPostureContract | null {
   const section = rawMarkdownSection(plan, CONTRACT_HEADING);
   const match = section.match(/```json[ \t]*\r?\n([\s\S]*?)\r?\n```/i);
   if (!match) return null;
@@ -1087,10 +1130,13 @@ export function parseTestingContract(plan: string): TestingPostureContract | nul
 // This projection is for the PLAN only. The unit-test instructions are not a
 // review artifact and have no mandated post-approval mutation, so they bind
 // byte-exactly (line endings aside): see `projectInstructionsContent`.
-const PLAN_TASK_MARKER_RE = /^([ \t]*(?:[-*+]|\d+[.)])[ \t]+)\[[xX-]\](?=[ \t]|$)/;
+const PLAN_TASK_MARKER_RE =
+  /^([ \t]*(?:[-*+]|\d+[.)])[ \t]+)\[[xX-]\](?=[ \t]|$)/;
 
 export function projectPlanApprovalContent(text: string): string {
-  const retained = contentBeforeTerminalReviewAppendix(text.replace(/^\uFEFF/, ""));
+  const retained = contentBeforeTerminalReviewAppendix(
+    text.replace(/^\uFEFF/, ""),
+  );
   const projected: string[] = [];
   let fence: MarkdownFence | null = null;
   let inComment = false;
@@ -1155,7 +1201,10 @@ export function approvalFingerprint(
   plan: string,
   instructions: string,
   contractHash: string,
-  authority: Pick<CodeGenerationAuthority, "targetId" | "intentId" | "runFloor">,
+  authority: Pick<
+    CodeGenerationAuthority,
+    "targetId" | "intentId" | "runFloor"
+  >,
 ): string {
   const digest = hashObject({
     plan: projectPlanApprovalContent(plan),
@@ -1200,7 +1249,11 @@ export function workerBrief(
   target: CodeGenerationTarget,
 ): WorkerBrief {
   const approval = evaluateCodeGenerationApproval(projectDir, target);
-  if (!approval.ok || approval.contractHash === null || approval.approvalFingerprint === null) {
+  if (
+    !approval.ok ||
+    approval.contractHash === null ||
+    approval.approvalFingerprint === null
+  ) {
     throw new Error(
       `Cannot assemble a worker brief for ${
         target.unit ? `unit "${target.unit}"` : "the stage-level target"
@@ -1213,7 +1266,10 @@ export function workerBrief(
   // brief is never assembled from bytes the approval did not cover.
   const stageDir = codeGenerationRecordDir(projectDir, target.unit);
   const plan = readFileSync(join(stageDir, "code-generation-plan.md"), "utf-8");
-  const instructions = readFileSync(join(stageDir, "unit-test-instructions.md"), "utf-8");
+  const instructions = readFileSync(
+    join(stageDir, "unit-test-instructions.md"),
+    "utf-8",
+  );
   const authority = resolveCodeGenerationAuthority(projectDir, target);
   const snapshotFingerprint = approvalFingerprint(
     plan,
@@ -1242,12 +1298,16 @@ export function workerBrief(
     unit: approval.unit,
     contractHash: approval.contractHash,
     brief,
-    appendixStripped: planReviewAppendix(plan.replace(/^\uFEFF/, "")).length > 0,
+    appendixStripped:
+      planReviewAppendix(plan.replace(/^\uFEFF/, "")).length > 0,
   };
 }
 
 function isPlanApprovalLabel(value: string): boolean {
-  let normalized = value.trim().replace(/[?:][ \t]*$/, "").trim();
+  let normalized = value
+    .trim()
+    .replace(/[?:][ \t]*$/, "")
+    .trim();
   for (const marker of ["**", "__", "*", "_"]) {
     if (
       normalized.startsWith(marker) &&
@@ -1328,11 +1388,7 @@ export function questionsFileApproved(body: string): boolean {
 
 export function questionsFileHasPendingPlanApproval(body: string): boolean {
   const latest = latestPlanApproval(body);
-  return (
-    latest.found &&
-    latest.answer !== null &&
-    /^_*$/.test(latest.answer)
-  );
+  return latest.found && latest.answer !== null && /^_*$/.test(latest.answer);
 }
 
 export function questionsFileApprovalFingerprint(body: string): string | null {
@@ -1352,7 +1408,9 @@ export function promptTestingContractMarkers(text: string): string[] {
   return Array.from(hashes);
 }
 
-function normalizeCodeGenerationTarget(target: CodeGenerationTarget): CodeGenerationTarget {
+function normalizeCodeGenerationTarget(
+  target: CodeGenerationTarget,
+): CodeGenerationTarget {
   if (target.unit === null) return { unit: null };
   const unit = target.unit.trim();
   const error = validateUnitName(unit);
@@ -1362,7 +1420,9 @@ function normalizeCodeGenerationTarget(target: CodeGenerationTarget): CodeGenera
 
 export function codeGenerationTargetId(target: CodeGenerationTarget): string {
   const normalized = normalizeCodeGenerationTarget(target);
-  return normalized.unit === null ? "stage:code-generation" : `unit:${normalized.unit}`;
+  return normalized.unit === null
+    ? "stage:code-generation"
+    : `unit:${normalized.unit}`;
 }
 
 export function resolveCodeGenerationAuthority(
@@ -1372,7 +1432,9 @@ export function resolveCodeGenerationAuthority(
   const target = normalizeCodeGenerationTarget(requestedTarget);
   const statePath = stateFilePath(projectDir);
   if (!existsSync(statePath)) {
-    throw new Error("Code Generation approval authority requires an active workflow state");
+    throw new Error(
+      "Code Generation approval authority requires an active workflow state",
+    );
   }
   const state = readFileSync(statePath, "utf-8");
   const marker = readActiveDirectiveMarker(projectDir, state);
@@ -1422,7 +1484,9 @@ export function resolveCodeGenerationAuthority(
     marker.active_attempt?.result_revision ??
     marker.revision;
   if (!Number.isInteger(issuanceRevision)) {
-    throw new Error("Code Generation active directive has no stable issuance revision");
+    throw new Error(
+      "Code Generation active directive has no stable issuance revision",
+    );
   }
   const markerRevision = Number(issuanceRevision);
   const targetId = codeGenerationTargetId(target);
@@ -1493,8 +1557,14 @@ function codeGenerationApprovalArtifacts(
   questionsPath: string;
 } {
   const planPath = join(authority.stageDir, "code-generation-plan.md");
-  const instructionsPath = join(authority.stageDir, "unit-test-instructions.md");
-  const questionsPath = join(authority.stageDir, "code-generation-questions.md");
+  const instructionsPath = join(
+    authority.stageDir,
+    "unit-test-instructions.md",
+  );
+  const questionsPath = join(
+    authority.stageDir,
+    "code-generation-questions.md",
+  );
   const plan = existsSync(planPath) ? readFileSync(planPath, "utf-8") : "";
   const instructions = existsSync(instructionsPath)
     ? readFileSync(instructionsPath, "utf-8")
@@ -1588,7 +1658,9 @@ export function legacyPlanApprovalGuardState(
     } else {
       const units = marker.units ?? [];
       if (units.length === 0) {
-        throw new Error("active swarm directive carries no authoritative units");
+        throw new Error(
+          "active swarm directive carries no authoritative units",
+        );
       }
       const pending = units.find(
         (unit) => !evaluateCodeGenerationApproval(projectDir, { unit }).ok,
@@ -1644,16 +1716,20 @@ export function legacyPlanApprovalGuardState(
       if (candidates.length === 0) return null;
       let latestTimestamp = candidates[0].timestamp;
       for (const candidate of candidates) {
-        if (candidate.timestamp > latestTimestamp) latestTimestamp = candidate.timestamp;
+        if (candidate.timestamp > latestTimestamp)
+          latestTimestamp = candidate.timestamp;
       }
       const atLatestTimestamp = candidates.filter(
         (candidate) => candidate.timestamp === latestTimestamp,
       );
-      if (new Set(atLatestTimestamp.map((candidate) => candidate.shard)).size !== 1) {
+      if (
+        new Set(atLatestTimestamp.map((candidate) => candidate.shard)).size !==
+        1
+      ) {
         return null;
       }
       return atLatestTimestamp.reduce((latest, candidate) =>
-        candidate.pos > latest.pos ? candidate : latest
+        candidate.pos > latest.pos ? candidate : latest,
       );
     };
     const latestSession = latestCausal(
@@ -1663,9 +1739,10 @@ export function legacyPlanApprovalGuardState(
           entry.event === "SESSION_RESUMED",
       ),
     );
-    const session = latestSession === null
-      ? null
-      : auditBlockField(latestSession.block, "Session");
+    const session =
+      latestSession === null
+        ? null
+        : auditBlockField(latestSession.block, "Session");
     const challenge =
       session === null ? null : readPlanApprovalChallenge(projectDir, session);
     const response =
@@ -1776,12 +1853,10 @@ export function recordPlanApprovalChallenge(
       : null;
     if (
       useLegacyDirectiveOffer &&
-      (
-        !offer ||
+      (!offer ||
         offer.intentId !== identity.intentId ||
         offer.markerRevision !== provenance.markerRevision ||
-        !offer.allowedUnits.some((unit) => unit === evidence.authority.unit)
-      )
+        !offer.allowedUnits.some((unit) => unit === evidence.authority.unit))
     ) {
       throw new Error(
         "legacy Plan Approval requires protected choices from the invoking Code Generation directive",
@@ -1791,12 +1866,12 @@ export function recordPlanApprovalChallenge(
     const storedOptions: [string, string] = offer
       ? offer.options
       : hashOptionLabels
-      ? options.map((option) =>
-        createHash("sha256")
-          .update(option.trim().toLowerCase(), "utf-8")
-          .digest("hex")
-      ) as [string, string]
-      : options;
+        ? (options.map((option) =>
+            createHash("sha256")
+              .update(option.trim().toLowerCase(), "utf-8")
+              .digest("hex"),
+          ) as [string, string])
+        : options;
     const challenge: PlanApprovalRuntimeChallenge = {
       version: 1,
       ...identity,
@@ -1836,14 +1911,12 @@ function offeredPlanApprovalChoice(
   // human's choice. Nothing else about the match is loosened.
   const response = stripRecommendedDecorator(responseText);
   const comparison = challenge.hashedOptionLabels
-    ? createHash("sha256")
-      .update(response.toLowerCase(), "utf-8")
-      .digest("hex")
+    ? createHash("sha256").update(response.toLowerCase(), "utf-8").digest("hex")
     : response.toLowerCase();
   const matchedIndex = challenge.options.findIndex((option) =>
     challenge.hashedOptionLabels
       ? option === comparison
-      : option.toLowerCase() === comparison
+      : option.toLowerCase() === comparison,
   );
   if (matchedIndex >= 0) {
     return matchedIndex === 0 ? "Approve Plan" : "Request Changes";
@@ -1881,10 +1954,7 @@ export function recordPlanApprovalHumanResponse(
       return { recorded: true };
     }
   }
-  const recovery = readPlanApprovalLegacyRecoveryChallenge(
-    projectDir,
-    session,
-  );
+  const recovery = readPlanApprovalLegacyRecoveryChallenge(projectDir, session);
   if (
     recovery &&
     responseText.trim() === LEGACY_PLAN_APPROVAL_RECOVERY_CHOICE
@@ -2095,7 +2165,8 @@ export function authorizingPlanApprovalOverrideRequest(
   if (request === null) return null;
   const expected = planApprovalOverrideReasonSha256(reason);
   if (request.reasonSha256 !== expected) return null;
-  if (planApprovalOverrideReasonSha256(request.reason) !== expected) return null;
+  if (planApprovalOverrideReasonSha256(request.reason) !== expected)
+    return null;
   if (intentId !== null && request.intentId !== intentId) return null;
   return request;
 }
@@ -2134,7 +2205,12 @@ export function recordPlanApprovalOverrideReceipt(
     }
     const failedChecks: string[] = [];
     try {
-      const normal = certifyPlanApprovalReceipt(projectDir, evidence, session, "Approve Plan");
+      const normal = certifyPlanApprovalReceipt(
+        projectDir,
+        evidence,
+        session,
+        "Approve Plan",
+      );
       if (normal.receipt !== null) {
         return {
           receipt: normal.receipt,
@@ -2149,7 +2225,9 @@ export function recordPlanApprovalOverrideReceipt(
     }
     const current = workspaceSourceState(projectDir);
     if (current === null) {
-      failedChecks.push(`workspace source cannot be bound${workspaceSourceFailureSuffix()}`);
+      failedChecks.push(
+        `workspace source cannot be bound${workspaceSourceFailureSuffix()}`,
+      );
     }
     const identity = runtimeIdentity(evidence);
     const challenge = readPlanApprovalChallenge(projectDir, session);
@@ -2212,7 +2290,9 @@ export function codeGenerationPlanApprovalQuestionEvidence(
   }
   const artifacts = codeGenerationApprovalArtifacts(projectDir, authority);
   if (!artifacts.planExists || !artifacts.instructionsExist) {
-    throw new Error("Plan Approval requires non-empty plan and unit-test instructions");
+    throw new Error(
+      "Plan Approval requires non-empty plan and unit-test instructions",
+    );
   }
   if (!artifacts.contractValid || artifacts.expectedFingerprint === null) {
     throw new Error("Plan Approval requires the current Testing Contract");
@@ -2228,7 +2308,11 @@ export function codeGenerationPlanApprovalQuestionEvidence(
     );
   }
   const latest = latestPlanApproval(artifacts.questions);
-  if (!latest.found || latest.answer === null || latest.answer !== expectedAnswer) {
+  if (
+    !latest.found ||
+    latest.answer === null ||
+    latest.answer !== expectedAnswer
+  ) {
     throw new Error(
       `Plan Approval questions file must contain exactly [Answer]: ${expectedAnswer || "(blank)"}`,
     );
@@ -2251,16 +2335,26 @@ export function codeGenerationPlanApprovalQuestionEvidence(
   // source recorded as `unbindable` while the workspace binds now is treated
   // as drift from that recording: strict asks for a re-fingerprint (which now
   // records a real source), relaxed re-baselines the tag before the challenge.
-  const currentState = options.breakGlass ? null : workspaceSourceState(projectDir);
+  const currentState = options.breakGlass
+    ? null
+    : workspaceSourceState(projectDir);
   const currentSource = currentState?.fingerprint ?? null;
   if (!options.breakGlass && currentSource === null) {
-    throw new PlanApprovalUnbindableError(expectedAnswer === "" ? "presented" : "recorded");
+    throw new PlanApprovalUnbindableError(
+      expectedAnswer === "" ? "presented" : "recorded",
+    );
   }
   let questions = artifacts.questions;
   let boundSource = plannedSource;
   const changeNotices: string[] = [];
   if (!options.breakGlass && currentSource !== plannedSource) {
-    const judged = judgePlanSourceDrift(projectDir, authority.unit, plannedSource, currentState, true);
+    const judged = judgePlanSourceDrift(
+      projectDir,
+      authority.unit,
+      plannedSource,
+      currentState,
+      true,
+    );
     if ("refusal" in judged) throw judged.refusal;
     // The row is written BEFORE anything is re-baselined: a ledger that cannot
     // take it refuses here, with the drift still visible to the next attempt.
@@ -2322,7 +2416,10 @@ export function evaluateCodeGenerationApproval(
     const normalizedTarget = normalizeCodeGenerationTarget(target);
     normalizedUnit = normalizedTarget.unit;
     empty.unit = normalizedUnit;
-    const authority = resolveCodeGenerationAuthority(projectDir, normalizedTarget);
+    const authority = resolveCodeGenerationAuthority(
+      projectDir,
+      normalizedTarget,
+    );
     empty.directiveEpoch = authority.directiveEpoch;
     const artifacts = codeGenerationApprovalArtifacts(projectDir, authority);
     empty.planExists = artifacts.planExists;
@@ -2340,7 +2437,8 @@ export function evaluateCodeGenerationApproval(
       return empty;
     }
     if (artifacts.contractHash === null) {
-      empty.reason = "code-generation-plan.md has no valid ## Testing Contract JSON block";
+      empty.reason =
+        "code-generation-plan.md has no valid ## Testing Contract JSON block";
       return empty;
     }
     if (!empty.contractValid) {
@@ -2358,7 +2456,7 @@ export function evaluateCodeGenerationApproval(
     if (!empty.fingerprintValid) {
       empty.reason =
         artifacts.recordedFingerprint !== null &&
-          !approvalFingerprintIsCurrentFormat(artifacts.recordedFingerprint)
+        !approvalFingerprintIsCurrentFormat(artifacts.recordedFingerprint)
           ? "the recorded Plan Approval fingerprint was written under an earlier format; re-run the fingerprint command, re-present the plan, and approve again"
           : "the Plan Approval fingerprint does not match the active intent, target, stage attempt, plan, test instructions, and Testing Contract; re-run the fingerprint command, re-present the plan, and approve again";
       return empty;
@@ -2387,8 +2485,7 @@ export function evaluateCodeGenerationApproval(
       violation?.version === 1 &&
       violation.markerRevision === authority.markerRevision
     ) {
-      empty.reason =
-        `legacy Plan Approval authority was poisoned by unsupported write target "${violation.target}"`;
+      empty.reason = `legacy Plan Approval authority was poisoned by unsupported write target "${violation.target}"`;
       return empty;
     }
     const receipt = readPlanApprovalReceipt(projectDir, identity);
@@ -2406,7 +2503,10 @@ export function evaluateCodeGenerationApproval(
       receipt.override === undefined
     ) {
       const current = workspaceSourceState(projectDir);
-      if (current === null || current.fingerprint !== receipt.certifiedSourceSha256) {
+      if (
+        current === null ||
+        current.fingerprint !== receipt.certifiedSourceSha256
+      ) {
         const judged = judgePlanSourceDrift(
           projectDir,
           normalizedUnit,
@@ -2438,9 +2538,10 @@ export function evaluateCodeGenerationApproval(
         authority.targetId,
         authority.runFloor,
       );
-      empty.reason = stale.length > 0
-        ? "the Plan Approval receipt for this target belongs to an earlier stage attempt; present the plan again and approve it for the current attempt"
-        : "no current protected Plan Approval receipt matches this prompt, session response, target, stage attempt, and plan content";
+      empty.reason =
+        stale.length > 0
+          ? "the Plan Approval receipt for this target belongs to an earlier stage attempt; present the plan again and approve it for the current attempt"
+          : "no current protected Plan Approval receipt matches this prompt, session response, target, stage attempt, and plan content";
       return empty;
     }
     return {
@@ -2466,8 +2567,11 @@ export function beginCodeGeneration(
     withActiveDirectiveLock(projectDir, () => {
       const approval = evaluateCodeGenerationApproval(projectDir, target);
       if (!approval.ok || !approval.approvalFingerprint) {
-        if (approval.sourceDrift) throw new PlanApprovalSourceDriftError(approval.reason);
-        throw new Error(approval.reason || "Code Generation requires Plan Approval");
+        if (approval.sourceDrift)
+          throw new PlanApprovalSourceDriftError(approval.reason);
+        throw new Error(
+          approval.reason || "Code Generation requires Plan Approval",
+        );
       }
       const authority = resolveCodeGenerationAuthority(projectDir, target);
       const receiptKey: PlanApprovalReceiptKey = {
@@ -2486,7 +2590,10 @@ export function beginCodeGeneration(
         // close, so the generation boundary is published as the receipt stands.
         // This is the one place an override could have been downgraded to
         // "approve again": it is not.
-        writePlanApprovalReceipt(projectDir, { ...receipt, status: "generation" });
+        writePlanApprovalReceipt(projectDir, {
+          ...receipt,
+          status: "generation",
+        });
         collectStalePlanApprovalReceipts(
           projectDir,
           authority.intentId,
@@ -2498,7 +2605,9 @@ export function beginCodeGeneration(
       const stateBefore = workspaceSourceState(projectDir);
       const sourceBefore = stateBefore?.fingerprint ?? null;
       if (sourceBefore === null) {
-        throw new PlanApprovalSourceDriftError(planSourceDriftStrictMessage(null, true));
+        throw new PlanApprovalSourceDriftError(
+          planSourceDriftStrictMessage(null, true),
+        );
       }
       const changeNotices: string[] = [];
       if (sourceBefore !== receipt.certifiedSourceSha256) {
@@ -2516,7 +2625,9 @@ export function beginCodeGeneration(
           true,
         );
         if ("refusal" in judged) throw judged.refusal;
-        changeNotices.push(...recordAcceptedChanges(projectDir, [judged.accepted]));
+        changeNotices.push(
+          ...recordAcceptedChanges(projectDir, [judged.accepted]),
+        );
         keepWorkspaceSourceSnapshot(projectDir, stateBefore);
       }
       // Publication is the generation boundary. It sits between two source
@@ -2530,12 +2641,19 @@ export function beginCodeGeneration(
       const publicationBarrier =
         process.env.AIDLC_TEST_PLAN_APPROVAL_PUBLICATION_BARRIER?.trim();
       if (publicationBarrier) {
-        writeFileSync(`${publicationBarrier}.published`, "published\n", "utf-8");
+        writeFileSync(
+          `${publicationBarrier}.published`,
+          "published\n",
+          "utf-8",
+        );
         const waitCell = new Int32Array(new SharedArrayBuffer(4));
         const deadline = Date.now() + 30_000;
         while (!existsSync(`${publicationBarrier}.release`)) {
           if (Date.now() >= deadline) {
-            writePlanApprovalReceipt(projectDir, { ...receipt, status: "approved" });
+            writePlanApprovalReceipt(projectDir, {
+              ...receipt,
+              status: "approved",
+            });
             throw new Error(
               "timed out waiting for the Plan Approval publication test barrier",
             );
@@ -2549,7 +2667,10 @@ export function beginCodeGeneration(
         // human's decision is still a fact, only the start is not. This is the
         // race window, not the governed drift, so both Change Control values
         // ask for the step again.
-        writePlanApprovalReceipt(projectDir, { ...receipt, status: "approved" });
+        writePlanApprovalReceipt(projectDir, {
+          ...receipt,
+          status: "approved",
+        });
         throw new Error(
           "Source files changed while code generation was starting. Retry the step.",
         );
@@ -2577,7 +2698,9 @@ function targetFromArgs(
   const unitIndex = args.indexOf("--unit");
   const stageLevel = args.includes("--stage-level");
   if (unitIndex >= 0 && stageLevel) {
-    throw new Error(`${subcommand} accepts exactly one of --unit <unit> or --stage-level`);
+    throw new Error(
+      `${subcommand} accepts exactly one of --unit <unit> or --stage-level`,
+    );
   }
   if (unitIndex >= 0) {
     const unit = args[unitIndex + 1];
@@ -2587,12 +2710,16 @@ function targetFromArgs(
     return normalizeCodeGenerationTarget({ unit });
   }
   if (stageLevel) return { unit: null };
-  throw new Error(`${subcommand} requires exactly one of --unit <unit> or --stage-level`);
+  throw new Error(
+    `${subcommand} requires exactly one of --unit <unit> or --stage-level`,
+  );
 }
 
 export function main(argv: string[]): void {
   const subcommand = argv.find((arg) =>
-    ["resolve", "render", "fingerprint", "verify", "begin", "brief"].includes(arg)
+    ["resolve", "render", "fingerprint", "verify", "begin", "brief"].includes(
+      arg,
+    ),
   );
   const projectDir = resolveProjectDir(flagValue(argv, "--project-dir"));
   try {
@@ -2601,14 +2728,19 @@ export function main(argv: string[]): void {
         console.log(JSON.stringify(resolveTestingPosture(projectDir), null, 2));
         return;
       case "render":
-        process.stdout.write(renderTestingContract(resolveTestingPosture(projectDir)));
+        process.stdout.write(
+          renderTestingContract(resolveTestingPosture(projectDir)),
+        );
         return;
       case "fingerprint": {
         const target = targetFromArgs(argv, "fingerprint");
         const authority = resolveCodeGenerationAuthority(projectDir, target);
         const approval = evaluateCodeGenerationApproval(projectDir, target);
         const stageDir = authority.stageDir;
-        const plan = readFileSync(join(stageDir, "code-generation-plan.md"), "utf-8");
+        const plan = readFileSync(
+          join(stageDir, "code-generation-plan.md"),
+          "utf-8",
+        );
         const instructions = readFileSync(
           join(stageDir, "unit-test-instructions.md"),
           "utf-8",
@@ -2624,10 +2756,7 @@ export function main(argv: string[]): void {
         }
         const embedded = parseTestingContract(plan);
         const current = resolveTestingPosture(projectDir);
-        if (
-          !embedded ||
-          embedded.contract_sha256 !== current.contract_sha256
-        ) {
+        if (!embedded || embedded.contract_sha256 !== current.contract_sha256) {
           throw new Error(
             approval.reason ||
               "plan Testing Contract does not match the current effective posture",
@@ -2641,16 +2770,15 @@ export function main(argv: string[]): void {
         // the human as the files that changed.
         const plannedState = workspaceSourceState(projectDir);
         keepWorkspaceSourceSnapshot(projectDir, plannedState);
-        const plannedSource = plannedState?.fingerprint ?? UNBINDABLE_FINGERPRINT;
+        const plannedSource =
+          plannedState?.fingerprint ?? UNBINDABLE_FINGERPRINT;
         console.log(
-          `[Approval Fingerprint]: ${
-            approvalFingerprint(
-              plan,
-              instructions,
-              current.contract_sha256,
-              authority,
-            )
-          }`,
+          `[Approval Fingerprint]: ${approvalFingerprint(
+            plan,
+            instructions,
+            current.contract_sha256,
+            authority,
+          )}`,
         );
         console.log(`[Planned Source]: ${plannedSource}`);
         if (plannedState === null) {
@@ -2681,7 +2809,9 @@ export function main(argv: string[]): void {
           JSON.stringify({
             status: "generation",
             target,
-            ...(changeNotices.length > 0 ? { change_notices: changeNotices } : {}),
+            ...(changeNotices.length > 0
+              ? { change_notices: changeNotices }
+              : {}),
           }),
         );
         return;
@@ -2715,7 +2845,9 @@ export function main(argv: string[]): void {
     console.error(
       JSON.stringify({
         error: error instanceof Error ? error.message : String(error),
-        ...(error instanceof PlanApprovalSourceDriftError ? { remedy: error.remedy } : {}),
+        ...(error instanceof PlanApprovalSourceDriftError
+          ? { remedy: error.remedy }
+          : {}),
       }),
     );
     process.exit(1);

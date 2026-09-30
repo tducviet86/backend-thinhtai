@@ -308,12 +308,21 @@ function loadStateFileIfPresent(projectDir: string): string | null {
 // --- Directive emission ---
 
 interface PreparedEmission {
-  transported: Directive; serialized: string; resultSha256: string; projectDir?: string;
+  transported: Directive;
+  serialized: string;
+  resultSha256: string;
+  projectDir?: string;
   marker?: {
-    kind: "ask" | "load-steering" | "run-stage" | "invoke-swarm"; stage: string; unit?: string;
+    kind: "ask" | "load-steering" | "run-stage" | "invoke-swarm";
+    stage: string;
+    unit?: string;
     units?: string[];
-    part?: number; parts?: number; continue_token?: string; state_sha256: string;
-    rules_bundle?: string; directive_sha256?: string;
+    part?: number;
+    parts?: number;
+    continue_token?: string;
+    state_sha256: string;
+    rules_bundle?: string;
+    directive_sha256?: string;
     ask_type?: string;
     remedies?: Array<Pick<GuardRemedy, "op" | "action">>;
   };
@@ -325,7 +334,11 @@ interface PreparedLegacyPlanApproval {
   session?: string;
 }
 
-let engineInvocation: { attemptId?: string; commandKind: "next" | "continue" | "report" | "park"; commandSha256: string } | null = null;
+let engineInvocation: {
+  attemptId?: string;
+  commandKind: "next" | "continue" | "report" | "park";
+  commandSha256: string;
+} | null = null;
 let activeStageValidityAdvisory: StageValidityAdvisory | undefined;
 let engineProjectDir: string | undefined;
 
@@ -346,10 +359,11 @@ function projectStageValidityAdvisory(
       .map((issue) => issue.stage);
     const earliest = direct[0] ?? validity.issues[0]?.stage ?? null;
     const state = validity.warnings.length > 0 ? "unavailable" : "drifted";
-    const warning = state === "drifted"
-      ? `Completed stage results have drifted; routing is continuing in advisory mode` +
-        (earliest ? `. Suggested redo: /aidlc --stage ${earliest}.` : ".")
-      : `Stage-validity inspection is partly unavailable; routing is continuing in advisory mode. ${validity.warnings.join(" ")}`;
+    const warning =
+      state === "drifted"
+        ? `Completed stage results have drifted; routing is continuing in advisory mode` +
+          (earliest ? `. Suggested redo: /aidlc --stage ${earliest}.` : ".")
+        : `Stage-validity inspection is partly unavailable; routing is continuing in advisory mode. ${validity.warnings.join(" ")}`;
     return {
       state,
       directly_stale: direct,
@@ -399,9 +413,7 @@ function engineChildEnv(
   return {
     ...process.env,
     ...extra,
-    ...(engineSessionId
-      ? { AIDLC_SESSION_OVERRIDE: engineSessionId }
-      : {}),
+    ...(engineSessionId ? { AIDLC_SESSION_OVERRIDE: engineSessionId } : {}),
   };
 }
 
@@ -475,24 +487,36 @@ function prepareEmission(directive: Directive): PreparedEmission {
       kind: "ask",
       stage: transported.stage,
       ask_type: GUARD_RECOVERY_ASK_TYPE,
-      ...(typeof transported.unit === "string" ? { unit: transported.unit } : {}),
+      ...(typeof transported.unit === "string"
+        ? { unit: transported.unit }
+        : {}),
       remedies: transported.remedies.map(({ op, action }) => ({ op, action })),
       state_sha256: stateDigest(askState),
     };
   }
-  if ((transported.kind === "load-steering" || transported.kind === "run-stage") && route) {
+  if (
+    (transported.kind === "load-steering" ||
+      transported.kind === "run-stage") &&
+    route
+  ) {
     const markerStateHash =
       route.stateHash ??
-      (
-        directive.kind === "run-stage" && directive.single === true &&
-          existsSync(engineStateFilePath(route.codekbCtx.projectDir))
-          ? stateDigest(readFileSync(engineStateFilePath(route.codekbCtx.projectDir), "utf-8"))
-          : sha256("")
-      );
+      (directive.kind === "run-stage" &&
+      directive.single === true &&
+      existsSync(engineStateFilePath(route.codekbCtx.projectDir))
+        ? stateDigest(
+            readFileSync(
+              engineStateFilePath(route.codekbCtx.projectDir),
+              "utf-8",
+            ),
+          )
+        : sha256(""));
     marker = {
       kind: transported.kind,
       stage: transported.stage,
-      ...(directive.kind === "run-stage" && directive.unit ? { unit: directive.unit } : {}),
+      ...(directive.kind === "run-stage" && directive.unit
+        ? { unit: directive.unit }
+        : {}),
       ...(transported.kind === "load-steering"
         ? {
             part: transported.part,
@@ -527,7 +551,7 @@ function prepareEmission(directive: Directive): PreparedEmission {
         ? { projectDir: publication.projectDir }
         : marker?.kind === "ask" && engineProjectDir
           ? { projectDir: engineProjectDir }
-        : {}),
+          : {}),
     ...(marker ? { marker } : {}),
   };
 }
@@ -552,11 +576,9 @@ function attachLegacyKiroPlanApprovalChoices(
     return { prepared };
   }
   const eligible =
-    (
-      directive.kind === "run-stage" &&
+    (directive.kind === "run-stage" &&
       directive.stage === "code-generation" &&
-      directive.swarm_settled !== true
-    ) ||
+      directive.swarm_settled !== true) ||
     directive.kind === "invoke-swarm";
   if (!eligible) return { prepared, session };
 
@@ -622,17 +644,19 @@ function guardRecoveryAskMarkerIsCurrent(
     marker.stage,
     marker.unit,
   );
-  return current !== null &&
+  return (
+    current !== null &&
     current.state_sha256 === marker.state_sha256 &&
     current.remedies !== undefined &&
     marker.remedies !== undefined &&
     current.remedies.length === marker.remedies.length &&
-    current.remedies.every((remedy, index) =>
-      remedy.op === marker.remedies?.[index]?.op &&
-      remedy.action === marker.remedies[index]?.action
-    );
+    current.remedies.every(
+      (remedy, index) =>
+        remedy.op === marker.remedies?.[index]?.op &&
+        remedy.action === marker.remedies[index]?.action,
+    )
+  );
 }
-
 
 function emit(directive: Directive): void {
   const withLegacyOffer = attachLegacyKiroPlanApprovalChoices(
@@ -662,28 +686,40 @@ function emit(directive: Directive): void {
     const projectDir = prepared.projectDir;
     try {
       if (projectDir) {
-        const publication = writeActiveDirectiveMarker(projectDir, prepared.marker, {
-          ...(engineInvocation?.attemptId ? { attemptId: engineInvocation.attemptId } : {}),
-          ...(engineInvocation ? { commandKind: engineInvocation.commandKind } : {}),
-          ...(engineInvocation ? { commandSha256: engineInvocation.commandSha256 } : {}),
-          ...(withLegacyOffer.offer
-            ? { legacyPlanApprovalOffer: withLegacyOffer.offer }
-            : {}),
-          ...(withLegacyOffer.session
-            ? { legacyPlanApprovalSession: withLegacyOffer.session }
-            : {}),
-          resultSha256: prepared.resultSha256,
-        });
+        const publication = writeActiveDirectiveMarker(
+          projectDir,
+          prepared.marker,
+          {
+            ...(engineInvocation?.attemptId
+              ? { attemptId: engineInvocation.attemptId }
+              : {}),
+            ...(engineInvocation
+              ? { commandKind: engineInvocation.commandKind }
+              : {}),
+            ...(engineInvocation
+              ? { commandSha256: engineInvocation.commandSha256 }
+              : {}),
+            ...(withLegacyOffer.offer
+              ? { legacyPlanApprovalOffer: withLegacyOffer.offer }
+              : {}),
+            ...(withLegacyOffer.session
+              ? { legacyPlanApprovalSession: withLegacyOffer.session }
+              : {}),
+            resultSha256: prepared.resultSha256,
+          },
+        );
         if (publication === "legacy-plan-approval-owned") {
-          writePrepared(prepareEmission(errorDirective(
-            "Legacy Kiro Plan Approval is owned by another active IDE window. Continue the pending approval there; this call did not receive or rotate its protected choices.",
-          )));
+          writePrepared(
+            prepareEmission(
+              errorDirective(
+                "Legacy Kiro Plan Approval is owned by another active IDE window. Continue the pending approval there; this call did not receive or rotate its protected choices.",
+              ),
+            ),
+          );
           return;
         }
         if (publication === "legacy-plan-approval-recovery-required") {
-          writePrepared(
-            prepareEmission(legacyPlanApprovalRecoveryDirective()),
-          );
+          writePrepared(prepareEmission(legacyPlanApprovalRecoveryDirective()));
           return;
         }
         if (
@@ -694,17 +730,36 @@ function emit(directive: Directive): void {
           return;
         }
         if (publication === "stale-attempt") {
-          recordHookDrop(projectDir, "active-directive", "tracked fresh next attempt was superseded before publication");
-          writePrepared(prepareEmission(errorDirective(
-            "This tracked `next` attempt is stale or superseded, so its prepared result was not issued. Run a fresh `next` in the current Copilot session.",
-          )));
+          recordHookDrop(
+            projectDir,
+            "active-directive",
+            "tracked fresh next attempt was superseded before publication",
+          );
+          writePrepared(
+            prepareEmission(
+              errorDirective(
+                "This tracked `next` attempt is stale or superseded, so its prepared result was not issued. Run a fresh `next` in the current Copilot session.",
+              ),
+            ),
+          );
           return;
         }
-        if (publication !== "copilot-committed" && publication !== "generic-committed") {
-          recordHookDrop(projectDir, "active-directive", "fresh next did not commit its directive");
-          writePrepared(prepareEmission(errorDirective(
-            "The directive could not be published, so no work directive was issued. Retry the command; if coordination remains busy, run `/aidlc --doctor`.",
-          )));
+        if (
+          publication !== "copilot-committed" &&
+          publication !== "generic-committed"
+        ) {
+          recordHookDrop(
+            projectDir,
+            "active-directive",
+            "fresh next did not commit its directive",
+          );
+          writePrepared(
+            prepareEmission(
+              errorDirective(
+                "The directive could not be published, so no work directive was issued. Retry the command; if coordination remains busy, run `/aidlc --doctor`.",
+              ),
+            ),
+          );
           return;
         }
       }
@@ -718,9 +773,13 @@ function emit(directive: Directive): void {
       if (projectDir) {
         recordHookDrop(projectDir, "active-directive", errorMessage(e));
       }
-      writePrepared(prepareEmission(errorDirective(
-        "The directive could not be published, so no work directive was issued. Retry the command; if coordination remains busy, run `/aidlc --doctor`.",
-      )));
+      writePrepared(
+        prepareEmission(
+          errorDirective(
+            "The directive could not be published, so no work directive was issued. Retry the command; if coordination remains busy, run `/aidlc --doctor`.",
+          ),
+        ),
+      );
       return;
     }
   }
@@ -764,12 +823,20 @@ function toolPath(file: string): string {
 function toolCommand(toolFile: string, args: string[]): string[] {
   if (IS_COMPILED) {
     if (toolFile === "aidlc-utility.ts" && args[0] === "resolve-env-scope") {
-      return [process.execPath, "engine", "scope", "resolve-env", ...args.slice(1)];
+      return [
+        process.execPath,
+        "engine",
+        "scope",
+        "resolve-env",
+        ...args.slice(1),
+      ];
     }
     if (toolFile === "aidlc-jump.ts") {
       return [process.execPath, "engine", "jump", ...args];
     }
-    throw new Error(`No compiled dispatcher route for ${toolFile} ${args.join(" ")}`);
+    throw new Error(
+      `No compiled dispatcher route for ${toolFile} ${args.join(" ")}`,
+    );
   }
   return [process.execPath, toolPath(toolFile), ...args];
 }
@@ -1042,14 +1109,16 @@ function noticeDirective(message: string): NoticeDirective {
 function unitClaimAskDirective(
   overview: ReturnType<typeof cachedUnitClaimOverview>,
 ): AskDirective {
-  const claimed = overview.claimed.length === 0
-    ? "none"
-    : overview.claimed.map((row) => `${row.unit} (${row.owner})`).join(", ");
-  const waiting = overview.waiting.length === 0
-    ? "none"
-    : overview.waiting
-        .map((row) => `${row.unit} waits on ${row.blockedBy.join(", ")}`)
-        .join("; ");
+  const claimed =
+    overview.claimed.length === 0
+      ? "none"
+      : overview.claimed.map((row) => `${row.unit} (${row.owner})`).join(", ");
+  const waiting =
+    overview.waiting.length === 0
+      ? "none"
+      : overview.waiting
+          .map((row) => `${row.unit} waits on ${row.blockedBy.join(", ")}`)
+          .join("; ");
   return {
     kind: "ask",
     ask_type: "unit-claim",
@@ -1133,7 +1202,8 @@ export function buildTeamConstructionBoard(
     overview?: UnitClaimOverview;
   } = {},
 ): TeamConstructionBoard {
-  const overview = options.overview ??
+  const overview =
+    options.overview ??
     cachedUnitClaimOverview(projectDir, {
       writeCache: options.readOnly !== true,
     });
@@ -1198,12 +1268,11 @@ function initialUnitProgressSection(
     ...parsed.units.map((entry) => {
       const claim = overview.claims.get(entry.name);
       const transaction = transactionByUnit.get(entry.name);
-      const owner = claim?.status === "claimed"
-        ? claim.owner
-        : transaction?.owner ?? "-";
-      return `| ${entry.name} | ${owner} | ${
-        stages.map(() => "[ ]").join(" | ")
-      } | [ ] |${
+      const owner =
+        claim?.status === "claimed" ? claim.owner : (transaction?.owner ?? "-");
+      return `| ${entry.name} | ${owner} | ${stages
+        .map(() => "[ ]")
+        .join(" | ")} | [ ] |${
         mergeTracking
           ? ` ${transaction?.status === "complete" ? "[x]" : "[ ]"} |`
           : ""
@@ -1232,18 +1301,15 @@ export function buildTeamConstructionBoardForIntent(
     selector.space,
     selector.intentUuid,
   );
-  const grid = unitProgressSectionFromState(stateContent) ??
+  const grid =
+    unitProgressSectionFromState(stateContent) ??
     initialUnitProgressSection(
       stateContent,
       selector.dependencyBody,
       overview,
       transactions,
     );
-  return assembleTeamConstructionBoard(
-    grid,
-    overview,
-    transactions,
-  );
+  return assembleTeamConstructionBoard(grid, overview, transactions);
 }
 
 function assembleTeamConstructionBoard(
@@ -1268,8 +1334,7 @@ function assembleTeamConstructionBoard(
       status: transaction.status,
       pinnedOid: transaction.pinned_oid,
       readiness: mergeReadiness(transaction.status),
-      releasedAfterGitAccepted:
-        transaction.released_after_git !== undefined,
+      releasedAfterGitAccepted: transaction.released_after_git !== undefined,
     }));
   const claimable = [...overview.claimable].sort();
   const blocked = overview.waiting
@@ -1285,9 +1350,7 @@ function assembleTeamConstructionBoard(
     claimable,
     blocked,
     ...(overview.warning ? { warning: overview.warning } : {}),
-    fanoutActive:
-      awaitingMerge.length > 0 ||
-      overview.claimed.length > 0,
+    fanoutActive: awaitingMerge.length > 0 || overview.claimed.length > 0,
   };
 }
 
@@ -1295,33 +1358,39 @@ export function renderTeamConstructionBoard(
   board: TeamConstructionBoard,
   mode: "dispatcher" | "snapshot",
 ): string {
-  const title = mode === "snapshot"
-    ? "# Team Construction Snapshot"
-    : "# Team Construction Dispatcher";
-  const claimRows = board.claims.length === 0
-    ? ["| - | - | - | - | no claim refs observed |"]
-    : board.claims.map(
-      (claim) =>
-        `| ${claim.unit} | ${claim.status} | ${claim.owner} | ${claim.generation} | ${claim.observedActivity} |`,
-    );
-  const mergeRows = board.awaitingMerge.length === 0
-    ? ["| - | - | - | none |"]
-    : board.awaitingMerge.map(
-      (row) =>
-        `| ${row.unit} | ${row.status} | \`${row.pinnedOid.slice(0, 12)}\` | ${row.readiness} |`,
-    );
-  const blockedRows = board.blocked.length === 0
-    ? ["| - | none |"]
-    : board.blocked.map(
-      (row) => `| ${row.unit} | ${row.blockedBy.join(", ")} |`,
-    );
-  const claimedSummary = board.claims
-    .filter((claim) => claim.status === "claimed")
-    .map((claim) => `${claim.unit} (${claim.owner})`)
-    .join(", ") || "none";
-  const blockedSummary = board.blocked
-    .map((row) => `${row.unit} waits on ${row.blockedBy.join(", ")}`)
-    .join("; ") || "none";
+  const title =
+    mode === "snapshot"
+      ? "# Team Construction Snapshot"
+      : "# Team Construction Dispatcher";
+  const claimRows =
+    board.claims.length === 0
+      ? ["| - | - | - | - | no claim refs observed |"]
+      : board.claims.map(
+          (claim) =>
+            `| ${claim.unit} | ${claim.status} | ${claim.owner} | ${claim.generation} | ${claim.observedActivity} |`,
+        );
+  const mergeRows =
+    board.awaitingMerge.length === 0
+      ? ["| - | - | - | none |"]
+      : board.awaitingMerge.map(
+          (row) =>
+            `| ${row.unit} | ${row.status} | \`${row.pinnedOid.slice(0, 12)}\` | ${row.readiness} |`,
+        );
+  const blockedRows =
+    board.blocked.length === 0
+      ? ["| - | none |"]
+      : board.blocked.map(
+          (row) => `| ${row.unit} | ${row.blockedBy.join(", ")} |`,
+        );
+  const claimedSummary =
+    board.claims
+      .filter((claim) => claim.status === "claimed")
+      .map((claim) => `${claim.unit} (${claim.owner})`)
+      .join(", ") || "none";
+  const blockedSummary =
+    board.blocked
+      .map((row) => `${row.unit} waits on ${row.blockedBy.join(", ")}`)
+      .join("; ") || "none";
   const nextActions: string[] = [];
   const reclaimable = new Set([
     ...board.claimable,
@@ -1345,13 +1414,10 @@ export function renderTeamConstructionBoard(
       row.status === "state-folded"
     ) {
       const released = board.claims.some(
-        (claim) =>
-          claim.unit === row.unit && claim.status === "released",
+        (claim) => claim.unit === row.unit && claim.status === "released",
       );
       nextActions.push(
-        released &&
-            row.status === "git-landed" &&
-            !row.releasedAfterGitAccepted
+        released && row.status === "git-landed" && !row.releasedAfterGitAccepted
           ? `- The landed attempt for \`${row.unit}\` was released. Inspect the merge commit, then run \`aidlc unit land ${row.unit} --accept-released-attempt --user-input "<human acknowledgment>"\`.`
           : `- Resume \`${row.unit}\` with \`aidlc unit land ${row.unit}\`.`,
       );
@@ -1465,7 +1531,9 @@ function effectiveScopeCostSummary(
   const policy = {} as CeremonyPolicy;
   for (const key of CEREMONY_KEYS) {
     const base = resolveCeremony(key, scope, null);
-    policy[key] = base.source.startsWith("env ") ? "off" : overrides?.[key] ?? base.value;
+    policy[key] = base.source.startsWith("env ")
+      ? "off"
+      : (overrides?.[key] ?? base.value);
   }
   const off = ceremonyOffList(scope, policy);
   const definition = loadScopeMapping()[scope];
@@ -1475,7 +1543,10 @@ function effectiveScopeCostSummary(
   ) {
     return { ...nominal, off };
   }
-  const adjusted = { ...definition.stages, "reverse-engineering": "SKIP" as const };
+  const adjusted = {
+    ...definition.stages,
+    "reverse-engineering": "SKIP" as const,
+  };
   return { ...gridCostSummary(adjusted), off };
 }
 
@@ -1485,12 +1556,17 @@ function effectiveScopeCostSummary(
 // reverse-engineering adjustment intent creation writes into state.
 // Returns "" for a scope that does not resolve (a fixture tree without it), so
 // callers can drop the whole clause rather than emit a broken preview.
-function costClause(scope: string, projectDir: string, overrides?: Partial<CeremonyPolicy>): string {
+function costClause(
+  scope: string,
+  projectDir: string,
+  overrides?: Partial<CeremonyPolicy>,
+): string {
   const c = effectiveScopeCostSummary(scope, projectDir, overrides);
   if (!c) return "";
-  const perUnit = c.perUnitStages > 0
-    ? `, ${c.perUnitStages} ${c.perUnitStages === 1 ? "stage repeats" : "stages repeat"} per unit of work in Construction`
-    : "";
+  const perUnit =
+    c.perUnitStages > 0
+      ? `, ${c.perUnitStages} ${c.perUnitStages === 1 ? "stage repeats" : "stages repeat"} per unit of work in Construction`
+      : "";
   return `${c.execute} of ${c.total} stages, ${c.gates} approval gates${perUnit}${ceremonyOffClause(c)}`;
 }
 
@@ -1673,14 +1749,17 @@ function parseNextFlags(args: string[]): ParsedFlags {
       } else {
         const parsed = parseChangeControl(value);
         if (parsed === null) {
-          flags.parseError =
-            `--change-control requires <strict|relaxed>; received "${value}".`;
+          flags.parseError = `--change-control requires <strict|relaxed>; received "${value}".`;
         } else {
           flags.changeControl = parsed;
         }
         i++;
       }
-    } else if (a === CEREMONY_FLAGS.sensors || a === CEREMONY_FLAGS.learnings || a === CEREMONY_FLAGS.summary_confirmation) {
+    } else if (
+      a === CEREMONY_FLAGS.sensors ||
+      a === CEREMONY_FLAGS.learnings ||
+      a === CEREMONY_FLAGS.summary_confirmation
+    ) {
       const key = CEREMONY_KEYS.find((key) => CEREMONY_FLAGS[key] === a)!;
       const value = args[i + 1];
       if (value === undefined || value.startsWith("--")) {
@@ -1769,7 +1848,7 @@ function parseNextFlags(args: string[]): ParsedFlags {
 const NEW_WORK_HINT =
   " If this input is genuinely NEW, unrelated work (not a follow-up to the " +
   "completed intent), don't stop here: offer to start a second intent, and on " +
-  "the human's yes run `next --new-intent --scope <scope> \"<text>\"` (see the " +
+  'the human\'s yes run `next --new-intent --scope <scope> "<text>"` (see the ' +
   "SKILL's new-work offer, never auto-create).";
 
 // The workflow creation print for a resolved scope on a fresh workspace (no intent
@@ -1805,15 +1884,15 @@ function createPrintDirective(
     // the conductor adds it; the dir name becomes `<YYMMDD>-<label>`. (A bare run
     // without --label still creates a sane name by truncating --arguments.)
     cmd.push(`--label "<2-3 word kebab essence>"`);
-    labelHint =
-      ` Replace \`--label\` with a 2-3 word kebab essence of the description (e.g. "simple calc"), which becomes the readable folder name for this piece of work.`;
+    labelHint = ` Replace \`--label\` with a 2-3 word kebab essence of the description (e.g. "simple calc"), which becomes the readable folder name for this piece of work.`;
   }
   if (flags.depth) cmd.push(`--depth ${flags.depth}`);
   if (flags.testStrategy) cmd.push(`--test-strategy ${flags.testStrategy}`);
   if (flags.review) cmd.push(`--review ${flags.review}`);
   if (flags.changeControl) cmd.push(`--change-control ${flags.changeControl}`);
   for (const key of CEREMONY_KEYS) {
-    if (flags.ceremony?.[key]) cmd.push(`${CEREMONY_FLAGS[key]} ${flags.ceremony[key]}`);
+    if (flags.ceremony?.[key])
+      cmd.push(`${CEREMONY_FLAGS[key]} ${flags.ceremony[key]}`);
   }
   // Disclose the ceremony on the print: an explicitly named scope creates
   // directly (no confirm ask by design), so the stage/gate counts ride here.
@@ -1823,14 +1902,14 @@ function createPrintDirective(
   const runCmd = `Run \`${aidlcDispatcherInvocation("intent create")} ${cmd.join(" ")}\``;
   const directive = flags.newIntent
     ? printDirective(
-      `${runCmd} to start the new intent${cost}.${labelHint} Then STOP, do NOT re-run \`next\` in this session. ` +
-        `This is a NEW, unrelated intent, and the current session still carries the previous intent's context. ` +
-        `Tell the user to start a fresh session using this harness's reset or restart flow, then invoke its AI-DLC entry skill to begin the new intent with a clean slate. ` +
-        `Nothing is lost: the intent is saved on disk and resumes on the next \`next\`.`,
+        `${runCmd} to start the new intent${cost}.${labelHint} Then STOP, do NOT re-run \`next\` in this session. ` +
+          `This is a NEW, unrelated intent, and the current session still carries the previous intent's context. ` +
+          `Tell the user to start a fresh session using this harness's reset or restart flow, then invoke its AI-DLC entry skill to begin the new intent with a clean slate. ` +
+          `Nothing is lost: the intent is saved on disk and resumes on the next \`next\`.`,
       )
     : printDirective(
-      `${runCmd} to start the workflow${cost}, then re-run \`next\` to continue.${labelHint}`,
-    );
+        `${runCmd} to start the workflow${cost}, then re-run \`next\` to continue.${labelHint}`,
+      );
   // The user named a scope (or one was inferred and confirmed), so the spoken
   // line can say what is being set up and how much process that means, with the
   // counts the compiled grid already gave us.
@@ -1964,64 +2043,65 @@ function intentPickPromptIfRecordsExist(
     }
     return { intent, state };
   });
-  const annotate = intents.length > 1 &&
+  const annotate =
+    intents.length > 1 &&
     intentStates.some(({ state }) => isTeamUnitOwnership(state));
   const selectable = intentStates.flatMap(({ intent, state }) =>
-    intent.dirName
-      ? [{ intent, state, selector: intent.dirName }]
-      : []
+    intent.dirName ? [{ intent, state, selector: intent.dirName }] : [],
   );
   const selectors = selectable.map(({ selector }) => selector);
-  const displayRows = selectable.length > 0
-    ? selectable
-    : intentStates.map(({ intent, state }) => ({
-        intent,
-        state,
-        selector: undefined as string | undefined,
-      }));
-  const list = displayRows.map(({ intent, state, selector }) => {
-    let annotation = "";
-    if (annotate) {
-      const completed =
-        intent.status.toLowerCase() === "complete" ||
-        getField(state, "Status") === "Completed";
-      const parked = (getField(state, "Parked") ?? "").trim();
-      const parkedAt = (getField(state, "Parked At Stage") ?? "").trim();
-      const currentStage = (getField(state, "Current Stage") ?? "").trim();
-      if (completed) {
-        annotation = "complete";
-      } else if (parked && parkedAt && parkedAt === currentStage) {
-        annotation = `parked at ${parkedAt}`;
-      } else if (
-        intent.dirName &&
-        intent.uuid &&
-        isTeamUnitOwnership(state)
-      ) {
-        try {
-          const dependencyBody = readFileSync(
-            unitDependencyPath(projectDir, intent.dirName, space),
-            "utf-8",
-          );
-          const overview = localUnitClaimOverviewForIntent(projectDir, {
-            space,
-            intentUuid: intent.uuid,
-            stateContent: state,
-            dependencyBody,
-          });
-          annotation =
-            `team construction, ${overview.claimable.length} units claimable`;
-        } catch {
-          annotation = "team construction, claim status unavailable";
+  const displayRows =
+    selectable.length > 0
+      ? selectable
+      : intentStates.map(({ intent, state }) => ({
+          intent,
+          state,
+          selector: undefined as string | undefined,
+        }));
+  const list = displayRows
+    .map(({ intent, state, selector }) => {
+      let annotation = "";
+      if (annotate) {
+        const completed =
+          intent.status.toLowerCase() === "complete" ||
+          getField(state, "Status") === "Completed";
+        const parked = (getField(state, "Parked") ?? "").trim();
+        const parkedAt = (getField(state, "Parked At Stage") ?? "").trim();
+        const currentStage = (getField(state, "Current Stage") ?? "").trim();
+        if (completed) {
+          annotation = "complete";
+        } else if (parked && parkedAt && parkedAt === currentStage) {
+          annotation = `parked at ${parkedAt}`;
+        } else if (
+          intent.dirName &&
+          intent.uuid &&
+          isTeamUnitOwnership(state)
+        ) {
+          try {
+            const dependencyBody = readFileSync(
+              unitDependencyPath(projectDir, intent.dirName, space),
+              "utf-8",
+            );
+            const overview = localUnitClaimOverviewForIntent(projectDir, {
+              space,
+              intentUuid: intent.uuid,
+              stateContent: state,
+              dependencyBody,
+            });
+            annotation = `team construction, ${overview.claimable.length} units claimable`;
+          } catch {
+            annotation = "team construction, claim status unavailable";
+          }
         }
       }
-    }
-    const identity = selector
-      ? intent.slug === selector
-        ? `\`${selector}\``
-        : `\`${intent.slug}\` (record: \`${selector}\`)`
-      : `\`${intent.slug}\``;
-    return `${identity}${annotation ? ` (${annotation})` : ""}`;
-  }).join(", ");
+      const identity = selector
+        ? intent.slug === selector
+          ? `\`${selector}\``
+          : `\`${intent.slug}\` (record: \`${selector}\`)`
+        : `\`${intent.slug}\``;
+      return `${identity}${annotation ? ` (${annotation})` : ""}`;
+    })
+    .join(", ");
   const spaceLabel = space === "default" ? "" : ` in space "${space}"`;
   // Only Kiro consumes the typed prose contract. Other harnesses retain their
   // established picker and scope-confirm behavior.
@@ -2079,7 +2159,11 @@ function intentPickPromptIfRecordsExist(
 function resolveScope(
   stateContent: string | null,
   flags: ParsedFlags,
-): { scope: string; source: "state" | "flag" | "positional" | "env" | "default"; error?: string } {
+): {
+  scope: string;
+  source: "state" | "flag" | "positional" | "env" | "default";
+  error?: string;
+} {
   const stateScope = stateContent ? getField(stateContent, "Scope") : null;
   if (stateScope && stateScope.length > 0) {
     return { scope: stateScope, source: "state" };
@@ -2104,7 +2188,11 @@ function resolveScope(
 // the absolute projectDir-keyed state helpers.
 // Per-unit Construction stages embed a {unit-name} segment that a later engine
 // change resolves; until then the bare phase/slug form is the faithful derivation.
-function memoryPathFor(phase: string, slug: string, recordPrefix: string | null): string {
+function memoryPathFor(
+  phase: string,
+  slug: string,
+  recordPrefix: string | null,
+): string {
   const prefix = recordPrefix ?? relativeSpaceRecordPrefix();
   return `${prefix}/${phase}/${slug}/memory.md`;
 }
@@ -2127,11 +2215,7 @@ export function bootstrapDirectiveMemory(
   codekbCtx?: { projectDir: string },
 ): void {
   try {
-    if (
-      !codekbCtx ||
-      memoryPath.includes("{") ||
-      isReadOnlyEngineProbe()
-    ) {
+    if (!codekbCtx || memoryPath.includes("{") || isReadOnlyEngineProbe()) {
       return;
     }
     const template = join(
@@ -2174,7 +2258,10 @@ function stageFileFor(phase: string, slug: string): string {
 // routing error — the run-stage directive is still well-formed without the
 // optional field — so we never fail the workflow over it.
 function readConductorPersona(): string | null {
-  const conductorPersonaPath = resolveHarnessPath(["aidlc-common", "conductor.md"]);
+  const conductorPersonaPath = resolveHarnessPath([
+    "aidlc-common",
+    "conductor.md",
+  ]);
   if (!existsSync(conductorPersonaPath)) return null;
   try {
     return readFileSync(conductorPersonaPath, "utf-8");
@@ -2242,7 +2329,10 @@ let requestedSteeringContinuation: SteeringTokenPayload | null = null;
 let retainedIssuedDirective = false;
 // The content identity of the transport this invocation prepared, so the marker
 // records what the conductor was actually handed.
-let preparedTransportIdentity: { bundle: string; directiveSha256: string } | null = null;
+let preparedTransportIdentity: {
+  bundle: string;
+  directiveSha256: string;
+} | null = null;
 
 // "First run-stage of the workflow" — the deterministic signal D-E delivery
 // keys on. The engine is stateless per call, so it cannot track a "session";
@@ -2275,7 +2365,9 @@ function isFirstRunStageOfWorkflow(
   // Count completed/skipped NON-initialization stages. Zero → this is the first
   // substantive stage the conductor will run, so deliver the persona now.
   const initSlugs = new Set(
-    loadGraph().filter((s) => s.phase === "initialization").map((s) => s.slug),
+    loadGraph()
+      .filter((s) => s.phase === "initialization")
+      .map((s) => s.slug),
   );
   const advancedSubstantive = checkboxes.some(
     (c) =>
@@ -2308,8 +2400,12 @@ const VALID_SKELETON_STANCES: ReadonlySet<string> = new Set([
 
 // Read the recorded skeleton stance from state, or null if the round-trip has
 // not completed yet (the field is absent or empty). Composes getField.
-function readSkeletonStance(stateContent: string | null): SkeletonStance | null {
-  const raw = stateContent ? getField(stateContent, SKELETON_STANCE_FIELD) : null;
+function readSkeletonStance(
+  stateContent: string | null,
+): SkeletonStance | null {
+  const raw = stateContent
+    ? getField(stateContent, SKELETON_STANCE_FIELD)
+    : null;
   if (!raw) return null;
   const lower = raw.trim().toLowerCase();
   return VALID_SKELETON_STANCES.has(lower) ? (lower as SkeletonStance) : null;
@@ -2563,11 +2659,7 @@ function codekbCtxFor(pd: string): CodekbCtx {
       selection.space,
       selection.intent ?? undefined,
     ),
-    repos: intentRepos(
-      pd,
-      selection.intent ?? undefined,
-      selection.space,
-    ),
+    repos: intentRepos(pd, selection.intent ?? undefined, selection.space),
   };
 }
 
@@ -2762,7 +2854,7 @@ function conditionalRuntimeSkipStages(projectDir: string): Set<string> {
   const workflowFloor = mainRows
     .filter((row) => row.event === "WORKFLOW_STARTED")
     .reduce(
-      (latest, row) => row.timestamp > latest ? row.timestamp : latest,
+      (latest, row) => (row.timestamp > latest ? row.timestamp : latest),
       "",
     );
   const latestByStage = new Map<
@@ -2832,13 +2924,15 @@ function splitConsumesByPresence(
     }
     if (!c.required) continue; // optional + missing → not an input, not a gap
     const onPathProducers = producersOf(c.artifact).filter((p) =>
-      onPath.has(p.slug)
+      onPath.has(p.slug),
     );
-    const allOnPathProducersSkipped = onPathProducers.length > 0 &&
+    const allOnPathProducersSkipped =
+      onPathProducers.length > 0 &&
       stateContent != null &&
-      onPathProducers.every((p) =>
-        checkboxForSlug(stateContent, p.slug)?.state === "skipped" &&
-        conditionallySkipped.has(p.slug)
+      onPathProducers.every(
+        (p) =>
+          checkboxForSlug(stateContent, p.slug)?.state === "skipped" &&
+          conditionallySkipped.has(p.slug),
       );
     absent.push({
       path: c.path,
@@ -2864,10 +2958,9 @@ function resolveProduces(
   codekbCtx?: CodekbCtx,
   unitKind: string | null = null,
 ): string[] {
-  return applicableProduceNames(node, unitKind, true)
-    .flatMap((name) =>
-      resolveArtifactPaths(name, node, unit, recordPrefix, codekbCtx)
-    );
+  return applicableProduceNames(node, unitKind, true).flatMap((name) =>
+    resolveArtifactPaths(name, node, unit, recordPrefix, codekbCtx),
+  );
 }
 
 // The one applicability rule for a stage's kind-aware produce set. Callers
@@ -2981,11 +3074,12 @@ function markdownFilesUnder(
 // by the roster builder and the deliver-once derivation so both agree on
 // "who is inline here".
 function inlineAgentsFor(node: GraphStage): string[] {
-  const inlineAgents = node.mode === "inline"
-    ? [node.lead_agent, ...(node.support_agents ?? [])]
-    : node.mode === "mob"
-      ? [node.lead_agent]
-      : [];
+  const inlineAgents =
+    node.mode === "inline"
+      ? [node.lead_agent, ...(node.support_agents ?? [])]
+      : node.mode === "mob"
+        ? [node.lead_agent]
+        : [];
   return [...new Set(inlineAgents)].filter((agent) => agent !== "orchestrator");
 }
 
@@ -3035,38 +3129,37 @@ const MINIMAL_INLINE_KNOWLEDGE: Readonly<
   },
 };
 
-const SHIPPED_INLINE_KNOWLEDGE: Readonly<
-  Record<string, ReadonlySet<string>>
-> = {
-  "aidlc-shared": new Set([
-    "ai-dlc-principles.md",
-    "audit-format.md",
-    "brownfield.md",
-    "knowledge-readme-template.md",
-    "memory-template.md",
-    "rules-reading.md",
-    "state-template.md",
-    "verification.md",
-    "worktree-info-schema.md",
-  ]),
-  "aidlc-product-agent": new Set([
-    "functional-design-guide.md",
-    "market-research-methods.md",
-    "prioritization-frameworks.md",
-    "product-guide.md",
-    "requirements-elicitation.md",
-    "requirements-guide.md",
-    "user-story-patterns.md",
-  ]),
-  "aidlc-architect-agent": new Set([
-    "adr-template.md",
-    "architecture-guide.md",
-    "architecture-patterns.md",
-    "ddd-patterns.md",
-    "nfr-design-guide.md",
-    "nfr-design-patterns.md",
-  ]),
-};
+const SHIPPED_INLINE_KNOWLEDGE: Readonly<Record<string, ReadonlySet<string>>> =
+  {
+    "aidlc-shared": new Set([
+      "ai-dlc-principles.md",
+      "audit-format.md",
+      "brownfield.md",
+      "knowledge-readme-template.md",
+      "memory-template.md",
+      "rules-reading.md",
+      "state-template.md",
+      "verification.md",
+      "worktree-info-schema.md",
+    ]),
+    "aidlc-product-agent": new Set([
+      "functional-design-guide.md",
+      "market-research-methods.md",
+      "prioritization-frameworks.md",
+      "product-guide.md",
+      "requirements-elicitation.md",
+      "requirements-guide.md",
+      "user-story-patterns.md",
+    ]),
+    "aidlc-architect-agent": new Set([
+      "adr-template.md",
+      "architecture-guide.md",
+      "architecture-patterns.md",
+      "ddd-patterns.md",
+      "nfr-design-guide.md",
+      "nfr-design-patterns.md",
+    ]),
+  };
 
 function pluginKnowledgeOwners(
   harnessRoot: string,
@@ -3078,8 +3171,8 @@ function pluginKnowledgeOwners(
   let files: string[];
   try {
     files = readdirSync(dataDir)
-      .filter((name) =>
-        name.startsWith("plugin-files-") && name.endsWith(".json")
+      .filter(
+        (name) => name.startsWith("plugin-files-") && name.endsWith(".json"),
       )
       .sort();
   } catch (e) {
@@ -3146,12 +3239,10 @@ function selectShippedInlineKnowledge(
     if (pathOwners) {
       return [...pathOwners].some((plugin) => isPluginEnabled(plugin));
     }
-    const ownerRelative = toPosix(relative(
-      join(harnessRoot, "knowledge", owner),
-      file.abs,
-    ));
-    return shipped?.has(ownerRelative) !== true ||
-      selected.has(ownerRelative);
+    const ownerRelative = toPosix(
+      relative(join(harnessRoot, "knowledge", owner), file.abs),
+    );
+    return shipped?.has(ownerRelative) !== true || selected.has(ownerRelative);
   });
 }
 
@@ -3271,13 +3362,15 @@ function inlineContextRoster(
   depth: string | null = null,
 ): { paths: string[]; warnings: string[] } {
   const warnings: string[] = [];
-  const allPaths = inlineContextEntries(node, codekbCtx, warnings, depth).map((e) => e.rel);
+  const allPaths = inlineContextEntries(node, codekbCtx, warnings, depth).map(
+    (e) => e.rel,
+  );
   const paths: string[] = [];
   for (const path of allPaths) {
     const candidate = [...paths, path];
     if (
       Buffer.byteLength(JSON.stringify(candidate), "utf-8") >
-        INLINE_CONTEXT_PATHS_MAX_BYTES
+      INLINE_CONTEXT_PATHS_MAX_BYTES
     ) {
       break;
     }
@@ -3297,7 +3390,7 @@ function inlineContextRoster(
 function boundedContextWarnings(warnings: string[]): string[] {
   if (
     Buffer.byteLength(JSON.stringify(warnings), "utf-8") <=
-      CONTEXT_WARNINGS_MAX_BYTES
+    CONTEXT_WARNINGS_MAX_BYTES
   ) {
     return warnings;
   }
@@ -3305,13 +3398,14 @@ function boundedContextWarnings(warnings: string[]): string[] {
   const kept: string[] = [];
   for (let i = 0; i < warnings.length; i++) {
     const omitted = warnings.length - i - 1;
-    const summary = omitted > 0
-      ? `Warning: ${omitted} additional optional persona/knowledge warning(s) were omitted from this directive. Inspect the configured context directories and repair missing, unreadable, or invalid UTF-8 files.`
-      : null;
+    const summary =
+      omitted > 0
+        ? `Warning: ${omitted} additional optional persona/knowledge warning(s) were omitted from this directive. Inspect the configured context directories and repair missing, unreadable, or invalid UTF-8 files.`
+        : null;
     const candidate = [...kept, warnings[i], ...(summary ? [summary] : [])];
     if (
       Buffer.byteLength(JSON.stringify(candidate), "utf-8") >
-        CONTEXT_WARNINGS_MAX_BYTES
+      CONTEXT_WARNINGS_MAX_BYTES
     ) {
       break;
     }
@@ -3351,7 +3445,7 @@ function buildRunStageDirective(
 ): RunStageDirective {
   const artifactUnit =
     unit === UNIT_NAME_PLACEHOLDER &&
-      usesStageLevelPerUnitArtifacts(scope, stateContent)
+    usesStageLevelPerUnitArtifacts(scope, stateContent)
       ? null
       : unit;
   const resolvedConsumes = resolveConsumes(
@@ -3371,7 +3465,7 @@ function buildRunStageDirective(
   );
   const depth = stateContent
     ? getField(stateContent, "Depth")
-    : loadScopeMetadata()[scope]?.depth ?? null;
+    : (loadScopeMetadata()[scope]?.depth ?? null);
   const inlineContext = inlineContextRoster(node, codekbCtx, depth);
   const ruleEntries = codekbCtx
     ? rulesContentEntries(node, codekbCtx.projectDir, codekbCtx.space)
@@ -3403,9 +3497,10 @@ function buildRunStageDirective(
       ruleEntries?.map((entry) => entry.rel) ??
       (node.rules_in_context ?? []).map((r) => r.path),
     ceremony,
-    sensors_applicable: ceremony.sensors === "off"
-      ? []
-      : (node.sensors_applicable ?? []).map((s) => s.id),
+    sensors_applicable:
+      ceremony.sensors === "off"
+        ? []
+        : (node.sensors_applicable ?? []).map((s) => s.id),
     stage_file: stageFileFor(node.phase, node.slug),
   };
   if (node.mode === "pipeline" && codekbCtx) {
@@ -3430,7 +3525,11 @@ function buildRunStageDirective(
   // [x]/[S] checkboxes, the same walk the post-approval advance uses, so the
   // named stage is the one the workflow will actually run next. null = this is
   // the final in-scope stage (the conductor renders "Complete workflow").
-  const nextStage = nextInScopeStage(node.slug, scope, stateContent ?? undefined);
+  const nextStage = nextInScopeStage(
+    node.slug,
+    scope,
+    stateContent ?? undefined,
+  );
   directive.next_stage = nextStage ? nextStage.name : null;
   // Reviewer — include if the stage declares one (§12a) AND the effective
   // review class is not "none". The engine resolves the class here (stage
@@ -3443,14 +3542,14 @@ function buildRunStageDirective(
     const reviewClass = resolveReviewClass(
       node.review_class,
       scope,
-      stateContent
+      stateContent,
     );
     if (reviewClass !== "none") {
       directive.reviewer = node.reviewer;
       directive.review_artifact = node.review_artifact;
       directive.review_class = reviewClass;
       directive.reviewer_max_iterations =
-        reviewClass === "advisory" ? 1 : node.reviewer_max_iterations ?? 2;
+        reviewClass === "advisory" ? 1 : (node.reviewer_max_iterations ?? 2);
     }
   }
   const protocolModules: ProtocolModule[] = [];
@@ -3698,10 +3797,7 @@ function steeringTokenKey(
   }
 }
 
-function steeringTokenMac(
-  payload: SteeringTokenPayload,
-  key: Buffer,
-): string {
+function steeringTokenMac(payload: SteeringTokenPayload, key: Buffer): string {
   return createHmac("sha256", key)
     .update(JSON.stringify(payload), "utf-8")
     .digest("base64url");
@@ -3720,7 +3816,9 @@ function encodeSteeringToken(
   const probe = isStopHookProbe();
   const loaded = steeringTokenKey(projectDir, !probe);
   const key = probe
-    ? (loaded.error === null ? probeSteeringTokenKey(projectDir) : null)
+    ? loaded.error === null
+      ? probeSteeringTokenKey(projectDir)
+      : null
     : loaded.key;
   if (!key) return { token: null, error: loaded.error };
   const envelope: SteeringTokenEnvelope = {
@@ -3757,10 +3855,7 @@ function decodeSteeringToken(
     if (envelope.probe !== undefined && !probe) return null;
     if (
       probe &&
-      (
-        !("i" in envelope.p) ||
-        (envelope.p as { i?: unknown }).i !== 1
-      )
+      (!("i" in envelope.p) || (envelope.p as { i?: unknown }).i !== 1)
     ) {
       return null;
     }
@@ -4022,10 +4117,7 @@ function transportRunStage(
     directiveHash,
     index + 1,
   );
-  const encoded = encodeSteeringToken(
-    payload,
-    route.codekbCtx.projectDir,
-  );
+  const encoded = encodeSteeringToken(payload, route.codekbCtx.projectDir);
   if (!encoded.token) {
     return errorDirective(
       encoded.error ??
@@ -4094,8 +4186,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // to apply the override first, then invoke the other mode separately.
   if (
     flags.review &&
-    (
-      flags.readOnly ||
+    (flags.readOnly ||
       flags.config ||
       flags.workspaceCommand ||
       flags.compose ||
@@ -4104,22 +4195,33 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       flags.single ||
       flags.stage ||
       flags.phase ||
-      flags.resume
-    )
+      flags.resume)
   ) {
-    emit(errorDirective(
-      "Cannot combine --review with read-only, workspace, compose, single-stage, jump, or resume modes. Apply /aidlc --review <class> first, then run the other command.",
-    ));
+    emit(
+      errorDirective(
+        "Cannot combine --review with read-only, workspace, compose, single-stage, jump, or resume modes. Apply /aidlc --review <class> first, then run the other command.",
+      ),
+    );
     return;
   }
   if (
     flags.ceremony &&
-    (flags.readOnly || flags.config || flags.workspaceCommand || flags.compose ||
-      flags.newScope || flags.report || flags.single || flags.stage || flags.phase || flags.resume)
+    (flags.readOnly ||
+      flags.config ||
+      flags.workspaceCommand ||
+      flags.compose ||
+      flags.newScope ||
+      flags.report ||
+      flags.single ||
+      flags.stage ||
+      flags.phase ||
+      flags.resume)
   ) {
-    emit(errorDirective(
-      "Cannot combine ceremony flags with read-only, workspace, compose, single-stage, jump, or resume modes. Apply the ceremony setting first, then run the other command.",
-    ));
+    emit(
+      errorDirective(
+        "Cannot combine ceremony flags with read-only, workspace, compose, single-stage, jump, or resume modes. Apply the ceremony setting first, then run the other command.",
+      ),
+    );
     return;
   }
 
@@ -4136,10 +4238,12 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     const rhythmArg = flags.claimRhythm
       ? ` --rhythm ${shellArg(flags.claimRhythm)}`
       : "";
-    emit(printDirective(
-      `Run \`bun ${harnessDir()}/tools/aidlc-utility.ts ${verb} ${shellArg(unit)}${teamArg}${rhythmArg}\`, ` +
-        "print its output verbatim, then stop. Re-run /aidlc after the claim registry changes.",
-    ));
+    emit(
+      printDirective(
+        `Run \`bun ${harnessDir()}/tools/aidlc-utility.ts ${verb} ${shellArg(unit)}${teamArg}${rhythmArg}\`, ` +
+          "print its output verbatim, then stop. Re-run /aidlc after the claim registry changes.",
+      ),
+    );
     return;
   }
 
@@ -4156,11 +4260,28 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // swallowed. Inert on Claude/Codex: the latch files are never written there (no
   // seam) → fresh is always false → falls through. Advisory: any failure fails
   // open to the normal `next`.
-  if (!flags.readOnly && !flags.config && !flags.workspaceCommand && !flags.pluginCommand && !flags.knowledgeCommand && !flags.stage && !flags.phase &&
-      !flags.scope && !flags.positionalScope && !flags.intent && !flags.resume &&
-      !flags.depth && !flags.testStrategy && !flags.review &&
-      !flags.single && !flags.compose && !flags.newScope && !flags.report &&
-      !flags.claim && !flags.release) {
+  if (
+    !flags.readOnly &&
+    !flags.config &&
+    !flags.workspaceCommand &&
+    !flags.pluginCommand &&
+    !flags.knowledgeCommand &&
+    !flags.stage &&
+    !flags.phase &&
+    !flags.scope &&
+    !flags.positionalScope &&
+    !flags.intent &&
+    !flags.resume &&
+    !flags.depth &&
+    !flags.testStrategy &&
+    !flags.review &&
+    !flags.single &&
+    !flags.compose &&
+    !flags.newScope &&
+    !flags.report &&
+    !flags.claim &&
+    !flags.release
+  ) {
     try {
       const pdLatch = resolveProjectDir(projectDir);
       const latchPath = join(pdLatch, "aidlc", ".aidlc-readonly-latch");
@@ -4169,15 +4290,24 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       let latchTurn = -2;
       let label = "the read-only command";
       if (existsSync(counterPath)) {
-        const n = Number.parseInt(readFileSync(counterPath, "utf-8").trim(), 10);
+        const n = Number.parseInt(
+          readFileSync(counterPath, "utf-8").trim(),
+          10,
+        );
         if (Number.isFinite(n)) counter = n;
       }
       if (existsSync(latchPath)) {
-        const lr = JSON.parse(readFileSync(latchPath, "utf-8")) as { turn?: number; flag?: string; source?: string };
+        const lr = JSON.parse(readFileSync(latchPath, "utf-8")) as {
+          turn?: number;
+          flag?: string;
+          source?: string;
+        };
         if (typeof lr.turn === "number") latchTurn = lr.turn;
         if (typeof lr.flag === "string") {
           // Read-only flags render with `--`; noun commands render as typed.
-          const nounCommand = lr.source === "workspace-verb" || lr.source === "plugin-verb" ||
+          const nounCommand =
+            lr.source === "workspace-verb" ||
+            lr.source === "plugin-verb" ||
             lr.source === "knowledge-verb";
           label = nounCommand ? `\`${lr.flag}\`` : `--${lr.flag}`;
         }
@@ -4189,7 +4319,9 @@ function handleNext(args: string[], projectDir: string | undefined): void {
         });
         return;
       }
-    } catch { /* advisory: guard is best-effort, never blocks a real next */ }
+    } catch {
+      /* advisory: guard is best-effort, never blocks a real next */
+    }
   }
 
   // Branch 1a - in-session configuration alias. Unlike the read-only utilities,
@@ -4203,10 +4335,14 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     const show = selected
       ? `${invoke} config ${selected} --show --json`
       : `${invoke} config <section> --show --json`;
-    const target = selected ? `the ${selected} section` : "project configuration";
-    emit(printDirective(
-      `Configure ${target} conversationally. Read current state first with \`${show}\`; for a bare request, ask which sections the human wants to consider, and skip any section they leave unchanged. Use the native question picker for enumerable choices. Land each accepted change with exactly one \`${invoke} config <section> <explicit value flags> --yes\` command, relaying the human's answers verbatim as flags; show the exact command and its output. Never invent values, regions, or plugin names, and never run bare \`${invoke} config --yes\`. After the changes land, or after the human declines, STOP: do NOT run \`next\`, advance, resume, or run any workflow stage.`,
-    ));
+    const target = selected
+      ? `the ${selected} section`
+      : "project configuration";
+    emit(
+      printDirective(
+        `Configure ${target} conversationally. Read current state first with \`${show}\`; for a bare request, ask which sections the human wants to consider, and skip any section they leave unchanged. Use the native question picker for enumerable choices. Land each accepted change with exactly one \`${invoke} config <section> <explicit value flags> --yes\` command, relaying the human's answers verbatim as flags; show the exact command and its output. Never invent values, regions, or plugin names, and never run bare \`${invoke} config --yes\`. After the changes land, or after the human declines, STOP: do NOT run \`next\`, advance, resume, or run any workflow stage.`,
+      ),
+    );
     return;
   }
 
@@ -4230,17 +4366,21 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     // (`--doctor [--verbose] [--export] [--output <dir>]`)
     // into the named command so the documented export surface reaches the tool
     // through the real routing path, not just a direct invocation.
-    const extra = flags.readOnlyArgs && flags.readOnlyArgs.length > 0
-      ? ` ${flags.readOnlyArgs.join(" ")}`
-      : "";
-    const command = sub === "status"
-      ? aidlcDispatcherInvocation("status")
-      : sub === "help"
-      ? aidlcDispatcherInvocation("orchestrate help")
-      : `${aidlcInvocation()} ${sub}`;
-    emit(printDirective(
-      `Run \`${command}${extra}\`, print its output verbatim, then stop. This is a read-only utility, NOT workflow work: do NOT run \`next\` and do NOT advance, resume, or run any workflow stage.`,
-    ));
+    const extra =
+      flags.readOnlyArgs && flags.readOnlyArgs.length > 0
+        ? ` ${flags.readOnlyArgs.join(" ")}`
+        : "";
+    const command =
+      sub === "status"
+        ? aidlcDispatcherInvocation("status")
+        : sub === "help"
+          ? aidlcDispatcherInvocation("orchestrate help")
+          : `${aidlcInvocation()} ${sub}`;
+    emit(
+      printDirective(
+        `Run \`${command}${extra}\`, print its output verbatim, then stop. This is a read-only utility, NOT workflow work: do NOT run \`next\` and do NOT advance, resume, or run any workflow stage.`,
+      ),
+    );
     return;
   }
 
@@ -4266,19 +4406,22 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       return;
     }
     const [verb, ...tail] = argv;
-    const route = verb === "intent-create"
-      ? "intent create"
-      : verb === "space-create"
-      ? "space create"
-      : verb === "intent"
-      ? `intent ${tail[0] && !tail[0].startsWith("--") ? tail.shift() : "list"}`
-      : verb === "space"
-      ? `space ${tail[0] && !tail[0].startsWith("--") ? tail.shift() : "list"}`
-      : verb;
+    const route =
+      verb === "intent-create"
+        ? "intent create"
+        : verb === "space-create"
+          ? "space create"
+          : verb === "intent"
+            ? `intent ${tail[0] && !tail[0].startsWith("--") ? tail.shift() : "list"}`
+            : verb === "space"
+              ? `space ${tail[0] && !tail[0].startsWith("--") ? tail.shift() : "list"}`
+              : verb;
     const suffix = tail.length > 0 ? ` ${tail.map(shellArg).join(" ")}` : "";
-    emit(printDirective(
-      `Run \`${aidlcDispatcherInvocation(route)}${suffix}\`, print its output verbatim, then stop.`,
-    ));
+    emit(
+      printDirective(
+        `Run \`${aidlcDispatcherInvocation(route)}${suffix}\`, print its output verbatim, then stop.`,
+      ),
+    );
     return;
   }
 
@@ -4293,11 +4436,14 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     }
     const argv = command.kind === "help" ? ["help"] : command.argv;
     const [verb, ...tail] = argv;
-    const routeVerb = verb === "select-plugins" ? "select" : verb.replace(/^plugin-/, "");
+    const routeVerb =
+      verb === "select-plugins" ? "select" : verb.replace(/^plugin-/, "");
     const suffix = tail.length > 0 ? ` ${tail.map(shellArg).join(" ")}` : "";
-    emit(printDirective(
-      `Run \`${aidlcDispatcherInvocation(`plugin ${routeVerb}`)}${suffix}\`, print its output verbatim, then stop. This is a terminal utility, NOT workflow work: do NOT run \`next\` and do NOT advance, resume, or run any workflow stage.`,
-    ));
+    emit(
+      printDirective(
+        `Run \`${aidlcDispatcherInvocation(`plugin ${routeVerb}`)}${suffix}\`, print its output verbatim, then stop. This is a terminal utility, NOT workflow work: do NOT run \`next\` and do NOT advance, resume, or run any workflow stage.`,
+      ),
+    );
     return;
   }
 
@@ -4314,9 +4460,11 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     const argv = command.kind === "help" ? ["help"] : command.argv;
     const [verb, ...tail] = argv;
     const suffix = tail.length > 0 ? ` ${tail.map(shellArg).join(" ")}` : "";
-    emit(printDirective(
-      `Run \`bun ${harnessDir()}/tools/aidlc-knowledge.ts ${verb}${suffix}\`, print its output verbatim, then stop. This is a terminal utility, NOT workflow work: do NOT run \`next\` and do NOT advance, resume, or run any workflow stage.`,
-    ));
+    emit(
+      printDirective(
+        `Run \`bun ${harnessDir()}/tools/aidlc-knowledge.ts ${verb}${suffix}\`, print its output verbatim, then stop. This is a terminal utility, NOT workflow work: do NOT run \`next\` and do NOT advance, resume, or run any workflow stage.`,
+      ),
+    );
     return;
   }
 
@@ -4324,9 +4472,11 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // message is VERBATIM from SKILL.md:120 so the prose and the engine emit the
   // same user-facing text.
   if (flags.stage && flags.phase) {
-    emit(errorDirective(
-      "Cannot use --stage and --phase together. Use one or the other.",
-    ));
+    emit(
+      errorDirective(
+        "Cannot use --stage and --phase together. Use one or the other.",
+      ),
+    );
     return;
   }
 
@@ -4383,9 +4533,11 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       : null;
 
   if (unitScope && (flags.stage || flags.phase)) {
-    emit(errorDirective(
-      `This checkout is scoped to Unit "${unitScope.unit}"; explicit stage/phase jumps are refused in a scoped Unit checkout.`,
-    ));
+    emit(
+      errorDirective(
+        `This checkout is scoped to Unit "${unitScope.unit}"; explicit stage/phase jumps are refused in a scoped Unit checkout.`,
+      ),
+    );
     return;
   }
 
@@ -4396,10 +4548,12 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     !flags.phase &&
     existsSync(unitParkedPath(pd))
   ) {
-    emit(parkedDirective(
-      `Unit "${unitScope.unit}" is parked in this checkout. Resume with /aidlc --resume.`,
-      getField(stateContent!, "Current Stage") ?? "functional-design",
-    ));
+    emit(
+      parkedDirective(
+        `Unit "${unitScope.unit}" is parked in this checkout. Resume with /aidlc --resume.`,
+        getField(stateContent!, "Current Stage") ?? "functional-design",
+      ),
+    );
     return;
   }
   if (
@@ -4409,9 +4563,11 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     !flags.phase &&
     existsSync(unitParkedPath(pd))
   ) {
-    emit(printDirective(
-      `Run \`bun ${harnessDir()}/tools/aidlc-state.ts unpark\` to clear this checkout's Unit park marker, then re-run \`next --resume\`.`,
-    ));
+    emit(
+      printDirective(
+        `Run \`bun ${harnessDir()}/tools/aidlc-state.ts unpark\` to clear this checkout's Unit park marker, then re-run \`next --resume\`.`,
+      ),
+    );
     return;
   }
 
@@ -4441,10 +4597,12 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     const parkedAt = (getField(stateContent, "Parked At Stage") ?? "").trim();
     const currentSlug = (getField(stateContent, "Current Stage") ?? "").trim();
     if (parkedAt.length > 0 && parkedAt === currentSlug) {
-      emit(parkedDirective(
-        `Workflow parked at "${parkedAt}". Resume with /aidlc --resume.`,
-        parkedAt,
-      ));
+      emit(
+        parkedDirective(
+          `Workflow parked at "${parkedAt}". Resume with /aidlc --resume.`,
+          parkedAt,
+        ),
+      );
       return;
     }
   }
@@ -4463,10 +4621,12 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     !flags.phase &&
     (getField(stateContent, "Parked") ?? "").trim().length > 0
   ) {
-    emit(printDirective(
-      `This workflow is parked. Run \`${aidlcToolInvocation("state")} unpark\` ` +
-        "to clear the park marker, then re-run `next --resume` to continue.",
-    ));
+    emit(
+      printDirective(
+        `This workflow is parked. Run \`${aidlcToolInvocation("state")} unpark\` ` +
+          "to clear the park marker, then re-run `next --resume` to continue.",
+      ),
+    );
     return;
   }
 
@@ -4478,7 +4638,11 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // scope-confirm `ask` first. No `--init`/`--force` flag reaches the engine.)
 
   // Resolve scope by the precedence ladder before any graph lookup.
-  const { scope, source, error: scopeResolutionError } = resolveScope(stateContent, flags);
+  const {
+    scope,
+    source,
+    error: scopeResolutionError,
+  } = resolveScope(stateContent, flags);
 
   // Branch 3b — UNCONDITIONAL --scope validation. An explicit `--scope` flag is
   // validated even when state supplies a valid scope that wins the precedence
@@ -4492,9 +4656,9 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // no-op that falls through to the happy path.
   if (flags.scope && !validScopes().has(flags.scope)) {
     const valid = [...validScopes()].join(", ");
-    emit(errorDirective(
-      `Unknown scope "${flags.scope}". Valid scopes: ${valid}.`,
-    ));
+    emit(
+      errorDirective(`Unknown scope "${flags.scope}". Valid scopes: ${valid}.`),
+    );
     return;
   }
 
@@ -4542,9 +4706,11 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // path swallows a compose request.
   if (flags.compose || flags.newScope || flags.report) {
     if (flags.stage || flags.phase) {
-      emit(errorDirective(
-        "Cannot combine compose with --stage/--phase. Compose re-shapes the plan; jump moves the cursor. Run them separately.",
-      ));
+      emit(
+        errorDirective(
+          "Cannot combine compose with --stage/--phase. Compose re-shapes the plan; jump moves the cursor. Run them separately.",
+        ),
+      );
       return;
     }
     emit(composeDispatchDirective(flags, stateContent !== null));
@@ -4570,9 +4736,11 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   if (flags.newIntent) {
     const description = flags.intent?.trim();
     if (!description) {
-      emit(errorDirective(
-        "`next --new-intent` requires a nonblank new-work description after the confirmed scope.",
-      ));
+      emit(
+        errorDirective(
+          "`next --new-intent` requires a nonblank new-work description after the confirmed scope.",
+        ),
+      );
       return;
     }
     // Use the EXPLICIT --scope, not the precedence-ladder `scope` (which lets the
@@ -4609,15 +4777,19 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     if (flags.phase) {
       // A single run targets ONE stage; --phase is a range, so the two are
       // mutually exclusive (mirrors the --stage/--phase guard above).
-      emit(errorDirective(
-        "Cannot use --single with --phase. --single runs one stage; pass --stage <slug>.",
-      ));
+      emit(
+        errorDirective(
+          "Cannot use --single with --phase. --single runs one stage; pass --stage <slug>.",
+        ),
+      );
       return;
     }
     if (!flags.stage) {
-      emit(errorDirective(
-        "--single requires --stage <slug>. A stage-runner runs exactly one named stage.",
-      ));
+      emit(
+        errorDirective(
+          "--single requires --stage <slug>. A stage-runner runs exactly one named stage.",
+        ),
+      );
       return;
     }
     emitSingleRunStage(
@@ -4638,12 +4810,16 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   if (stateContent && !flags.stage && !flags.phase) {
     const modifiers: string[] = [];
     if (flags.depth) modifiers.push(`depth ${flags.depth}`);
-    if (flags.testStrategy) modifiers.push(`test-strategy ${flags.testStrategy}`);
+    if (flags.testStrategy)
+      modifiers.push(`test-strategy ${flags.testStrategy}`);
     if (flags.review) modifiers.push(`review ${flags.review}`);
-    if (flags.changeControl) modifiers.push(`change-control ${flags.changeControl}`);
+    if (flags.changeControl)
+      modifiers.push(`change-control ${flags.changeControl}`);
     for (const key of CEREMONY_KEYS) {
       if (flags.ceremony?.[key]) {
-        modifiers.push(`${CEREMONY_FLAGS[key].slice(2)} ${flags.ceremony[key]}`);
+        modifiers.push(
+          `${CEREMONY_FLAGS[key].slice(2)} ${flags.ceremony[key]}`,
+        );
       }
     }
     // A scope-change requires a VALID --scope that DIFFERS from the active
@@ -4657,19 +4833,24 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     ) {
       const parts = [`--scope ${flags.scope}`];
       for (const modifier of modifiers) parts.push(`--${modifier}`);
-      emit(printDirective(
-        `Run \`${aidlcDispatcherInvocation("scope change")} ${parts.join(" ")}\` to change scope, then print its output verbatim and stop.`,
-      ));
+      emit(
+        printDirective(
+          `Run \`${aidlcDispatcherInvocation("scope change")} ${parts.join(" ")}\` to change scope, then print its output verbatim and stop.`,
+        ),
+      );
       return;
     }
     // Every setting belongs to one atomic config-change, including a
     // same-as-current --scope: no sibling modifier may be silently discarded.
     if (modifiers.length > 0) {
       const command = [aidlcDispatcherInvocation(`config set ${modifiers[0]}`)];
-      for (let i = 1; i < modifiers.length; i++) command.push(`--${modifiers[i]}`);
-      emit(printDirective(
-        `Run \`${command.join(" ")}\` to update the configuration, then print its output verbatim and stop.`,
-      ));
+      for (let i = 1; i < modifiers.length; i++)
+        command.push(`--${modifiers[i]}`);
+      emit(
+        printDirective(
+          `Run \`${command.join(" ")}\` to update the configuration, then print its output verbatim and stop.`,
+        ),
+      );
       return;
     }
   }
@@ -4695,12 +4876,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // flags.intent. Create an intent with the positional scope and preserve that prose as the
   // intent-create --arguments value. An explicit --scope outranks this branch
   // and reaches Branch 9a; a no-state --resume never creates.
-  if (
-    !stateContent &&
-    flags.positionalScope &&
-    !flags.scope &&
-    !flags.resume
-  ) {
+  if (!stateContent && flags.positionalScope && !flags.scope && !flags.resume) {
     // Don't create a duplicate over a multi-intent workspace whose cursor is
     // unset (fresh clone) — prompt the human to pick an existing intent. null →
     // zero intents → creation as before.
@@ -4740,12 +4916,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   //     COMPOSE OFFER, never a silent default. The conductor renders
   //     it; on "compose" it re-runs `next compose "<text>"` to reach the
   //     Branch 4c dispatch.
-  if (
-    !stateContent &&
-    flags.intent &&
-    !flags.scope &&
-    !flags.positionalScope
-  ) {
+  if (!stateContent && flags.intent && !flags.scope && !flags.positionalScope) {
     const inferred = inferScopeFromText(flags.intent);
     if (isKiroRoutingHarness()) {
       const pick = intentPickPromptIfRecordsExist(pd, {
@@ -4763,10 +4934,12 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       // resolve (a fixture tree without it) rather than emit a broken preview.
       const clause = costClause(inferred.scope, pd, flags.ceremony);
       const cost = clause ? ` - ${clause}` : "";
-      emit(askDirective(
-        `This looks like "${inferred.scope}" work, so I'd run the "${inferred.scope}" plan for: "${flags.intent}"${cost}. ` +
-          "Say go ahead, name a different plan, or say \"compose\" and I'll tailor one to this task.",
-      ));
+      emit(
+        askDirective(
+          `This looks like "${inferred.scope}" work, so I'd run the "${inferred.scope}" plan for: "${flags.intent}"${cost}. ` +
+            'Say go ahead, name a different plan, or say "compose" and I\'ll tailor one to this task.',
+        ),
+      );
       return;
     }
     // Anchor the compose offer with the counts for the three named scopes so the
@@ -4775,15 +4948,19 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     const express = effectiveScopeCostSummary("express", pd);
     const classic = effectiveScopeCostSummary("classic", pd);
     const feat = effectiveScopeCostSummary("feature", pd);
-    const fallbackExamples = [...validScopes()].slice(0, 3).join(", ") || "an explicit scope";
-    const examples = express && classic && feat
-      ? `express = ${express.execute} of ${express.total} stages, classic = ${classic.execute}, feature = all ${feat.execute}`
-      : fallbackExamples;
-    emit(askDirective(
-      `None of the ready-made plans is an obvious fit for: "${flags.intent}". ` +
-        "I can work out a plan tailored to this task (recommended: reply \"compose\"), " +
-        `or you can pick one directly (e.g. ${examples}; see /aidlc --help for the full list).`,
-    ));
+    const fallbackExamples =
+      [...validScopes()].slice(0, 3).join(", ") || "an explicit scope";
+    const examples =
+      express && classic && feat
+        ? `express = ${express.execute} of ${express.total} stages, classic = ${classic.execute}, feature = all ${feat.execute}`
+        : fallbackExamples;
+    emit(
+      askDirective(
+        `None of the ready-made plans is an obvious fit for: "${flags.intent}". ` +
+          'I can work out a plan tailored to this task (recommended: reply "compose"), ' +
+          `or you can pick one directly (e.g. ${examples}; see /aidlc --help for the full list).`,
+      ),
+    );
     return;
   }
 
@@ -4831,11 +5008,13 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // just typed `/aidlc <scope>` to type exactly that — circular now that a
   // named scope creates).
   if (!stateContent) {
-    emit(errorDirective(
-      "No workflow state found (no active intent). " +
-        "Start one by describing what to build (/aidlc \"build the auth service\") " +
-        "or by naming a scope (/aidlc --scope <scope>).",
-    ));
+    emit(
+      errorDirective(
+        "No workflow state found (no active intent). " +
+          'Start one by describing what to build (/aidlc "build the auth service") ' +
+          "or by naming a scope (/aidlc --scope <scope>).",
+      ),
+    );
     return;
   }
 
@@ -4872,27 +5051,26 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     // inferScopeFromText always returns a deterministic scope, including its
     // selection-aware fallback for rich prose.
     const inferred = inferScopeFromText(flags.intent);
-    emit(newWorkRoutingAskDirective(
-      `Work is already in progress on: "${activeLabel}". You said: "${flags.intent}". ` +
-        `Is this (1) part of that work - continue it; (2) a separate new piece of work - ` +
-        `Yes, set it up alongside the current one as "${inferred.scope}" work without changing it; ` +
-        "or (3) a change to how the remaining plan is shaped?",
-      `**New work routing** — Work is already in progress on: "${activeLabel}". You said: "${flags.intent}". What should I do?\n\n` +
-        "1. **Part of the active work** — Continue the current workflow\n" +
-        `2. **Separate new piece of work** — Yes, set it up alongside the current one as "${inferred.scope}" work without changing it\n` +
-        "3. **Reshape the active work** — Change how the remaining plan is shaped\n" +
-        "4. **Other** — describe what you want instead\n\n" +
-        "Reply with a number (or just tell me).",
-      flags.intent,
-      inferred.scope,
-    ));
+    emit(
+      newWorkRoutingAskDirective(
+        `Work is already in progress on: "${activeLabel}". You said: "${flags.intent}". ` +
+          `Is this (1) part of that work - continue it; (2) a separate new piece of work - ` +
+          `Yes, set it up alongside the current one as "${inferred.scope}" work without changing it; ` +
+          "or (3) a change to how the remaining plan is shaped?",
+        `**New work routing** — Work is already in progress on: "${activeLabel}". You said: "${flags.intent}". What should I do?\n\n` +
+          "1. **Part of the active work** — Continue the current workflow\n" +
+          `2. **Separate new piece of work** — Yes, set it up alongside the current one as "${inferred.scope}" work without changing it\n` +
+          "3. **Reshape the active work** — Change how the remaining plan is shaped\n" +
+          "4. **Other** — describe what you want instead\n\n" +
+          "Reply with a number (or just tell me).",
+        flags.intent,
+        inferred.scope,
+      ),
+    );
     return;
   }
 
-  if (
-    stateContent &&
-    isTeamUnitOwnership(stateContent)
-  ) {
+  if (stateContent && isTeamUnitOwnership(stateContent)) {
     if (unitScope) {
       try {
         validateLiveUnitScope(pd, unitScope.unit);
@@ -4926,20 +5104,25 @@ function handleNext(args: string[], projectDir: string | undefined): void {
           overview,
         });
         if (board.fanoutActive) {
-          emit(noticeDirective(
-            renderTeamConstructionBoard(board, "dispatcher"),
-          ));
+          emit(
+            noticeDirective(renderTeamConstructionBoard(board, "dispatcher")),
+          );
           return;
         }
       } catch (e) {
-        if (errorMessage(e) === "claimless-team-mode" || !existsSync(join(pd, ".git"))) {
+        if (
+          errorMessage(e) === "claimless-team-mode" ||
+          !existsSync(join(pd, ".git"))
+        ) {
           // Non-git deterministic fixtures and exact claim-less increment-1
           // projects retain the existing single-checkout team walk.
         } else {
-          emit(noticeDirective(
-            `Team Construction dispatcher could not compose its local board: ${errorMessage(e)} ` +
-              "Refusing to route Unit work until the local state, DAG, claims, and merge journals are consistent.",
-          ));
+          emit(
+            noticeDirective(
+              `Team Construction dispatcher could not compose its local board: ${errorMessage(e)} ` +
+                "Refusing to route Unit work until the local state, DAG, claims, and merge journals are consistent.",
+            ),
+          );
           return;
         }
       }
@@ -4950,9 +5133,11 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // it to the stage to run next.
   const currentSlug = getField(stateContent, "Current Stage");
   if (!currentSlug || currentSlug.length === 0) {
-    emit(errorDirective(
-      "State file has no Current Stage field — cannot determine the next stage.",
-    ));
+    emit(
+      errorDirective(
+        "State file has no Current Stage field — cannot determine the next stage.",
+      ),
+    );
     return;
   }
 
@@ -4986,25 +5171,31 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       currentNode?.phase === "construction" &&
       isPerUnit(currentNode)
     ) {
-      emit(errorDirective(
-        `Unit Ownership: team cannot route current stage "${currentSlug}": it is not in the active unskipped per-unit Construction block.`,
-      ));
+      emit(
+        errorDirective(
+          `Unit Ownership: team cannot route current stage "${currentSlug}": it is not in the active unskipped per-unit Construction block.`,
+        ),
+      );
       return;
     }
     if (currentState !== "in-progress" && currentState !== "revising") {
-      emit(errorDirective(
-        `Stage "${currentSlug}" is SKIP in the approved workflow plan but its active cursor state is ` +
-          `"${currentState ?? "missing"}". Refusing to emit run-stage; repair the inconsistent state before continuing.`,
-      ));
+      emit(
+        errorDirective(
+          `Stage "${currentSlug}" is SKIP in the approved workflow plan but its active cursor state is ` +
+            `"${currentState ?? "missing"}". Refusing to emit run-stage; repair the inconsistent state before continuing.`,
+        ),
+      );
       return;
     }
     const reason = "stage is SKIP in the approved workflow plan";
-    emit(printDirective(
-      `Stage "${currentSlug}" is SKIP in the approved workflow plan but is still the active cursor. ` +
-        `Do not run this stage. Run \`bun ${harnessDir()}/tools/aidlc-orchestrate.ts report ` +
-        `--stage ${shellArg(currentSlug)} --result skipped --reason ${shellArg(reason)}\` ` +
-        "to recover the stale pointer, then re-run `next` to continue.",
-    ));
+    emit(
+      printDirective(
+        `Stage "${currentSlug}" is SKIP in the approved workflow plan but is still the active cursor. ` +
+          `Do not run this stage. Run \`bun ${harnessDir()}/tools/aidlc-orchestrate.ts report ` +
+          `--stage ${shellArg(currentSlug)} --result skipped --reason ${shellArg(reason)}\` ` +
+          "to recover the stale pointer, then re-run `next` to continue.",
+      ),
+    );
     return;
   }
 
@@ -5012,12 +5203,9 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     if (currentState === "awaiting-approval") {
       const currentNode = nodeForSlug(currentSlug);
       if (currentNode !== undefined) {
-        const preflight = preflightDirective(
-          pd,
-          stateContent,
-          currentNode,
-          { action: "present-approval-gate" },
-        );
+        const preflight = preflightDirective(pd, stateContent, currentNode, {
+          action: "present-approval-gate",
+        });
         if (preflight !== null) {
           emit(preflight);
           return;
@@ -5033,8 +5221,26 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     // (one unit per `next`, gate suppressed on every uncovered unit with the real
     // gate only on the all-covered re-entry; issue #368) and emits a single
     // directive for every other stage.
-    if (!tryEmitSwarm(currentSlug, scope, stateContent, pd, projectType, recordPrefix, codekbCtx)) {
-      emitForSlug(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
+    if (
+      !tryEmitSwarm(
+        currentSlug,
+        scope,
+        stateContent,
+        pd,
+        projectType,
+        recordPrefix,
+        codekbCtx,
+      )
+    ) {
+      emitForSlug(
+        currentSlug,
+        projectType,
+        scope,
+        stateContent,
+        recordPrefix,
+        codekbCtx,
+        pd,
+      );
     }
     return;
   }
@@ -5054,7 +5260,8 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       // The genuine end of the work. The other `done` emissions in this file are
       // loop bookkeeping (a report landed, a read-only command already ran) and
       // stay silent: the user did not ask about the round-trip.
-      narration: "That is everything on the plan. Your work is finished and written up.",
+      narration:
+        "That is everything on the plan. Your work is finished and written up.",
     });
     return;
   }
@@ -5063,8 +5270,26 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // swarm path, emitForSlug drives the engine's per-unit for_each loop for a
   // per-unit Construction stage (issue #368) and emits a single directive
   // otherwise.
-  if (!tryEmitSwarm(next.slug, scope, stateContent, pd, projectType, recordPrefix, codekbCtx)) {
-    emitForSlug(next.slug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
+  if (
+    !tryEmitSwarm(
+      next.slug,
+      scope,
+      stateContent,
+      pd,
+      projectType,
+      recordPrefix,
+      codekbCtx,
+    )
+  ) {
+    emitForSlug(
+      next.slug,
+      projectType,
+      scope,
+      stateContent,
+      recordPrefix,
+      codekbCtx,
+      pd,
+    );
   }
 }
 
@@ -5116,7 +5341,8 @@ function isAutonomousSwarmCandidate(
   stateContent: string | null,
 ): boolean {
   if (node.phase !== "construction") return false;
-  if (node.for_each !== SWARM_FOR_EACH || node.mode !== SWARM_MODE) return false;
+  if (node.for_each !== SWARM_FOR_EACH || node.mode !== SWARM_MODE)
+    return false;
   if (usesStageLevelPerUnitArtifacts(scope, stateContent)) return false;
   if (isSkeletonGateStage(node, scope)) return false;
   if (readAutonomyMode(stateContent) !== "autonomous") return false;
@@ -5165,7 +5391,8 @@ function applySettledSwarmShape(
   delete directive.review_class;
   delete directive.reviewer_max_iterations;
   directive.protocol_modules = ["construction", "swarm"];
-  if (directive.ceremony.learnings === "on") directive.protocol_modules.push("learnings");
+  if (directive.ceremony.learnings === "on")
+    directive.protocol_modules.push("learnings");
   directive.swarm_settled = true;
   return directive;
 }
@@ -5227,7 +5454,12 @@ function tryEmitSwarm(
 ): boolean {
   const node = nodeForSlug(slug);
   if (!node) return false;
-  const batches = eligibleAutonomousSwarmBatches(node, scope, stateContent, projectDir);
+  const batches = eligibleAutonomousSwarmBatches(
+    node,
+    scope,
+    stateContent,
+    projectDir,
+  );
   if (batches === null) return false;
 
   // Select the first topological batch with an unconverged unit; emit only that
@@ -5257,20 +5489,24 @@ function tryEmitSwarm(
     if (flatUnits.length === 0) return false;
     const lastUnit = flatUnits[flatUnits.length - 1];
     const directive = buildRunStageDirective(
-      node, projectType, lastUnit, scope, stateContent, recordPrefix, codekbCtx,
+      node,
+      projectType,
+      lastUnit,
+      scope,
+      stateContent,
+      recordPrefix,
+      codekbCtx,
     );
     directive.unit = lastUnit;
     // Gate-only resume surface: every Unit body and reviewer already converged
     // inside the swarm. Keep that fact explicit across fresh sessions and remove
     // the ordinary body/reviewer modules so settlement cannot repeat work.
-    const preflight = stateContent === null
-      ? null
-      : preflightDirective(
-          projectDir,
-          stateContent,
-          node,
-          { action: "present-approval-gate" },
-        );
+    const preflight =
+      stateContent === null
+        ? null
+        : preflightDirective(projectDir, stateContent, node, {
+            action: "present-approval-gate",
+          });
     if (preflight !== null) {
       emit(preflight);
       return true;
@@ -5310,7 +5546,7 @@ function tryEmitSwarm(
         reviewer_max_iterations:
           declaredReviewClass === "advisory"
             ? 1
-            : node.reviewer_max_iterations ?? 2,
+            : (node.reviewer_max_iterations ?? 2),
       }
     : {};
   const protocolModules: ProtocolModule[] = [
@@ -5369,7 +5605,17 @@ function emitRunStageForSlug(
     });
     return;
   }
-  emit(buildRunStageDirective(node, projectType, UNIT_NAME_PLACEHOLDER, scope, stateContent, recordPrefix, codekbCtx));
+  emit(
+    buildRunStageDirective(
+      node,
+      projectType,
+      UNIT_NAME_PLACEHOLDER,
+      scope,
+      stateContent,
+      recordPrefix,
+      codekbCtx,
+    ),
+  );
 }
 
 // --- Per-unit iteration (issue #368): the engine drives the for_each loop ---
@@ -5482,7 +5728,8 @@ function unitSettled(
   unitKind: string | null,
   ledger: UnitLedger,
 ): boolean {
-  if (!unitCovered(projectDir, node, unit, recordPrefix, codekbCtx, unitKind)) return false;
+  if (!unitCovered(projectDir, node, unit, recordPrefix, codekbCtx, unitKind))
+    return false;
   if (!ledger.inUse) return true;
   if (kindVacuous(node, unitKind)) {
     return true; // vacuous for this kind — no directive, no receipt to earn
@@ -5590,7 +5837,12 @@ function summaryRefusalForRouting(
     unit,
     summaryCoverage: confirmation.summaryCoverage,
   });
-  const teamGate = teamUnitGateStatus(projectDir, stateContent, stage.slug, unit);
+  const teamGate = teamUnitGateStatus(
+    projectDir,
+    stateContent,
+    stage.slug,
+    unit,
+  );
   const evaluated = evaluateGuardRefusal({
     code: attached.code,
     blockedAction: "review-request",
@@ -5654,22 +5906,9 @@ function waveEntry(
     unit_memory_path: unitMemoryPathFor(node.slug, unit, recordPrefix),
     consumes: present,
     consumes_absent: absent,
-    produces: resolveProduces(
-      node,
-      unit,
-      recordPrefix,
-      codekbCtx,
-      unitKind,
-    ),
+    produces: resolveProduces(node, unit, recordPrefix, codekbCtx, unitKind),
     required_produces: applicableProduceNames(node, unitKind, false).map(
-      (name) =>
-        resolveArtifactPath(
-          name,
-          node,
-          unit,
-          recordPrefix,
-          codekbCtx,
-        ),
+      (name) => resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx),
     ),
   };
   return entry;
@@ -5731,17 +5970,26 @@ function activePerUnitWave(
   codekbCtx: CodekbCtx,
 ): ActiveWave {
   const reviewClass = node.reviewer
-    ? resolveReviewClass(node.review_class ?? "adversarial", scope, stateContent)
+    ? resolveReviewClass(
+        node.review_class ?? "adversarial",
+        scope,
+        stateContent,
+      )
     : "none";
-  const reviewProgress = reviewClass !== "none"
-    ? freshReviewReceipts(projectDir, stateContent ?? "", node, {
-        boltDag: resolution,
-        reviewClass,
-      })
-    : null;
+  const reviewProgress =
+    reviewClass !== "none"
+      ? freshReviewReceipts(projectDir, stateContent ?? "", node, {
+          boltDag: resolution,
+          reviewClass,
+        })
+      : null;
   const ledger = unitLedgerFor(projectDir, node.slug);
 
-  for (let batchIndex = 0; batchIndex < resolution.batches.length; batchIndex++) {
+  for (
+    let batchIndex = 0;
+    batchIndex < resolution.batches.length;
+    batchIndex++
+  ) {
     const batch = resolution.batches[batchIndex];
     const entries: RunStageWaveEntry[] = [];
     let firstPendingIndex = -1;
@@ -5760,10 +6008,14 @@ function activePerUnitWave(
         unitKind,
       );
       if (covered) {
-        const confirmation = checkSummaryConfirmationEvidence(projectDir, node, {
-          stateContent,
-          unit,
-        });
+        const confirmation = checkSummaryConfirmationEvidence(
+          projectDir,
+          node,
+          {
+            stateContent,
+            unit,
+          },
+        );
         if (!confirmation.ok) {
           const refusal = summaryRefusalForRouting(
             projectDir,
@@ -5784,20 +6036,22 @@ function activePerUnitWave(
       const terminalVerdict = reviewProgress?.unitVerdicts.get(unit);
       const pendingReview = reviewProgress?.unitPending.get(unit);
       const staleReview = reviewProgress?.unitStaleProgress.get(unit);
-      const reviewState: RunStageWaveEntry["review_state"] = reviewClass === "none"
-        ? "not-required"
-        : terminalVerdict ??
-          pendingReview?.state ??
-          (staleReview
-            ? staleReview.recoverySpent
-              ? "escalation-required"
-              : "recovery-required"
-            : "outstanding");
-      const reviewIteration = reviewClass === "none"
-        ? null
-        : terminalVerdict
-          ? (reviewProgress?.unitIterations.get(unit) ?? null)
-          : (pendingReview?.iteration ?? staleReview?.nextIteration ?? 1);
+      const reviewState: RunStageWaveEntry["review_state"] =
+        reviewClass === "none"
+          ? "not-required"
+          : (terminalVerdict ??
+            pendingReview?.state ??
+            (staleReview
+              ? staleReview.recoverySpent
+                ? "escalation-required"
+                : "recovery-required"
+              : "outstanding"));
+      const reviewIteration =
+        reviewClass === "none"
+          ? null
+          : terminalVerdict
+            ? (reviewProgress?.unitIterations.get(unit) ?? null)
+            : (pendingReview?.iteration ?? staleReview?.nextIteration ?? 1);
       if (staleReview?.recoverySpent === true) {
         const teamGate = teamUnitGateStatus(
           projectDir,
@@ -5819,10 +6073,15 @@ function activePerUnitWave(
         } catch {
           guidance = `Restart this stage with /aidlc --stage ${node.slug}.`;
         }
-        const snapshot = guardAttemptState(projectDir, stateContent ?? "", node, {
-          unit,
-          ...(reviewProgress ? { receipts: reviewProgress } : {}),
-        });
+        const snapshot = guardAttemptState(
+          projectDir,
+          stateContent ?? "",
+          node,
+          {
+            unit,
+            ...(reviewProgress ? { receipts: reviewProgress } : {}),
+          },
+        );
         return {
           state: "refusal",
           refusal: {
@@ -5953,7 +6212,14 @@ function emitPerUnitRunStage(
     isSkeletonGateStage(node, scope) &&
     readSkeletonStance(stateContent) === null
   ) {
-    emitRunStageForSlug(node.slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
+    emitRunStageForSlug(
+      node.slug,
+      projectType,
+      scope,
+      stateContent,
+      recordPrefix,
+      codekbCtx,
+    );
     return;
   }
 
@@ -5971,8 +6237,7 @@ function emitPerUnitRunStage(
     case "malformed":
       emit({
         kind: "error",
-        message:
-          `Cannot iterate units for stage "${node.slug}": inception/units-generation/unit-of-work-dependency.md is authoritative for the unit set and is ${r.reason} (${r.detail}). Fix the fenced units block in that artifact, then run next again.`,
+        message: `Cannot iterate units for stage "${node.slug}": inception/units-generation/unit-of-work-dependency.md is authoritative for the unit set and is ${r.reason} (${r.detail}). Fix the fenced units block in that artifact, then run next again.`,
       });
       return;
     case "ok":
@@ -5986,14 +6251,16 @@ function emitPerUnitRunStage(
   // wave has no single active Unit; every entry settles with `complete --wave`.
   if (ledger.checkpoint?.state === "paused") {
     const cp = ledger.checkpoint;
-    emit(askDirective(
-      `Unit "${cp.unit}" of stage "${node.slug}" is PAUSED (unit_state: paused)` +
-        `${cp.reason ? ` — reason: ${cp.reason}` : ""}.` +
-        `${cp.nextAction ? ` Recorded next action: ${cp.nextAction}.` : ""} ` +
-        `Do not start other work. Resume this unit (bun ${harnessDir()}/tools/aidlc-state.ts unit resume ` +
-        `--stage ${node.slug} --unit ${cp.unit}) and continue from the recorded next action, or ask ` +
-        "the human how to proceed. STOP until the unit is explicitly resumed.",
-    ));
+    emit(
+      askDirective(
+        `Unit "${cp.unit}" of stage "${node.slug}" is PAUSED (unit_state: paused)` +
+          `${cp.reason ? ` — reason: ${cp.reason}` : ""}.` +
+          `${cp.nextAction ? ` Recorded next action: ${cp.nextAction}.` : ""} ` +
+          `Do not start other work. Resume this unit (bun ${harnessDir()}/tools/aidlc-state.ts unit resume ` +
+          `--stage ${node.slug} --unit ${cp.unit}) and continue from the recorded next action, or ask ` +
+          "the human how to proceed. STOP until the unit is explicitly resumed.",
+      ),
+    );
     return;
   }
 
@@ -6074,17 +6341,20 @@ function emitPerUnitRunStage(
     // everything is covered again.
     const lastUnit = units[units.length - 1];
     const directive = buildRunStageDirective(
-      node, projectType, lastUnit, scope, stateContent, recordPrefix, codekbCtx,
+      node,
+      projectType,
+      lastUnit,
+      scope,
+      stateContent,
+      recordPrefix,
+      codekbCtx,
       kinds?.get(lastUnit) ?? null,
     );
     directive.unit = lastUnit;
     if (stateContent !== null) {
-      const preflight = preflightDirective(
-        projectDir,
-        stateContent,
-        node,
-        { action: "present-approval-gate" },
-      );
+      const preflight = preflightDirective(projectDir, stateContent, node, {
+        action: "present-approval-gate",
+      });
       if (preflight !== null) {
         emit(preflight);
         return;
@@ -6094,7 +6364,13 @@ function emitPerUnitRunStage(
     return;
   }
   const directive = buildRunStageDirective(
-    node, projectType, pick.unit, scope, stateContent, recordPrefix, codekbCtx,
+    node,
+    projectType,
+    pick.unit,
+    scope,
+    stateContent,
+    recordPrefix,
+    codekbCtx,
     kinds?.get(pick.unit) ?? null,
   );
   // Suppress the gate on EVERY not-yet-settled unit. A per-unit directive with an
@@ -6158,8 +6434,10 @@ function teamUnitStageApplies(
   unitKind: string | null,
 ): boolean {
   const names = stage.produces ?? [];
-  return names.length > 0 &&
-    applicableProduceNames(stage, unitKind, false).length > 0;
+  return (
+    names.length > 0 &&
+    applicableProduceNames(stage, unitKind, false).length > 0
+  );
 }
 
 function unitProgressOwners(stateContent: string): Map<string, string> {
@@ -6174,7 +6452,10 @@ function unitProgressOwners(stateContent: string): Map<string, string> {
   const owners = new Map<string, string>();
   for (const line of section.split(/\r?\n/)) {
     if (!line.startsWith("|")) continue;
-    const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
     if (
       cells.length < 2 ||
       cells[0].toLowerCase() === "unit" ||
@@ -6236,7 +6517,7 @@ function teamUnitProgressModel(
     for (const unit of mainOwnedUnits) {
       const unitKind = kinds?.get(unit) ?? null;
       const applicableStages = block.filter((stage) =>
-        teamUnitStageApplies(stage, unitKind)
+        teamUnitStageApplies(stage, unitKind),
       );
       const settled = applicableStages.every((stage) =>
         unitSettled(
@@ -6247,33 +6528,34 @@ function teamUnitProgressModel(
           codekbCtx,
           unitKind,
           ledgers.get(stage.slug) ?? unitLedgerFor(projectDir, stage.slug),
-        )
+        ),
       );
       const reviewed = applicableStages.every((stage) => {
         const receipts = reviewReceipts.get(stage.slug);
-        return receipts === null || receipts?.unitVerdicts.get(unit) === "READY";
+        return (
+          receipts === null || receipts?.unitVerdicts.get(unit) === "READY"
+        );
       });
-      const gated = rhythm === "unit-end"
-        ? (
-          !!finalStage &&
-          unitGateStatus(
-            projectDir,
-            finalStage.slug,
-            unit,
-            "unit-end",
-            auditRows,
-          ) === "approved"
-        )
-        : applicableStages.every(
-          (stage) =>
+      const gated =
+        rhythm === "unit-end"
+          ? !!finalStage &&
             unitGateStatus(
               projectDir,
-              stage.slug,
+              finalStage.slug,
               unit,
-              "per-stage",
+              "unit-end",
               auditRows,
-            ) === "approved",
-        );
+            ) === "approved"
+          : applicableStages.every(
+              (stage) =>
+                unitGateStatus(
+                  projectDir,
+                  stage.slug,
+                  unit,
+                  "per-stage",
+                  auditRows,
+                ) === "approved",
+            );
       if (settled && reviewed && gated) mergedUnits.add(unit);
     }
   }
@@ -6293,8 +6575,10 @@ function teamUnitProgressModel(
 
     for (const stage of block) {
       const applies = teamUnitStageApplies(stage, unitKind);
-      const ledger = ledgers.get(stage.slug) ?? unitLedgerFor(projectDir, stage.slug);
-      const settled = !applies ||
+      const ledger =
+        ledgers.get(stage.slug) ?? unitLedgerFor(projectDir, stage.slug);
+      const settled =
+        !applies ||
         unitSettled(
           projectDir,
           stage,
@@ -6313,8 +6597,10 @@ function teamUnitProgressModel(
       );
       let state: CheckboxState;
       if (!applies) state = "completed";
-      else if (rhythm === "per-stage" && gate === "approved") state = "completed";
-      else if (rhythm === "per-stage" && gate === "revising") state = "revising";
+      else if (rhythm === "per-stage" && gate === "approved")
+        state = "completed";
+      else if (rhythm === "per-stage" && gate === "revising")
+        state = "revising";
       else if (settled && rhythm === "per-stage") state = "awaiting-approval";
       else if (settled) state = "completed";
       else if (ledger.checkpoint?.unit === unit) state = "in-progress";
@@ -6359,9 +6645,7 @@ function teamUnitProgressModel(
     }
     rows.push(
       `| ${unit} | ${owners.get(unit) ?? "-"} | ${cells.join(" | ")} | ${UNIT_PROGRESS_MARKERS[gateState]} |` +
-        (mergeTracking
-          ? ` ${mergedUnits.has(unit) ? "[x]" : "[ ]"} |`
-          : ""),
+        (mergeTracking ? ` ${mergedUnits.has(unit) ? "[x]" : "[ ]"} |` : ""),
     );
   }
 
@@ -6376,8 +6660,7 @@ function teamUnitProgressModel(
           unit,
           "unit-end",
           auditRows,
-        ) ===
-        "approved",
+        ) === "approved",
     );
   const stageStates: Record<string, CheckboxState> = {};
   const allMerged =
@@ -6424,7 +6707,9 @@ export function deriveTeamUnitProgressModel(
   if (!isTeamUnitOwnership(stateContent)) {
     throw new Error("Unit Progress derivation requires Unit Ownership: team.");
   }
-  if (getField(stateContent, "Construction Iteration")?.trim() !== "unit-major") {
+  if (
+    getField(stateContent, "Construction Iteration")?.trim() !== "unit-major"
+  ) {
     throw new Error(
       "Unit Progress derivation requires Construction Iteration: unit-major.",
     );
@@ -6442,15 +6727,15 @@ export function deriveTeamUnitProgressModel(
       "Unit Progress derivation found no active unskipped per-unit Construction stages.",
     );
   }
-  const orderedAuditRows = auditRows ?? readAuditShardEvents(projectDir).sort(
-    (a, b) => {
+  const orderedAuditRows =
+    auditRows ??
+    readAuditShardEvents(projectDir).sort((a, b) => {
       if (a.timestamp !== b.timestamp) {
         return a.timestamp < b.timestamp ? -1 : 1;
       }
       if (a.shardIndex !== b.shardIndex) return a.shardIndex - b.shardIndex;
       return a.pos - b.pos;
-    },
-  );
+    });
   const mergedReceipts = unitMergedReceipts(projectDir, orderedAuditRows);
   const transactions = unitMergeTransactions(projectDir);
   const mergeTracking =
@@ -6474,10 +6759,7 @@ export function deriveTeamUnitProgressModel(
     }
     if (mergeTracking) {
       for (const [unit, claim] of overview.claims) {
-        if (
-          claim.status === "released" &&
-          !mergedReceipts.has(unit)
-        ) {
+        if (claim.status === "released" && !mergedReceipts.has(unit)) {
           owners.delete(unit);
         }
       }
@@ -6603,9 +6885,11 @@ function emitTeamUnitMajorRunStage(
       unit,
     ]);
     if (synced.exitCode !== 0) {
-      emit(errorDirective(
-        `Scoped Unit stage sync failed: ${(synced.stderr || synced.stdout).trim()}`,
-      ));
+      emit(
+        errorDirective(
+          `Scoped Unit stage sync failed: ${(synced.stderr || synced.stdout).trim()}`,
+        ),
+      );
       return false;
     }
     refreshedState = readStateFile(projectDir);
@@ -6614,14 +6898,16 @@ function emitTeamUnitMajorRunStage(
   for (const stage of block) {
     const checkpoint = ledgers.get(stage.slug)?.checkpoint;
     if (checkpoint?.state === "paused") {
-      emit(askDirective(
-        `Unit "${checkpoint.unit}" of stage "${stage.slug}" is PAUSED (unit_state: paused)` +
-          `${checkpoint.reason ? ` — reason: ${checkpoint.reason}` : ""}.` +
-          `${checkpoint.nextAction ? ` Recorded next action: ${checkpoint.nextAction}.` : ""} ` +
-          `Do not start other work. Resume this unit (bun ${harnessDir()}/tools/aidlc-state.ts unit resume ` +
-          `--stage ${stage.slug} --unit ${checkpoint.unit}) and continue from the recorded next action, or ask ` +
-          "the human how to proceed. STOP until the unit is explicitly resumed.",
-      ));
+      emit(
+        askDirective(
+          `Unit "${checkpoint.unit}" of stage "${stage.slug}" is PAUSED (unit_state: paused)` +
+            `${checkpoint.reason ? ` — reason: ${checkpoint.reason}` : ""}.` +
+            `${checkpoint.nextAction ? ` Recorded next action: ${checkpoint.nextAction}.` : ""} ` +
+            `Do not start other work. Resume this unit (bun ${harnessDir()}/tools/aidlc-state.ts unit resume ` +
+            `--stage ${stage.slug} --unit ${checkpoint.unit}) and continue from the recorded next action, or ask ` +
+            "the human how to proceed. STOP until the unit is explicitly resumed.",
+        ),
+      );
       return;
     }
   }
@@ -6632,7 +6918,8 @@ function emitTeamUnitMajorRunStage(
     const unitKind = kinds?.get(unit) ?? null;
     for (const stage of block) {
       if (!teamUnitStageApplies(stage, unitKind)) continue;
-      const ledger = ledgers.get(stage.slug) ?? unitLedgerFor(projectDir, stage.slug);
+      const ledger =
+        ledgers.get(stage.slug) ?? unitLedgerFor(projectDir, stage.slug);
       if (
         !unitSettled(
           projectDir,
@@ -6681,13 +6968,8 @@ function emitTeamUnitMajorRunStage(
       }
       if (
         rhythm === "per-stage" &&
-        unitGateStatus(
-          projectDir,
-          stage.slug,
-          unit,
-          "per-stage",
-          auditRows,
-        ) !== "approved"
+        unitGateStatus(projectDir, stage.slug, unit, "per-stage", auditRows) !==
+          "approved"
       ) {
         if (!syncScopedStage(stage.slug, unit)) return;
         const directive = buildRunStageDirective(
@@ -6758,15 +7040,21 @@ function emitTeamUnitMajorRunStage(
   }
 
   if (!finalStage) {
-    emit(errorDirective("Team unit-major mode has no active per-unit Construction stages."));
+    emit(
+      errorDirective(
+        "Team unit-major mode has no active per-unit Construction stages.",
+      ),
+    );
     return;
   }
   if (scopeStamp) {
-    emit(noticeDirective(
-      `Unit "${scopeStamp.unit}" is complete and approved in this checkout. ` +
-        `Commit the completed candidate and run \`aidlc unit publish ${scopeStamp.unit}\`; ` +
-        "unscoped main will pin, gate, and land it.",
-    ));
+    emit(
+      noticeDirective(
+        `Unit "${scopeStamp.unit}" is complete and approved in this checkout. ` +
+          `Commit the completed candidate and run \`aidlc unit publish ${scopeStamp.unit}\`; ` +
+          "unscoped main will pin, gate, and land it.",
+      ),
+    );
     return;
   }
   const next = nextInScopeStage(finalStage.slug, scope, refreshedState);
@@ -6844,9 +7132,11 @@ function emitUnitMajorRunStage(
       resolution.state === "malformed"
         ? `${resolution.reason}: ${resolution.detail}`
         : "no non-empty authoritative Unit DAG is available";
-    emit(errorDirective(
-      `Unit Ownership: team requires a valid non-empty authoritative Unit DAG; ${detail}.`,
-    ));
+    emit(
+      errorDirective(
+        `Unit Ownership: team requires a valid non-empty authoritative Unit DAG; ${detail}.`,
+      ),
+    );
     return;
   }
 
@@ -6855,8 +7145,18 @@ function emitUnitMajorRunStage(
   // both the first block stage and the skeleton-gate stage for
   // feature/enterprise/mvp (nfr-requirements for infra); emit the classify
   // directive and return until the stance is recorded.
-  if (isSkeletonGateStage(node, scope) && readSkeletonStance(stateContent) === null) {
-    emitRunStageForSlug(node.slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
+  if (
+    isSkeletonGateStage(node, scope) &&
+    readSkeletonStance(stateContent) === null
+  ) {
+    emitRunStageForSlug(
+      node.slug,
+      projectType,
+      scope,
+      stateContent,
+      recordPrefix,
+      codekbCtx,
+    );
     return;
   }
 
@@ -6886,9 +7186,11 @@ function emitUnitMajorRunStage(
   // this slug.
   if (!block.some((n) => n.slug === node.slug)) {
     if (teamOwnership) {
-      emit(errorDirective(
-        `Unit Ownership: team cannot route current stage "${node.slug}": it is not in the active unskipped per-unit Construction block.`,
-      ));
+      emit(
+        errorDirective(
+          `Unit Ownership: team cannot route current stage "${node.slug}": it is not in the active unskipped per-unit Construction block.`,
+        ),
+      );
       return;
     }
     emitPerUnitRunStage(
@@ -6937,23 +7239,41 @@ function emitUnitMajorRunStage(
   for (const k of block) {
     const cp = ledgers.get(k.slug)?.checkpoint;
     if (cp?.state === "paused") {
-      emit(askDirective(
-        `Unit "${cp.unit}" of stage "${k.slug}" is PAUSED (unit_state: paused)` +
-          `${cp.reason ? ` — reason: ${cp.reason}` : ""}.` +
-          `${cp.nextAction ? ` Recorded next action: ${cp.nextAction}.` : ""} ` +
-          `Do not start other work. Resume this unit (bun ${harnessDir()}/tools/aidlc-state.ts unit resume ` +
-          `--stage ${k.slug} --unit ${cp.unit}) and continue from the recorded next action, or ask ` +
-          "the human how to proceed. STOP until the unit is explicitly resumed.",
-      ));
+      emit(
+        askDirective(
+          `Unit "${cp.unit}" of stage "${k.slug}" is PAUSED (unit_state: paused)` +
+            `${cp.reason ? ` — reason: ${cp.reason}` : ""}.` +
+            `${cp.nextAction ? ` Recorded next action: ${cp.nextAction}.` : ""} ` +
+            `Do not start other work. Resume this unit (bun ${harnessDir()}/tools/aidlc-state.ts unit resume ` +
+            `--stage ${k.slug} --unit ${cp.unit}) and continue from the recorded next action, or ask ` +
+            "the human how to proceed. STOP until the unit is explicitly resumed.",
+        ),
+      );
       return;
     }
   }
   for (const u of units) {
     for (const k of block) {
       const ledger = ledgers.get(k.slug) ?? unitLedgerFor(projectDir, k.slug);
-      if (!unitSettled(projectDir, k, u, recordPrefix, codekbCtx, kinds?.get(u) ?? null, ledger)) {
+      if (
+        !unitSettled(
+          projectDir,
+          k,
+          u,
+          recordPrefix,
+          codekbCtx,
+          kinds?.get(u) ?? null,
+          ledger,
+        )
+      ) {
         const directive = buildRunStageDirective(
-          k, projectType, u, scope, stateContent, recordPrefix, codekbCtx,
+          k,
+          projectType,
+          u,
+          scope,
+          stateContent,
+          recordPrefix,
+          codekbCtx,
           kinds?.get(u) ?? null,
         );
         directive.gate = false;
@@ -7021,13 +7341,36 @@ function emitForSlug(
     // code-generation included (the swarm never fires under unit-major - see
     // eligibleAutonomousSwarmBatches - so this branch owns the build too).
     if (readConstructionIteration(stateContent) === "unit-major") {
-      emitUnitMajorRunStage(node, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
+      emitUnitMajorRunStage(
+        node,
+        projectType,
+        scope,
+        stateContent,
+        recordPrefix,
+        codekbCtx,
+        projectDir,
+      );
       return;
     }
-    emitPerUnitRunStage(node, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
+    emitPerUnitRunStage(
+      node,
+      projectType,
+      scope,
+      stateContent,
+      recordPrefix,
+      codekbCtx,
+      projectDir,
+    );
     return;
   }
-  emitRunStageForSlug(slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
+  emitRunStageForSlug(
+    slug,
+    projectType,
+    scope,
+    stateContent,
+    recordPrefix,
+    codekbCtx,
+  );
 }
 
 // --- --single stage-runner mode ---
@@ -7053,20 +7396,25 @@ function emitForSlug(
 // `single:true` marker gives the conductor a typed branch before ordinary gate
 // handling; isolated runs have no main-workflow approval lifecycle.
 const SINGLE_INIT_ERROR =
-  "Cannot run an initialization stage with --single. Initialization is bootstrap (it creates the intent + state); it runs automatically when you start a workflow (describe what to build, e.g. /aidlc \"build the auth service\").";
+  'Cannot run an initialization stage with --single. Initialization is bootstrap (it creates the intent + state); it runs automatically when you start a workflow (describe what to build, e.g. /aidlc "build the auth service").';
 
 // Call only after confirming an open attempt. Match its boundary ordering and
 // never borrow ceremony policy from the main workflow; legacy rows return null.
-function singleStageAttemptScope(projectDir: string, slug: string): string | null {
+function singleStageAttemptScope(
+  projectDir: string,
+  slug: string,
+): string | null {
   const workflow = syntheticWorkflowId(slug);
   const attemptStart = readAuditShardEvents(projectDir)
-    .filter((entry) =>
-      entry.event === "STAGE_STARTED" &&
-      auditBlockField(entry.block, "Stage") === slug &&
-      auditBlockField(entry.block, "Workflow") === workflow
+    .filter(
+      (entry) =>
+        entry.event === "STAGE_STARTED" &&
+        auditBlockField(entry.block, "Stage") === slug &&
+        auditBlockField(entry.block, "Workflow") === workflow,
     )
     .sort((a, b) => {
-      if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+      if (a.timestamp !== b.timestamp)
+        return a.timestamp < b.timestamp ? -1 : 1;
       if (a.shardIndex !== b.shardIndex) return a.shardIndex - b.shardIndex;
       return a.pos - b.pos;
     })
@@ -7082,24 +7430,28 @@ function ensureSingleStageStarted(
   if (singleStageAttemptIsOpen(projectDir, node.slug)) {
     const recordedScope = singleStageAttemptScope(projectDir, node.slug);
     if (recordedScope !== null && recordedScope !== scope) {
-      return `The open isolated attempt uses scope "${recordedScope}", not requested scope "${scope}". ` +
+      return (
+        `The open isolated attempt uses scope "${recordedScope}", not requested scope "${scope}". ` +
         `Complete it with \`report --single --stage ${node.slug} --result approved\`, ` +
-        `or re-run with \`--scope ${recordedScope}\`.`;
+        `or re-run with \`--scope ${recordedScope}\`.`
+      );
     }
     return null;
   }
   // A query never appends a lifecycle event: an observer that opened a
   // single-stage attempt would move the run floor it came to read.
   if (isReadOnlyEngineProbe()) return null;
-  return appendSingleStageAuditEvents(projectDir, [{
-    eventType: "STAGE_STARTED",
-    fields: {
-      Stage: node.slug,
-      Agent: node.lead_agent,
-      Workflow: syntheticWorkflowId(node.slug),
-      Scope: scope,
+  return appendSingleStageAuditEvents(projectDir, [
+    {
+      eventType: "STAGE_STARTED",
+      fields: {
+        Stage: node.slug,
+        Agent: node.lead_agent,
+        Workflow: syntheticWorkflowId(node.slug),
+        Scope: scope,
+      },
     },
-  }]);
+  ]);
 }
 
 function emitSingleRunStage(
@@ -7112,9 +7464,11 @@ function emitSingleRunStage(
 ): void {
   const node = nodeForSlug(slug);
   if (!node) {
-    emit(errorDirective(
-      `Unknown stage "${slug}". Run /aidlc --help for the full list.`,
-    ));
+    emit(
+      errorDirective(
+        `Unknown stage "${slug}". Run /aidlc --help for the full list.`,
+      ),
+    );
     return;
   }
   if (node.phase === "initialization") {
@@ -7123,17 +7477,21 @@ function emitSingleRunStage(
   }
   const inScopeSlugs = new Set(subgraphForScope(scope).map((s) => s.slug));
   if (!inScopeSlugs.has(node.slug)) {
-    emit(errorDirective(
-      `Stage "${node.slug}" is skipped for scope "${scope}". ` +
-        "Choose a different stage or change scope.",
-    ));
+    emit(
+      errorDirective(
+        `Stage "${node.slug}" is skipped for scope "${scope}". ` +
+          "Choose a different stage or change scope.",
+      ),
+    );
     return;
   }
   const startError = ensureSingleStageStarted(projectDir, node, scope);
   if (startError) {
-    emit(errorDirective(
-      `Cannot start isolated stage "${node.slug}": ${startError}`,
-    ));
+    emit(
+      errorDirective(
+        `Cannot start isolated stage "${node.slug}": ${startError}`,
+      ),
+    );
     return;
   }
   // Build the directive only after the synthetic start is durable. Steering
@@ -7195,7 +7553,7 @@ function emitSingleRunStage(
 // (`aidlc-jump.ts resolve` treats init stages as valid targets, returning
 // valid:true), so the engine enforces it here rather than relaying a tool error.
 const INIT_JUMP_ERROR =
-  "Cannot jump to initialization stages. The Initialization phase runs automatically when you start a workflow (describe what to build, e.g. /aidlc \"build the auth service\").";
+  'Cannot jump to initialization stages. The Initialization phase runs automatically when you start a workflow (describe what to build, e.g. /aidlc "build the auth service").';
 
 function emitJumpDirective(
   flags: ParsedFlags,
@@ -7212,7 +7570,13 @@ function emitJumpDirective(
   const hasState = existsSync(engineStateFilePath(projectDir));
 
   if (hasState) {
-    const resolveArgs = ["resolve", "--scope", scope, "--project-dir", projectDir];
+    const resolveArgs = [
+      "resolve",
+      "--scope",
+      scope,
+      "--project-dir",
+      projectDir,
+    ];
     if (flags.phase) resolveArgs.push("--phase", flags.phase);
     else if (flags.stage) resolveArgs.push("--stage", flags.stage);
 
@@ -7225,9 +7589,11 @@ function emitJumpDirective(
     }
     const resolved = parseResolved(run.stdout);
     if (!resolved) {
-      emit(errorDirective(
-        `Internal: aidlc-jump.ts resolve returned no target_slug/direction for ${flags.phase ? `--phase ${flags.phase}` : `--stage ${flags.stage}`}.`,
-      ));
+      emit(
+        errorDirective(
+          `Internal: aidlc-jump.ts resolve returned no target_slug/direction for ${flags.phase ? `--phase ${flags.phase}` : `--stage ${flags.stage}`}.`,
+        ),
+      );
       return;
     }
     const { targetSlug, direction } = resolved;
@@ -7244,9 +7610,11 @@ function emitJumpDirective(
     // right stages, emits STAGE_JUMPED, and pivots Current Stage. After the
     // conductor runs it, the NEXT `next` sees the pivoted state and emits the
     // run-stage for the now-current target.
-    emit(printDirective(
-      `Run \`${aidlcToolInvocation("jump")} execute --target ${targetSlug} --direction ${direction} --scope ${scope}\` to perform the jump, then re-run \`next\` to continue from the jump target.`,
-    ));
+    emit(
+      printDirective(
+        `Run \`${aidlcToolInvocation("jump")} execute --target ${targetSlug} --direction ${direction} --scope ${scope}\` to perform the jump, then re-run \`next\` to continue from the jump target.`,
+      ),
+    );
     return;
   }
 
@@ -7256,16 +7624,20 @@ function emitJumpDirective(
   if (flags.phase) {
     const canonical = canonicalisePhase(flags.phase);
     if (!canonical) {
-      emit(errorDirective(
-        `Unknown phase "${flags.phase}". Valid phases: ${PHASES.join(", ")}.`,
-      ));
+      emit(
+        errorDirective(
+          `Unknown phase "${flags.phase}". Valid phases: ${PHASES.join(", ")}.`,
+        ),
+      );
       return;
     }
     const first = firstInScopeStageOfPhase(canonical, scope);
     if (!first) {
-      emit(errorDirective(
-        `Phase "${canonical}" has no executable stages for scope "${scope}".`,
-      ));
+      emit(
+        errorDirective(
+          `Phase "${canonical}" has no executable stages for scope "${scope}".`,
+        ),
+      );
       return;
     }
     // No-state jump: pass scope for the gate computation; stateContent stays
@@ -7275,7 +7647,14 @@ function emitJumpDirective(
     // codekb ctx is computed from the same live projectDir (no handleNext-cached
     // value reaches this inline site), so a codekb stage jumped-to here still
     // resolves under aidlc/spaces/<space>/codekb/<repo>/.
-    emitRunStageForSlug(first.slug, projectType, scope, null, engineRelativeRecordDir(projectDir), codekbCtxFor(projectDir));
+    emitRunStageForSlug(
+      first.slug,
+      projectType,
+      scope,
+      null,
+      engineRelativeRecordDir(projectDir),
+      codekbCtxFor(projectDir),
+    );
     return;
   }
 
@@ -7283,9 +7662,11 @@ function emitJumpDirective(
   const stageSlug = flags.stage ?? "";
   const node = nodeForSlug(stageSlug);
   if (!node) {
-    emit(errorDirective(
-      `Unknown stage "${stageSlug}". Run /aidlc --help for the full list.`,
-    ));
+    emit(
+      errorDirective(
+        `Unknown stage "${stageSlug}". Run /aidlc --help for the full list.`,
+      ),
+    );
     return;
   }
   // Init-stage guard applies on the no-state path too (SKILL.md step 5).
@@ -7303,16 +7684,28 @@ function emitJumpDirective(
   // stream is identical regardless of whether state exists yet.
   const inScopeSlugs = new Set(subgraphForScope(scope).map((s) => s.slug));
   if (!inScopeSlugs.has(node.slug)) {
-    emit(errorDirective(
-      `Stage "${node.slug}" is skipped for scope "${scope}". ` +
-        "Choose a different stage or change scope.",
-    ));
+    emit(
+      errorDirective(
+        `Stage "${node.slug}" is skipped for scope "${scope}". ` +
+          "Choose a different stage or change scope.",
+      ),
+    );
     return;
   }
   // No-state jump: scope feeds the gate; stateContent is null (no workflow yet).
   // codekb ctx computed off the same live projectDir as the inline recordPrefix
   // (same rationale as the --phase inline site above).
-  emit(buildRunStageDirective(node, projectType, UNIT_NAME_PLACEHOLDER, scope, null, engineRelativeRecordDir(projectDir), codekbCtxFor(projectDir)));
+  emit(
+    buildRunStageDirective(
+      node,
+      projectType,
+      UNIT_NAME_PLACEHOLDER,
+      scope,
+      null,
+      engineRelativeRecordDir(projectDir),
+      codekbCtxFor(projectDir),
+    ),
+  );
 }
 
 // Pull `target_slug` AND `direction` out of `aidlc-jump.ts resolve`'s stdout
@@ -7454,9 +7847,10 @@ function hasFreshPracticesAffirmationReceipt(
       timestamp: auditBlockField(block, "Timestamp") ?? "",
       timestampMs: Date.parse(auditBlockField(block, "Timestamp") ?? ""),
     }))
-    .filter(({ event }) =>
-      (event !== null && FLOOR_EVENTS.has(event)) ||
-      event === "PRACTICES_AFFIRMED"
+    .filter(
+      ({ event }) =>
+        (event !== null && FLOOR_EVENTS.has(event)) ||
+        event === "PRACTICES_AFFIRMED",
     )
     .sort((a, b) => {
       if (a.timestampMs !== b.timestampMs) {
@@ -7480,13 +7874,16 @@ function hasFreshPracticesAffirmationReceipt(
     }
     floor = i;
   }
-  return floor >= 0 &&
+  return (
+    floor >= 0 &&
     events
       .slice(floor + 1)
-      .some((event) =>
-        event.event === "PRACTICES_AFFIRMED" &&
-        event.timestamp === affirmedTimestamp
-      );
+      .some(
+        (event) =>
+          event.event === "PRACTICES_AFFIRMED" &&
+          event.timestamp === affirmedTimestamp,
+      )
+  );
 }
 
 interface ReportFlags {
@@ -7551,7 +7948,14 @@ function spawnState(
   subArgs: string[],
 ): { exitCode: number; stdout: string; stderr: string } {
   const command = IS_COMPILED
-    ? [process.execPath, "engine", "state", ...subArgs, "--project-dir", projectDir]
+    ? [
+        process.execPath,
+        "engine",
+        "state",
+        ...subArgs,
+        "--project-dir",
+        projectDir,
+      ]
     : [
         process.execPath,
         fileURLToPath(new URL("./aidlc-state.ts", import.meta.url)),
@@ -7589,7 +7993,12 @@ function changeNoticesFromToolOutput(stdout: string): string[] {
     } catch {
       continue;
     }
-    if (parsed === null || typeof parsed !== "object" || !("change_notices" in parsed)) continue;
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      !("change_notices" in parsed)
+    )
+      continue;
     const carried = parsed.change_notices;
     if (!Array.isArray(carried)) continue;
     for (const notice of carried) {
@@ -7600,8 +8009,13 @@ function changeNoticesFromToolOutput(stdout: string): string[] {
 }
 
 /** A directive with the notices attached, or unchanged when there are none. */
-function withChangeNotices<T extends Directive>(directive: T, notices: string[]): T {
-  return notices.length > 0 ? { ...directive, change_notices: notices } : directive;
+function withChangeNotices<T extends Directive>(
+  directive: T,
+  notices: string[],
+): T {
+  return notices.length > 0
+    ? { ...directive, change_notices: notices }
+    : directive;
 }
 
 // The guard-recovery ask an enforcing tool carried on the last line of its
@@ -7652,7 +8066,9 @@ function remedyRepeatsPreflightedAction(
   action: GuardPreflightOptions["action"],
   remedy: GuardRemedy,
 ): boolean {
-  return action === "present-approval-gate" && remedy.op === "present-approval-gate";
+  return (
+    action === "present-approval-gate" && remedy.op === "present-approval-gate"
+  );
 }
 
 // The ask for a refusal the router derived itself (a review request the wave
@@ -7691,7 +8107,9 @@ function directiveForPreflightRefusal(
   const ask = routedRefusalDirective(projectDir, outcome);
   if (
     ask.remedies.length > 0 &&
-    ask.remedies.every((remedy) => remedyRepeatsPreflightedAction(action, remedy))
+    ask.remedies.every((remedy) =>
+      remedyRepeatsPreflightedAction(action, remedy),
+    )
   ) {
     return null;
   }
@@ -7704,12 +8122,7 @@ function preflightDirective(
   stage: StageEntry,
   options: GuardPreflightOptions,
 ): GuardRecoveryAskDirective | null {
-  const result = guardPreflightResult(
-    projectDir,
-    stateContent,
-    stage,
-    options,
-  );
+  const result = guardPreflightResult(projectDir, stateContent, stage, options);
   return result.executable
     ? null
     : directiveForPreflightRefusal(projectDir, result, options.action);
@@ -7790,19 +8203,23 @@ function handleSkeletonStanceReport(
   projectDir: string | undefined,
 ): void {
   if (!VALID_SKELETON_STANCES.has(stance)) {
-    emit(errorDirective(
-      `Unknown --skeleton-stance "${stance}". Accepted: ${[...VALID_SKELETON_STANCES].join(", ")} ` +
-        "(the walking-skeleton stance classified from the team's ## Walking Skeleton prose).",
-    ));
+    emit(
+      errorDirective(
+        `Unknown --skeleton-stance "${stance}". Accepted: ${[...VALID_SKELETON_STANCES].join(", ")} ` +
+          "(the walking-skeleton stance classified from the team's ## Walking Skeleton prose).",
+      ),
+    );
     return;
   }
 
   const pd = resolveProjectDir(projectDir);
   const stateContent = loadStateFileIfPresent(pd);
   if (!stateContent) {
-    emit(errorDirective(
-      "No active intent workflow state found (aidlc-state.md is absent) — nothing to record a skeleton stance for.",
-    ));
+    emit(
+      errorDirective(
+        "No active intent workflow state found (aidlc-state.md is absent) — nothing to record a skeleton stance for.",
+      ),
+    );
     return;
   }
 
@@ -7813,23 +8230,29 @@ function handleSkeletonStanceReport(
   const slug = getField(stateContent, "Current Stage");
   const scope = getField(stateContent, "Scope");
   if (!slug || slug.length === 0) {
-    emit(errorDirective(
-      "State file has no Current Stage field — cannot record a skeleton stance.",
-    ));
+    emit(
+      errorDirective(
+        "State file has no Current Stage field — cannot record a skeleton stance.",
+      ),
+    );
     return;
   }
   if (!scope || scope.length === 0) {
-    emit(errorDirective(
-      "State file has no Scope field — cannot validate the skeleton-gate stage.",
-    ));
+    emit(
+      errorDirective(
+        "State file has no Scope field — cannot validate the skeleton-gate stage.",
+      ),
+    );
     return;
   }
   const node = nodeForSlug(slug);
   if (!node || !isSkeletonGateStage(node, scope)) {
-    emit(errorDirective(
-      `Current stage "${slug}" is not the skeleton-gate stage for scope "${scope}" — ` +
-        "a skeleton stance is only reported for the first Construction Bolt's gate.",
-    ));
+    emit(
+      errorDirective(
+        `Current stage "${slug}" is not the skeleton-gate stage for scope "${scope}" — ` +
+          "a skeleton stance is only reported for the first Construction Bolt's gate.",
+      ),
+    );
     return;
   }
 
@@ -7840,16 +8263,21 @@ function handleSkeletonStanceReport(
   const res = spawnState(pd, ["set-skeleton-stance", stance]);
   if (res.exitCode !== 0) {
     const detail = (res.stderr || res.stdout).trim();
-    emit(errorDirective(
-      `Failed to record skeleton stance for "${slug}"` + (detail ? `: ${detail}` : "."),
-    ));
+    emit(
+      errorDirective(
+        `Failed to record skeleton stance for "${slug}"` +
+          (detail ? `: ${detail}` : "."),
+      ),
+    );
     return;
   }
 
-  emit(printDirective(
-    `Recorded walking-skeleton stance "${stance}" for "${slug}". ` +
-      "Re-run `next` to continue — the gate is now determined.",
-  ));
+  emit(
+    printDirective(
+      `Recorded walking-skeleton stance "${stance}" for "${slug}". ` +
+        "Re-run `next` to continue — the gate is now determined.",
+    ),
+  );
 }
 
 // --- --single report: commit the synthetic-id pair ---
@@ -7863,9 +8291,7 @@ function syntheticWorkflowId(slug: string): string {
   return `single-stage:${slug}`;
 }
 
-type EnsembleEvidenceResult =
-  | { ok: true }
-  | { ok: false; message: string };
+type EnsembleEvidenceResult = { ok: true } | { ok: false; message: string };
 
 function checkSingleCodekbArtifacts(
   node: GraphStage,
@@ -7884,8 +8310,10 @@ function checkSingleCodekbArtifacts(
 }
 
 function requiresEnsembleEvidence(node: GraphStage): boolean {
-  return node.mode === "mob" ||
-    (node.mode === "subagent" && (node.support_agents ?? []).length > 0);
+  return (
+    node.mode === "mob" ||
+    (node.mode === "subagent" && (node.support_agents ?? []).length > 0)
+  );
 }
 
 // Validate the structural completion evidence required by mob and
@@ -7922,38 +8350,40 @@ function checkEnsembleEvidence(
   // DAG's per-unit contribution sets would make a per-unit single stage
   // unapprovable. Evidence for a single run is checked at the stage level.
   const perUnit =
-    !options.singleRun &&
-    !options.stageLevelPerUnit &&
-    isPerUnit(node);
+    !options.singleRun && !options.stageLevelPerUnit && isPerUnit(node);
   const resolution = perUnit
     ? (options.boltBatches ?? resolveBoltBatches(pd))
     : null;
   const units = resolution?.state === "ok" ? resolution.batches.flat() : [];
   const usesUnitDirs = units.length > 0;
   const kinds = usesUnitDirs
-    ? (
-        options.unitKinds === undefined
-          ? (resolution?.state === "ok" ? resolution.unitKinds : null)
-          : options.unitKinds
-      )
+    ? options.unitKinds === undefined
+      ? resolution?.state === "ok"
+        ? resolution.unitKinds
+        : null
+      : options.unitKinds
     : null;
   const requiredProduces = node.produces ?? [];
   // Match the per-unit coverage ledger: a kind-pruned unit with zero
   // applicable required artifacts is vacuously covered, so no directive ever
   // dispatches its collaborators and it cannot owe contribution files.
-  const evidenceUnits = units.filter((unit) =>
-    requiredProduces.length === 0 ||
-    applicableProduceNames(node, kinds?.get(unit) ?? null, false).length > 0
+  const evidenceUnits = units.filter(
+    (unit) =>
+      requiredProduces.length === 0 ||
+      applicableProduceNames(node, kinds?.get(unit) ?? null, false).length > 0,
   );
-  const contributionDirs: Array<{ path: string; unit: string | null }> = usesUnitDirs
-    ? evidenceUnits.map((unit) => ({
-        path: join(pd, prefix, "construction", unit, slug, "contributions"),
-        unit,
-      }))
-    : [{
-        path: join(pd, prefix, node.phase, slug, "contributions"),
-        unit: null,
-      }];
+  const contributionDirs: Array<{ path: string; unit: string | null }> =
+    usesUnitDirs
+      ? evidenceUnits.map((unit) => ({
+          path: join(pd, prefix, "construction", unit, slug, "contributions"),
+          unit,
+        }))
+      : [
+          {
+            path: join(pd, prefix, node.phase, slug, "contributions"),
+            unit: null,
+          },
+        ];
   const missing: string[] = [];
   for (const { path, unit } of contributionDirs) {
     for (const agent of node.support_agents ?? []) {
@@ -8002,7 +8432,7 @@ function checkPipelineLinkEvidence(
   const evidence = pipelineLinkEvidence(pd, node, { singleRun });
   if (evidence.missing.length === 0) return { ok: true };
   const missing = evidence.missing.map(({ link, repo }) =>
-    repo ? `${repo}:${link}` : link
+    repo ? `${repo}:${link}` : link,
   );
   const refusal = singleRun
     ? `Cannot complete an isolated run of "${slug}" because these pipeline handoffs have not been recorded for this isolated run`
@@ -8031,8 +8461,7 @@ function checkStageCompletionEvidence(
   pd: string,
 ): EnsembleEvidenceResult {
   const stageLevelPerUnit =
-    isPerUnit(node) &&
-    usesStageLevelPerUnitArtifacts(scope, stateContent);
+    isPerUnit(node) && usesStageLevelPerUnitArtifacts(scope, stateContent);
   const boltResolution =
     isPerUnit(node) && !stageLevelPerUnit ? resolveBoltBatches(pd) : null;
   const unitKinds =
@@ -8100,18 +8529,12 @@ function checkStageCompletionEvidence(
     }
   }
 
-  return checkEnsembleEvidence(
-    node,
-    slug,
-    pd,
-    engineRelativeRecordDir(pd),
-    {
-      settledSwarm,
-      stageLevelPerUnit,
-      boltBatches: boltResolution ?? undefined,
-      unitKinds,
-    },
-  );
+  return checkEnsembleEvidence(node, slug, pd, engineRelativeRecordDir(pd), {
+    settledSwarm,
+    stageLevelPerUnit,
+    boltBatches: boltResolution ?? undefined,
+    unitKinds,
+  });
 }
 
 // Handle `report --single --stage <slug> --result <outcome>`: complete the
@@ -8147,34 +8570,42 @@ function handleSingleReport(
   projectDir: string | undefined,
 ): void {
   if (!flags.result) {
-    emit(errorDirective(
-      "report --single requires --result <outcome>. Accepted: " +
-        [...FORWARD_RESULTS].join(", ") +
-        " (the verdict for the single stage just run).",
-    ));
+    emit(
+      errorDirective(
+        "report --single requires --result <outcome>. Accepted: " +
+          [...FORWARD_RESULTS].join(", ") +
+          " (the verdict for the single stage just run).",
+      ),
+    );
     return;
   }
   if (!FORWARD_RESULTS.has(flags.result)) {
-    emit(errorDirective(
-      `Unknown --result "${flags.result}". report commits forward outcomes only; ` +
-        `accepted: ${[...FORWARD_RESULTS].join(", ")}.`,
-    ));
+    emit(
+      errorDirective(
+        `Unknown --result "${flags.result}". report commits forward outcomes only; ` +
+          `accepted: ${[...FORWARD_RESULTS].join(", ")}.`,
+      ),
+    );
     return;
   }
   // The pointer invariant, explicit half: a --single report with no --stage is an
   // attempt to advance the MAIN workflow (commit against Current Stage). Refuse it.
   if (!flags.stage || flags.stage.length === 0) {
-    emit(errorDirective(
-      "report --single must not advance the main workflow. Pass --stage <slug> to commit the " +
-        "single stage's synthetic-id pair; --single never writes the main workflow's Current Stage.",
-    ));
+    emit(
+      errorDirective(
+        "report --single must not advance the main workflow. Pass --stage <slug> to commit the " +
+          "single stage's synthetic-id pair; --single never writes the main workflow's Current Stage.",
+      ),
+    );
     return;
   }
   const node = nodeForSlug(flags.stage);
   if (!node) {
-    emit(errorDirective(
-      `Unknown stage "${flags.stage}". Run /aidlc --help for the full list.`,
-    ));
+    emit(
+      errorDirective(
+        `Unknown stage "${flags.stage}". Run /aidlc --help for the full list.`,
+      ),
+    );
     return;
   }
   if (node.phase === "initialization") {
@@ -8185,10 +8616,12 @@ function handleSingleReport(
   const pd = resolveProjectDir(projectDir);
   const wfId = syntheticWorkflowId(node.slug);
   if (!singleStageAttemptIsOpen(pd, node.slug)) {
-    emit(errorDirective(
-      `Cannot complete isolated stage "${node.slug}": no open ${wfId} STAGE_STARTED boundary exists. ` +
-        `Run \`next --stage ${node.slug} --single\` first.`,
-    ));
+    emit(
+      errorDirective(
+        `Cannot complete isolated stage "${node.slug}": no open ${wfId} STAGE_STARTED boundary exists. ` +
+          `Run \`next --stage ${node.slug} --single\` first.`,
+      ),
+    );
     return;
   }
   const summaryEvidence = checkSummaryConfirmationEvidence(pd, node, {
@@ -8215,35 +8648,40 @@ function handleSingleReport(
     emit(errorDirective(pipelineEvidence.message));
     return;
   }
-  const recordPrefix = requiresEnsembleEvidence(node) ? engineRelativeRecordDir(pd) : null;
-  const evidence = checkEnsembleEvidence(
-    node,
-    node.slug,
-    pd,
-    recordPrefix,
-    { singleRun: true },
-  );
+  const recordPrefix = requiresEnsembleEvidence(node)
+    ? engineRelativeRecordDir(pd)
+    : null;
+  const evidence = checkEnsembleEvidence(node, node.slug, pd, recordPrefix, {
+    singleRun: true,
+  });
   if (!evidence.ok) {
     emit(errorDirective(evidence.message));
     return;
   }
-  const completionError = appendSingleStageAuditEvents(pd, [{
-    eventType: "STAGE_COMPLETED",
-    fields: {
-      Stage: node.slug,
-      Details: `Single-stage run of ${node.slug} completed`,
-      Workflow: wfId,
+  const completionError = appendSingleStageAuditEvents(pd, [
+    {
+      eventType: "STAGE_COMPLETED",
+      fields: {
+        Stage: node.slug,
+        Details: `Single-stage run of ${node.slug} completed`,
+        Workflow: wfId,
+      },
     },
-  }]);
+  ]);
   if (completionError) {
-    emit(errorDirective(
-      `Failed to record single-stage completion for "${node.slug}"` +
-        `: ${completionError}`,
-    ));
+    emit(
+      errorDirective(
+        `Failed to record single-stage completion for "${node.slug}"` +
+          `: ${completionError}`,
+      ),
+    );
     return;
   }
-  try { clearActiveDirectiveMarker(pd); }
-  catch (e) { recordHookDrop(pd, "active-directive", errorMessage(e)); }
+  try {
+    clearActiveDirectiveMarker(pd);
+  } catch (e) {
+    recordHookDrop(pd, "active-directive", errorMessage(e));
+  }
 
   emit({
     kind: "done",
@@ -8279,30 +8717,38 @@ function handleResumeReport(
   projectDir: string | undefined,
 ): void {
   if (flags.stage?.trim()) {
-    emit(errorDirective(
-      "A resume-choice report is not a stage transition; omit --stage.",
-    ));
+    emit(
+      errorDirective(
+        "A resume-choice report is not a stage transition; omit --stage.",
+      ),
+    );
     return;
   }
   if (!flags.userInput?.trim()) {
-    emit(errorDirective(
-      "report --result resumed requires --user-input with the human's resume choice.",
-    ));
+    emit(
+      errorDirective(
+        "report --result resumed requires --user-input with the human's resume choice.",
+      ),
+    );
     return;
   }
   const pd = resolveProjectDir(projectDir);
   const stateContent = loadStateFileIfPresent(pd);
   if (!stateContent) {
-    emit(errorDirective(
-      "No active intent workflow state found (aidlc-state.md is absent) - nothing to resume.",
-    ));
+    emit(
+      errorDirective(
+        "No active intent workflow state found (aidlc-state.md is absent) - nothing to resume.",
+      ),
+    );
     return;
   }
   const slug = getField(stateContent, "Current Stage")?.trim();
   if (!slug) {
-    emit(errorDirective(
-      "State file has no Current Stage field - cannot resume from the last checkpoint.",
-    ));
+    emit(
+      errorDirective(
+        "State file has no Current Stage field - cannot resume from the last checkpoint.",
+      ),
+    );
     return;
   }
   // Numbered-prose harnesses show this fixed menu as 1-4. Normalize an exact
@@ -8318,21 +8764,27 @@ function handleResumeReport(
   const choice = numericChoices[rawChoice] ?? rawChoice;
   if (choice.includes("redo")) {
     const scope = getField(stateContent, "Scope")?.trim() ?? "";
-    emit(printDirective(
-      `Redo accepted at "${slug}". Run \`${aidlcToolInvocation("jump")} execute --target ${slug} --direction redo --scope ${scope}\` to reset the current stage, then re-run \`next\` to start it over.`,
-    ));
+    emit(
+      printDirective(
+        `Redo accepted at "${slug}". Run \`${aidlcToolInvocation("jump")} execute --target ${slug} --direction redo --scope ${scope}\` to reset the current stage, then re-run \`next\` to start it over.`,
+      ),
+    );
     return;
   }
   if (choice.includes("jump")) {
-    emit(printDirective(
-      `Jump accepted. Ask the human which stage to jump to, then re-run \`next --stage <slug>\`; the direction and the target are worked out and checked for you.`,
-    ));
+    emit(
+      printDirective(
+        `Jump accepted. Ask the human which stage to jump to, then re-run \`next --stage <slug>\`; the direction and the target are worked out and checked for you.`,
+      ),
+    );
     return;
   }
   if (choice.includes("fresh") || choice.includes("start over")) {
-    emit(printDirective(
-      "Start-fresh accepted. Confirm the new work's scope and description with the human, then run `next --new-intent --scope <scope> \"<description>\"` — the existing workflow stays in place and the new intent starts alongside it.",
-    ));
+    emit(
+      printDirective(
+        'Start-fresh accepted. Confirm the new work\'s scope and description with the human, then run `next --new-intent --scope <scope> "<description>"` — the existing workflow stays in place and the new intent starts alongside it.',
+      ),
+    );
     return;
   }
   if (
@@ -8340,14 +8792,18 @@ function handleResumeReport(
     choice.includes("checkpoint") ||
     choice.includes("continue")
   ) {
-    emit(printDirective(
-      `Resume choice accepted at "${slug}". Re-run \`next\` to continue from the last checkpoint.`,
-    ));
+    emit(
+      printDirective(
+        `Resume choice accepted at "${slug}". Re-run \`next\` to continue from the last checkpoint.`,
+      ),
+    );
     return;
   }
-  emit(errorDirective(
-    `Unrecognized resume choice "${flags.userInput}". Accepted choices: 1/resume from last checkpoint, 2/redo the current stage, 3/jump to a stage, or 4/start fresh.`,
-  ));
+  emit(
+    errorDirective(
+      `Unrecognized resume choice "${flags.userInput}". Accepted choices: 1/resume from last checkpoint, 2/redo the current stage, 3/jump to a stage, or 4/start fresh.`,
+    ),
+  );
 }
 
 // The `report` handler. Reads the acted stage + scope from state, decides the
@@ -8380,10 +8836,12 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       }
       if (getField(sc, "Status") === "Archived") {
         const archivedIntent = engineSelection(pd).intent ?? "(unknown)";
-        emit(errorDirective(
-          `Intent "${archivedIntent}" is archived, so report cannot mutate its workflow state. ` +
-            `Bring it back with /aidlc intent unarchive ${archivedIntent}.`,
-        ));
+        emit(
+          errorDirective(
+            `Intent "${archivedIntent}" is archived, so report cannot mutate its workflow state. ` +
+              `Bring it back with /aidlc intent unarchive ${archivedIntent}.`,
+          ),
+        );
         return;
       }
     }
@@ -8469,13 +8927,15 @@ function handleReport(args: string[], projectDir: string | undefined): void {
     return;
   }
   const explicitStage = flags.stage?.trim();
-  const slug = explicitStage && explicitStage.length > 0 ? explicitStage : currentSlug;
+  const slug =
+    explicitStage && explicitStage.length > 0 ? explicitStage : currentSlug;
 
   const scope = getField(stateContent, "Scope");
   if (!scope || scope.length === 0) {
     emit({
       kind: "error",
-      message: "State file has no Scope field — cannot resolve the next in-scope stage.",
+      message:
+        "State file has no Scope field — cannot resolve the next in-scope stage.",
     });
     return;
   }
@@ -8507,30 +8967,38 @@ function handleReport(args: string[], projectDir: string | undefined): void {
   // cursor so a stale stage body cannot skip whatever Current Stage became.
   if (flags.result === SKIP_RESULT) {
     if (!explicitStage) {
-      emit(errorDirective(
-        "report --result skipped requires an explicit nonblank --stage <slug>.",
-      ));
+      emit(
+        errorDirective(
+          "report --result skipped requires an explicit nonblank --stage <slug>.",
+        ),
+      );
       return;
     }
     const planAction = effectivePlanAction(slug, scope, stateContent);
     if (node.execution !== "CONDITIONAL" && planAction !== "SKIP") {
-      emit(errorDirective(
-        `Stage "${slug}" is execution: ${node.execution}; only a CONDITIONAL stage can report skipped.`,
-      ));
+      emit(
+        errorDirective(
+          `Stage "${slug}" is execution: ${node.execution}; only a CONDITIONAL stage can report skipped.`,
+        ),
+      );
       return;
     }
     const reason = flags.reason?.trim();
     if (!reason) {
-      emit(errorDirective(
-        "report --result skipped requires a nonblank --reason <text>.",
-      ));
+      emit(
+        errorDirective(
+          "report --result skipped requires a nonblank --reason <text>.",
+        ),
+      );
       return;
     }
     if (slug !== currentSlug) {
-      emit(errorDirective(
-        `Cannot skip stage "${slug}": Current Stage is "${currentSlug}". ` +
-          "A skip report must name the active stage exactly.",
-      ));
+      emit(
+        errorDirective(
+          `Cannot skip stage "${slug}": Current Stage is "${currentSlug}". ` +
+            "A skip report must name the active stage exactly.",
+        ),
+      );
       return;
     }
     if (
@@ -8538,24 +9006,22 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       stageCheckbox.state !== "revising" &&
       stageCheckbox.state !== "skipped"
     ) {
-      emit(errorDirective(
-        `Stage "${slug}" is ${stageCheckbox.state}; only an active, revising, or interrupted skipped stage can be routed as skipped.`,
-      ));
+      emit(
+        errorDirective(
+          `Stage "${slug}" is ${stageCheckbox.state}; only an active, revising, or interrupted skipped stage can be routed as skipped.`,
+        ),
+      );
       return;
     }
 
-    const res = spawnState(pd, [
-      "skip",
-      slug,
-      "--reason",
-      reason,
-      "--route",
-    ]);
+    const res = spawnState(pd, ["skip", slug, "--reason", reason, "--route"]);
     if (res.exitCode !== 0) {
       const detail = (res.stderr || res.stdout).trim();
-      emit(errorDirective(
-        `Could not skip "${slug}"${detail ? `: ${detail}` : ". Run /aidlc --doctor if the reason is unclear."}`,
-      ));
+      emit(
+        errorDirective(
+          `Could not skip "${slug}"${detail ? `: ${detail}` : ". Run /aidlc --doctor if the reason is unclear."}`,
+        ),
+      );
       return;
     }
     emit({
@@ -8580,9 +9046,11 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       flags.result === "approved"
     ) {
       if (!unit) {
-        emit(errorDirective(
-          `Unit Ownership: team requires --unit <name> when reporting "${flags.result}" for "${slug}".`,
-        ));
+        emit(
+          errorDirective(
+            `Unit Ownership: team requires --unit <name> when reporting "${flags.result}" for "${slug}".`,
+          ),
+        );
         return;
       }
       try {
@@ -8593,7 +9061,11 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       }
       const resolution = resolveBoltBatches(pd);
       if (resolution.state !== "ok" || !resolution.units.includes(unit)) {
-        emit(errorDirective(`Unit "${unit}" is not in the authoritative unit DAG.`));
+        emit(
+          errorDirective(
+            `Unit "${unit}" is not in the authoritative unit DAG.`,
+          ),
+        );
         return;
       }
       const rhythm = effectiveUnitGateRhythm(pd, stateContent);
@@ -8601,9 +9073,11 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       const block = constructionUnitMajorBlock(scope, stateContent, true);
       const finalStage = block[block.length - 1];
       if (gateScope === "unit-end" && finalStage?.slug !== slug) {
-        emit(errorDirective(
-          `Unit-end gate for "${unit}" must be reported against "${finalStage?.slug ?? "unknown"}", not "${slug}".`,
-        ));
+        emit(
+          errorDirective(
+            `Unit-end gate for "${unit}" must be reported against "${finalStage?.slug ?? "unknown"}", not "${slug}".`,
+          ),
+        );
         return;
       }
       const status = unitGateStatus(pd, slug, unit, gateScope);
@@ -8613,18 +9087,21 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       const sequence: string[][] = [];
       if (flags.result === "awaiting-approval") {
         if (status === "awaiting-approval") {
-          emit(printDirective(
-            `Unit "${unit}" gate for "${slug}" is already awaiting approval.`,
-          ));
+          emit(
+            printDirective(
+              `Unit "${unit}" gate for "${slug}" is already awaiting approval.`,
+            ),
+          );
           return;
         }
         sequence.push(["gate-start", slug, "--unit", unit]);
       } else if (flags.result === "rejected") {
-        const feedback = flags.reason !== undefined
-          ? flags.reason.trim()
-          : protectedTeamHumanGate
-          ? undefined
-          : flags.userInput?.trim();
+        const feedback =
+          flags.reason !== undefined
+            ? flags.reason.trim()
+            : protectedTeamHumanGate
+              ? undefined
+              : flags.userInput?.trim();
         const rejectArgs = ["reject", slug, "--unit", unit];
         if (feedback) rejectArgs.push("--feedback", feedback);
         if (flags.userInput) {
@@ -8641,19 +9118,15 @@ function handleReport(args: string[], projectDir: string | undefined): void {
           resolveProjectFlag("AIDLC_SKIP_HUMAN_PRESENCE_GUARD") !== "1" &&
           !flags.userInput?.trim()
         ) {
-          emit(errorDirective(
-            `report --result approved for unit "${unit}" of "${slug}" requires --user-input with the human's exact approval choice.`,
-          ));
+          emit(
+            errorDirective(
+              `report --result approved for unit "${unit}" of "${slug}" requires --user-input with the human's exact approval choice.`,
+            ),
+          );
           return;
         }
         if (status !== "awaiting-approval") {
-          sequence.push([
-            "gate-start",
-            slug,
-            "--recovered",
-            "--unit",
-            unit,
-          ]);
+          sequence.push(["gate-start", slug, "--recovered", "--unit", unit]);
         }
         sequence.push(approveArgs(slug, flags));
       }
@@ -8679,10 +9152,12 @@ function handleReport(args: string[], projectDir: string | undefined): void {
             emit(guardAsk);
             return;
           }
-          emit(errorDirective(
-            `Transition rejected by aidlc-state.ts ${subArgs[0]} for unit "${unit}" of "${slug}"` +
-              (detail ? `: ${detail}` : "."),
-          ));
+          emit(
+            errorDirective(
+              `Transition rejected by aidlc-state.ts ${subArgs[0]} for unit "${unit}" of "${slug}"` +
+                (detail ? `: ${detail}` : "."),
+            ),
+          );
           return;
         }
         committed.push(subArgs[0]);
@@ -8706,13 +9181,17 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       return;
     }
     if (flags.unit) {
-      emit(errorDirective(
-        `--unit is supported only for team-owned gate outcomes, not "${flags.result}".`,
-      ));
+      emit(
+        errorDirective(
+          `--unit is supported only for team-owned gate outcomes, not "${flags.result}".`,
+        ),
+      );
       return;
     }
   } else if (flags.unit) {
-    emit(errorDirective("--unit gate reporting requires Unit Ownership: team."));
+    emit(
+      errorDirective("--unit gate reporting requires Unit Ownership: team."),
+    );
     return;
   }
 
@@ -8724,50 +9203,55 @@ function handleReport(args: string[], projectDir: string | undefined): void {
     resolveProjectFlag("AIDLC_SKIP_HUMAN_PRESENCE_GUARD") !== "1";
 
   if (flags.overrideBlockingSensors) {
-    if (
-      flags.result !== "awaiting-approval" &&
-      flags.result !== "revised"
-    ) {
-      emit(errorDirective(
-        "--override-blocking-sensors is valid only while opening or re-entering a gate.",
-      ));
+    if (flags.result !== "awaiting-approval" && flags.result !== "revised") {
+      emit(
+        errorDirective(
+          "--override-blocking-sensors is valid only while opening or re-entering a gate.",
+        ),
+      );
       return;
     }
     if (readAutonomyMode(stateContent) === "autonomous") {
-      emit(errorDirective(
-        `Refusing blocking sensor override for "${slug}": Construction Autonomy Mode ` +
-          "is autonomous. Unattended runs must halt on blocking sensor failures.",
-      ));
+      emit(
+        errorDirective(
+          `Refusing blocking sensor override for "${slug}": Construction Autonomy Mode ` +
+            "is autonomous. Unattended runs must halt on blocking sensor failures.",
+        ),
+      );
       return;
     }
     if (flags.userInput?.trim() !== BLOCKING_SENSOR_OVERRIDE_CHOICE) {
-      emit(errorDirective(
-        `A blocking sensor override requires --user-input ` +
-          `"${BLOCKING_SENSOR_OVERRIDE_CHOICE}", the exact choice offered to the human.`,
-      ));
+      emit(
+        errorDirective(
+          `A blocking sensor override requires --user-input ` +
+            `"${BLOCKING_SENSOR_OVERRIDE_CHOICE}", the exact choice offered to the human.`,
+        ),
+      );
       return;
     }
   }
 
-
-  if (
-    protectedHumanGate &&
-    FORWARD_RESULTS.has(flags.result ?? "")
-  ) {
+  if (protectedHumanGate && FORWARD_RESULTS.has(flags.result ?? "")) {
     const rawRevisionCount = getField(stateContent, "Revision Count");
-    const parsedRevisionCount = rawRevisionCount ? parseInt(rawRevisionCount, 10) : 0;
-    const revisionCount = Number.isFinite(parsedRevisionCount) ? parsedRevisionCount : 0;
+    const parsedRevisionCount = rawRevisionCount
+      ? parseInt(rawRevisionCount, 10)
+      : 0;
+    const revisionCount = Number.isFinite(parsedRevisionCount)
+      ? parsedRevisionCount
+      : 0;
     const approvalChoice = flags.userInput?.trim();
     const matchesOfferedApproval =
       approvalChoice === "Approve" ||
       (approvalChoice === "Accept as-is" && revisionCount >= 3);
     if (!matchesOfferedApproval) {
-      emit(errorDirective(
-        `report --result ${flags.result} for "${slug}" received reply ` +
-          `${formatReceivedReply(approvalChoice)} which did not match an offered choice at ` +
-          "the held gate. Re-present the original held gate with every offered " +
-          "choice and wait for the human to choose one.",
-      ));
+      emit(
+        errorDirective(
+          `report --result ${flags.result} for "${slug}" received reply ` +
+            `${formatReceivedReply(approvalChoice)} which did not match an offered choice at ` +
+            "the held gate. Re-present the original held gate with every offered " +
+            "choice and wait for the human to choose one.",
+        ),
+      );
       return;
     }
   }
@@ -8777,9 +9261,11 @@ function handleReport(args: string[], projectDir: string | undefined): void {
   // opening, rejecting, or re-entering a gate does not claim completion.
   if (GATE_RESULTS.has(flags.result)) {
     if (!isGated) {
-      emit(errorDirective(
-        `Stage "${slug}" is an ungated initialization stage; it cannot report ${flags.result}.`,
-      ));
+      emit(
+        errorDirective(
+          `Stage "${slug}" is an ungated initialization stage; it cannot report ${flags.result}.`,
+        ),
+      );
       return;
     }
     if (
@@ -8809,9 +9295,11 @@ function handleReport(args: string[], projectDir: string | undefined): void {
         stageCheckbox.state !== "in-progress" &&
         stageCheckbox.state !== "awaiting-approval"
       ) {
-        emit(errorDirective(
-          `Stage "${slug}" is ${stageCheckbox.state}; only an in-progress or already-open stage can validate a gate.`,
-        ));
+        emit(
+          errorDirective(
+            `Stage "${slug}" is ${stageCheckbox.state}; only an in-progress or already-open stage can validate a gate.`,
+          ),
+        );
         return;
       }
       subArgs = ["gate-start", slug];
@@ -8827,16 +9315,19 @@ function handleReport(args: string[], projectDir: string | undefined): void {
         stageCheckbox.state !== "in-progress" &&
         stageCheckbox.state !== "awaiting-approval"
       ) {
-        emit(errorDirective(
-          `Stage "${slug}" is ${stageCheckbox.state}; only an active or awaiting-approval stage can be rejected.`,
-        ));
+        emit(
+          errorDirective(
+            `Stage "${slug}" is ${stageCheckbox.state}; only an active or awaiting-approval stage can be rejected.`,
+          ),
+        );
         return;
       }
-      const feedback = flags.reason !== undefined
-        ? flags.reason.trim()
-        : protectedHumanGate
-        ? undefined
-        : flags.userInput?.trim();
+      const feedback =
+        flags.reason !== undefined
+          ? flags.reason.trim()
+          : protectedHumanGate
+            ? undefined
+            : flags.userInput?.trim();
       subArgs = ["reject", slug];
       if (feedback) subArgs.push("--feedback", feedback);
       if (flags.userInput) subArgs.push("--user-input", flags.userInput);
@@ -8845,9 +9336,11 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       }
     } else {
       if (stageCheckbox.state !== "revising") {
-        emit(errorDirective(
-          `Stage "${slug}" is ${stageCheckbox.state}; only a revising stage can re-enter its gate.`,
-        ));
+        emit(
+          errorDirective(
+            `Stage "${slug}" is ${stageCheckbox.state}; only a revising stage can re-enter its gate.`,
+          ),
+        );
         return;
       }
       subArgs = ["revise", slug];
@@ -8860,12 +9353,9 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       }
     }
 
-    const preflight = preflightSequenceDirective(
-      pd,
-      stateContent,
-      node,
-      [subArgs],
-    );
+    const preflight = preflightSequenceDirective(pd, stateContent, node, [
+      subArgs,
+    ]);
     if (preflight !== null) {
       emit(preflight);
       return;
@@ -8878,10 +9368,14 @@ function handleReport(args: string[], projectDir: string | undefined): void {
         emit(guardAsk);
         return;
       }
-      emit(errorDirective(
-        `Could not update the approval status for "${slug}"` +
-          (detail ? `: ${detail}` : ". Run /aidlc --doctor if the reason is unclear."),
-      ));
+      emit(
+        errorDirective(
+          `Could not update the approval status for "${slug}"` +
+            (detail
+              ? `: ${detail}`
+              : ". Run /aidlc --doctor if the reason is unclear."),
+        ),
+      );
       return;
     }
     emit(
@@ -8890,12 +9384,12 @@ function handleReport(args: string[], projectDir: string | undefined): void {
           revalidatingOpenGate
             ? `Stage "${slug}" is already awaiting approval; gate evidence revalidated.`
             : flags.result === "rejected" && node.mode === "pipeline"
-            ? `Recorded rejected for "${slug}". The rejection starts a new pipeline attempt; prior receipts no longer apply. ` +
-              `Re-run \`${aidlcToolInvocation("orchestrate")} next\`, then dispatch every missing link in ` +
-              `directive.pipeline order with the exact human feedback. Each link must perform fresh work and return before its ` +
-              `new receipt is recorded. Preserve the configured topology and reviewer policy; a targeted artifact edit does not ` +
-              `permit the conductor to replace the pipeline or reuse its previous handoffs. Report revised only after the fresh chain completes.`
-            : `Recorded ${flags.result} for "${slug}".`,
+              ? `Recorded rejected for "${slug}". The rejection starts a new pipeline attempt; prior receipts no longer apply. ` +
+                `Re-run \`${aidlcToolInvocation("orchestrate")} next\`, then dispatch every missing link in ` +
+                `directive.pipeline order with the exact human feedback. Each link must perform fresh work and return before its ` +
+                `new receipt is recorded. Preserve the configured topology and reviewer policy; a targeted artifact edit does not ` +
+                `permit the conductor to replace the pipeline or reuse its previous handoffs. Report revised only after the fresh chain completes.`
+              : `Recorded ${flags.result} for "${slug}".`,
         ),
         changeNoticesFromToolOutput(res.stdout),
       ),
@@ -8926,11 +9420,13 @@ function handleReport(args: string[], projectDir: string | undefined): void {
     stageCheckbox.state !== "completed" &&
     !hasFreshPracticesAffirmationReceipt(pd, stateContent)
   ) {
-    emit(errorDirective(
-      'Cannot approve "practices-discovery" because the approved practices have not been saved yet. ' +
-        "Run aidlc-state.ts practices-promote after the human approves, then report " +
-        '--result approved --user-input "<exact choice>".',
-    ));
+    emit(
+      errorDirective(
+        'Cannot approve "practices-discovery" because the approved practices have not been saved yet. ' +
+          "Run aidlc-state.ts practices-promote after the human approves, then report " +
+          '--result approved --user-input "<exact choice>".',
+      ),
+    );
     return;
   }
 
@@ -8949,16 +9445,14 @@ function handleReport(args: string[], projectDir: string | undefined): void {
   if (stageCheckbox.state === "skipped" || stageCheckbox.state === "revising") {
     emit({
       kind: "error",
-      message:
-        `Stage "${slug}" is ${stageCheckbox.state}; report commits forward completions only.`,
+      message: `Stage "${slug}" is ${stageCheckbox.state}; report commits forward completions only.`,
     });
     return;
   }
   if (stageCheckbox.state === "pending") {
     emit({
       kind: "error",
-      message:
-        `Stage "${slug}" is still pending. Run the stage before reporting it complete.`,
+      message: `Stage "${slug}" is still pending. Run the stage before reporting it complete.`,
     });
     return;
   }
@@ -8968,8 +9462,7 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       if (status === "Completed") {
         emit({
           kind: "done",
-          reason:
-            `Workflow is already completed at "${slug}" (scope: ${scope}); no transition was needed.${NEW_WORK_HINT}`,
+          reason: `Workflow is already completed at "${slug}" (scope: ${scope}); no transition was needed.${NEW_WORK_HINT}`,
         });
         return;
       }
@@ -8985,7 +9478,9 @@ function handleReport(args: string[], projectDir: string | undefined): void {
       // landed but advance crashed: slug === currentSlug, next still pending)
       // falls through to advance below.
       const currentCb =
-        slug === currentSlug ? undefined : checkboxForSlug(stateContent, currentSlug);
+        slug === currentSlug
+          ? undefined
+          : checkboxForSlug(stateContent, currentSlug);
       if (currentCb && currentCb.state !== "pending") {
         emit({
           kind: "done",
@@ -9054,7 +9549,9 @@ function handleReport(args: string[], projectDir: string | undefined): void {
         kind: "error",
         message:
           `Could not complete "${slug}"` +
-          (detail ? `: ${detail}` : ". Run /aidlc --doctor if the reason is unclear."),
+          (detail
+            ? `: ${detail}`
+            : ". Run /aidlc --doctor if the reason is unclear."),
       });
       return;
     }
@@ -9102,23 +9599,24 @@ function handlePark(_args: string[], projectDir: string | undefined): void {
   const res = spawnState(pd, ["park"]);
   if (res.exitCode !== 0) {
     const detail = (res.stderr || res.stdout).trim();
-    emit(errorDirective(`Cannot park the workflow${detail ? `: ${detail}` : "."}`));
+    emit(
+      errorDirective(`Cannot park the workflow${detail ? `: ${detail}` : "."}`),
+    );
     return;
   }
   const stateContent = loadStateFileIfPresent(pd);
   const parkedAt = stateContent
     ? (getField(stateContent, "Parked At Stage") ?? "").trim()
     : "";
-  emit(parkedDirective(
-    `Workflow parked at "${parkedAt}". Resume with /aidlc --resume.`,
-    parkedAt,
-  ));
+  emit(
+    parkedDirective(
+      `Workflow parked at "${parkedAt}". Resume with /aidlc --resume.`,
+      parkedAt,
+    ),
+  );
 }
 
-function handleTeamBoard(
-  args: string[],
-  projectDir: string | undefined,
-): void {
+function handleTeamBoard(args: string[], projectDir: string | undefined): void {
   const requestedProjectDir = resolveProjectDir(projectDir);
   let pd = requestedProjectDir;
   if (readApplicableTeamUnitScopeStamp(requestedProjectDir)) {
@@ -9136,7 +9634,9 @@ function handleTeamBoard(
     });
     if (top.exitCode === 0 && common.exitCode === 0) {
       const topPath = top.stdout.toString().trim();
-      const mainPath = dirname(resolve(topPath, common.stdout.toString().trim()));
+      const mainPath = dirname(
+        resolve(topPath, common.stdout.toString().trim()),
+      );
       if (existsSync(mainPath)) pd = mainPath;
     }
   }
@@ -9159,11 +9659,11 @@ function handleTeamBoard(
     const intents = listIntents(pd, selectedSpace);
     const matches = selectedIntent
       ? intents.filter(
-      (intent) =>
-        intent.dirName === selectedIntent ||
-        intent.slug === selectedIntent ||
-        intent.uuid === selectedIntent,
-      )
+          (intent) =>
+            intent.dirName === selectedIntent ||
+            intent.slug === selectedIntent ||
+            intent.uuid === selectedIntent,
+        )
       : intents.filter((intent) => intent.active);
     if (matches.length !== 1 || !matches[0].dirName || !matches[0].uuid) {
       throw new Error(
@@ -9181,16 +9681,16 @@ function handleTeamBoard(
     }
     board =
       selectedSpace === defaultSelection.space &&
-          intent.dirName === defaultSelection.intent
+      intent.dirName === defaultSelection.intent
         ? buildTeamConstructionBoard(pd, stateContent, { readOnly: true })
         : buildTeamConstructionBoardForIntent(pd, stateContent, {
-          space: selectedSpace,
-          intentUuid,
-          dependencyBody: readFileSync(
-            unitDependencyPath(pd, intentDir, selectedSpace),
-            "utf-8",
-          ),
-        });
+            space: selectedSpace,
+            intentUuid,
+            dependencyBody: readFileSync(
+              unitDependencyPath(pd, intentDir, selectedSpace),
+              "utf-8",
+            ),
+          });
   } else {
     stateContent = readStateFile(pd);
     if (!isTeamUnitOwnership(stateContent)) {
@@ -9217,30 +9717,38 @@ function handleContinue(args: string[], projectDir: string | undefined): void {
   const pd = resolveProjectDir(projectDir);
   const payload = decodeSteeringToken(token, pd);
   if (!payload || args.length !== 1) {
-    emit(errorDirective(
-      "Invalid steering continuation token: this stage's rules cannot be loaded from where they left off. Run a fresh `next` to restart delivery from part 1.",
-    ));
+    emit(
+      errorDirective(
+        "Invalid steering continuation token: this stage's rules cannot be loaded from where they left off. Run a fresh `next` to restart delivery from part 1.",
+      ),
+    );
     return;
   }
   const liveState = loadStateFileIfPresent(pd);
   const liveStateHash = liveState === null ? null : stateDigest(liveState);
   if (payload.a && payload.h !== liveStateHash) {
-    emit(errorDirective(
-      "The saved position moved on: the workflow state changed while this stage's rules were being loaded. Run a fresh `next` to restart delivery from part 1.",
-    ));
+    emit(
+      errorDirective(
+        "The saved position moved on: the workflow state changed while this stage's rules were being loaded. Run a fresh `next` to restart delivery from part 1.",
+      ),
+    );
     return;
   }
   const node = nodeForSlug(payload.s);
   if (!node) {
-    emit(errorDirective(
-      `Stage "${payload.s}" no longer exists. Run a fresh \`next\` after recompiling the stage graph.`,
-    ));
+    emit(
+      errorDirective(
+        `Stage "${payload.s}" no longer exists. Run a fresh \`next\` after recompiling the stage graph.`,
+      ),
+    );
     return;
   }
   if (payload.r !== steeringRouteHash(node, payload.c)) {
-    emit(errorDirective(
-      "Which stage runs next has changed: the stage route changed while its rules were being loaded. Run a fresh `next` to restart delivery from part 1.",
-    ));
+    emit(
+      errorDirective(
+        "Which stage runs next has changed: the stage route changed while its rules were being loaded. Run a fresh `next` to restart delivery from part 1.",
+      ),
+    );
     return;
   }
   activeStageValidityAdvisory =
@@ -9323,9 +9831,13 @@ function handleContinue(args: string[], projectDir: string | undefined): void {
       return;
     }
     if (advanced === "legacy-plan-approval-owned") {
-      writePrepared(prepareEmission(errorDirective(
-        "Legacy Kiro Plan Approval is owned by another active IDE window. Continue the pending approval there; this call did not receive or rotate its protected choices.",
-      )));
+      writePrepared(
+        prepareEmission(
+          errorDirective(
+            "Legacy Kiro Plan Approval is owned by another active IDE window. Continue the pending approval there; this call did not receive or rotate its protected choices.",
+          ),
+        ),
+      );
       return;
     }
     if (advanced === "legacy-plan-approval-recovery-required") {
@@ -9339,15 +9851,20 @@ function handleContinue(args: string[], projectDir: string | undefined): void {
       writePrepared(prepared);
       return;
     }
-    const message = advanced === "superseded"
-      ? "This continuation token is no longer current for this workflow. Run a fresh `next`; do not reuse an earlier token."
-      : "The active workflow context changed while this continuation was prepared. Run a fresh `next`; do not use the prepared result.";
+    const message =
+      advanced === "superseded"
+        ? "This continuation token is no longer current for this workflow. Run a fresh `next`; do not reuse an earlier token."
+        : "The active workflow context changed while this continuation was prepared. Run a fresh `next`; do not use the prepared result.";
     writePrepared(prepareEmission(errorDirective(message)));
   } catch (error) {
     if (!(error instanceof ActiveDirectiveLockContendedError)) throw error;
-    writePrepared(prepareEmission(errorDirective(
-      "Continuation coordination is busy. This call did not commit a cursor change. Retry the current token; if it is reported superseded, run a fresh `next`.",
-    )));
+    writePrepared(
+      prepareEmission(
+        errorDirective(
+          "Continuation coordination is busy. This call did not commit a cursor change. Retry the current token; if it is reported superseded, run a fresh `next`.",
+        ),
+      ),
+    );
   }
 }
 
@@ -9380,11 +9897,22 @@ function parseWaitFlags(args: string[]): WaitFlags {
     const a = args[i];
     const v = i + 1 < args.length ? args[i + 1] : undefined;
     if (v === undefined) continue;
-    if (a === "--stage") { flags.stage = v; i++; }
-    else if (a === "--unit") { flags.unit = v; i++; }
-    else if (a === "--for") { flags.for = v; i++; }
-    else if (a === "--review-file") { flags.reviewFile = v; i++; }
-    else if (a === "--timeout") { flags.timeout = Number(v); i++; }
+    if (a === "--stage") {
+      flags.stage = v;
+      i++;
+    } else if (a === "--unit") {
+      flags.unit = v;
+      i++;
+    } else if (a === "--for") {
+      flags.for = v;
+      i++;
+    } else if (a === "--review-file") {
+      flags.reviewFile = v;
+      i++;
+    } else if (a === "--timeout") {
+      flags.timeout = Number(v);
+      i++;
+    }
   }
   return flags;
 }
@@ -9415,7 +9943,9 @@ function handleWait(args: string[], projectDir: string | undefined): void {
     process.exit(1);
   }
   const seconds =
-    flags.timeout !== undefined && Number.isFinite(flags.timeout) && flags.timeout > 0
+    flags.timeout !== undefined &&
+    Number.isFinite(flags.timeout) &&
+    flags.timeout > 0
       ? Math.min(flags.timeout, WAIT_MAX_SECONDS)
       : WAIT_DEFAULT_SECONDS;
   const started = Date.now();
@@ -9437,7 +9967,9 @@ function handleWait(args: string[], projectDir: string | undefined): void {
   const reviewPath =
     flags.reviewFile === undefined
       ? null
-      : isAbsolute(flags.reviewFile) ? flags.reviewFile : join(pd, flags.reviewFile);
+      : isAbsolute(flags.reviewFile)
+        ? flags.reviewFile
+        : join(pd, flags.reviewFile);
   const missingNow = (): string[] => {
     const missing: string[] = [];
     if (target === "review") {
@@ -9448,7 +9980,12 @@ function handleWait(args: string[], projectDir: string | undefined): void {
       for (const agent of node.support_agents ?? []) {
         let firstLine = "";
         try {
-          firstLine = readFileSync(join(contributionsDir, `${agent}.md`), "utf-8").split("\n", 1)[0].trim();
+          firstLine = readFileSync(
+            join(contributionsDir, `${agent}.md`),
+            "utf-8",
+          )
+            .split("\n", 1)[0]
+            .trim();
         } catch {
           missing.push(`${agent} (no contribution file)`);
           continue;
@@ -9464,7 +10001,8 @@ function handleWait(args: string[], projectDir: string | undefined): void {
           missing.push(`${entry.logicalPath} (location unresolved)`);
           continue;
         }
-        if (!fileHasBytes(entry.path)) missing.push(`${entry.logicalPath} (absent or empty)`);
+        if (!fileHasBytes(entry.path))
+          missing.push(`${entry.logicalPath} (absent or empty)`);
       }
     }
     return missing;
@@ -9475,18 +10013,20 @@ function handleWait(args: string[], projectDir: string | undefined): void {
     missing = missingNow();
   }
   const settled = missing.length === 0;
-  console.log(JSON.stringify({
-    status: settled ? "settled" : "waiting",
-    stage: node.slug,
-    ...(flags.unit ? { unit: flags.unit } : {}),
-    for: target,
-    ...(flags.reviewFile ? { review_file: flags.reviewFile } : {}),
-    waited_ms: Date.now() - started,
-    missing,
-    next: settled
-      ? "The dispatched work has landed: read its outputs and continue the stage body."
-      : "Not yet: run this same command again. Never replace it with a shell loop or a sleep.",
-  }));
+  console.log(
+    JSON.stringify({
+      status: settled ? "settled" : "waiting",
+      stage: node.slug,
+      ...(flags.unit ? { unit: flags.unit } : {}),
+      for: target,
+      ...(flags.reviewFile ? { review_file: flags.reviewFile } : {}),
+      waited_ms: Date.now() - started,
+      missing,
+      next: settled
+        ? "The dispatched work has landed: read its outputs and continue the stage body."
+        : "Not yet: run this same command again. Never replace it with a shell loop or a sleep.",
+    }),
+  );
 }
 
 // --- CLI entry point ---
@@ -9504,13 +10044,22 @@ export function main(argv: string[]): void {
     if (rawArgs[i] === "--") {
       literalArgs = true;
       filteredArgs.push(rawArgs[i]);
-    } else if (!literalArgs && rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
+    } else if (
+      !literalArgs &&
+      rawArgs[i] === "--project-dir" &&
+      i + 1 < rawArgs.length
+    ) {
       projectDir = rawArgs[i + 1];
       i++;
-    } else if (!literalArgs && rawArgs[i] === "--aidlc-attempt-id" && i + 1 < rawArgs.length) {
+    } else if (
+      !literalArgs &&
+      rawArgs[i] === "--aidlc-attempt-id" &&
+      i + 1 < rawArgs.length
+    ) {
       const candidate = rawArgs[i + 1];
       if (/^[A-Za-z0-9._:-]{1,128}$/.test(candidate)) {
-        if (attemptId !== undefined && attemptId !== candidate) conflictingAttemptId = true;
+        if (attemptId !== undefined && attemptId !== candidate)
+          conflictingAttemptId = true;
         attemptId = candidate;
       }
       i++;
@@ -9521,24 +10070,23 @@ export function main(argv: string[]): void {
 
   const subcommand = filteredArgs[0];
   const subArgs = filteredArgs.slice(1);
-  if (engineInvocation !== null) throw new Error("Nested aidlc-orchestrate dispatch is not supported");
+  if (engineInvocation !== null)
+    throw new Error("Nested aidlc-orchestrate dispatch is not supported");
   const resolvedProjectDir = resolveProjectDir(projectDir);
   const resolvedSelection = resolveWorkflowSelection(resolvedProjectDir);
   engineProjectDir = resolvedProjectDir;
   engineSessionId = resolvedSelection.sessionId ?? undefined;
   engineSelections.clear();
   engineSelections.set(resolvedProjectDir, resolvedSelection);
-  const commandKind = (["next", "continue", "report", "park"] as const).find((kind) => kind === subcommand);
-  if (commandKind) engineInvocation = {
-    commandKind,
-    commandSha256: sha256(
-      JSON.stringify([
-        commandKind,
-        ...subArgs,
-      ]),
-    ),
-    ...(!conflictingAttemptId && attemptId ? { attemptId } : {}),
-  };
+  const commandKind = (["next", "continue", "report", "park"] as const).find(
+    (kind) => kind === subcommand,
+  );
+  if (commandKind)
+    engineInvocation = {
+      commandKind,
+      commandSha256: sha256(JSON.stringify([commandKind, ...subArgs])),
+      ...(!conflictingAttemptId && attemptId ? { attemptId } : {}),
+    };
   try {
     switch (subcommand) {
       case "next":

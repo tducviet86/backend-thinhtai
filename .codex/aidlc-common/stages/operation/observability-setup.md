@@ -64,6 +64,7 @@ CONDITIONAL stage reports skipped.
 ### Step 2: Generate Clarifying Questions
 
 Create questions file covering:
+
 - What are the golden signals to track (latency, traffic, errors, saturation)?
 - What SLOs/SLIs are defined?
 - What dashboard layouts does the team need?

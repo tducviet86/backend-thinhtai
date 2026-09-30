@@ -42,7 +42,9 @@ sources in agreement — see `docs/reference/02-plane-architecture.md` § 5
 ("Recovery as an emergent property").
 
 ### Session resume
+
 If `aidlc-state.md` exists, read it to determine:
+
 - Which stages are completed (marked `[x]`)
 - What the current/next stage is
 - Whether artifacts from prior stages exist
@@ -66,23 +68,28 @@ first, record fresh reviewer receipts, and `finalize`. None of the three paths
 may treat preserved artifacts or prior receipts as current-attempt evidence.
 
 ### Session resume context loading
+
 When resuming, load context appropriate to the current phase and stage type:
 
 **INITIALIZATION stages (0.1–0.3):**
+
 - No prior context needed — these are the first stages
 - Workspace Detection loads fresh filesystem scan
 - State Init reads workspace classification from Workspace Detection
 
 **IDEATION stages (1.1–1.7):**
+
 - Load `<record>/ideation/` artifacts completed so far (intent capture, market research, feasibility, scope)
 - Load guardrails from
   `aidlc/spaces/<active-space>/memory/{org,team,project}.md`
 
 **INCEPTION — RE (Reverse Engineering) stages:**
+
 - Load `aidlc/spaces/<active-space>/codekb/<repo>/` artifacts (codebase analysis, component inventory)
 - Load ideation artifacts (scope, feasibility) for context
 
 **INCEPTION — Practices Discovery (stage 2.2):**
+
 - Load `aidlc/spaces/<active-space>/codekb/<repo>/` artifacts (brownfield evidence inputs)
 - Load `<record>/inception/practices-discovery/` if partially complete,
   including its lead drafts, interview file, and `contributions/`.
@@ -101,39 +108,48 @@ When resuming, load context appropriate to the current phase and stage type:
   promotion succeeds.
 
 **INCEPTION — Requirements stages:**
+
 - Load RE artifacts (if RE was performed)
 - Load `<record>/inception/requirements-analysis/` (functional requirements, NFRs, user stories)
 
 **INCEPTION — Design stages (App Design, Refined Mockups, Units Generation):**
+
 - Load requirements artifacts
 - Load user stories
 - Load `<record>/inception/domain-design/` (component catalogue) and `<record>/inception/contract-design/` (inter-unit contracts)
 
 **INCEPTION — Delivery Planning:**
+
 - Load all inception artifacts (requirements, design, units)
 - Load `<record>/inception/delivery-planning/` if partially complete
 
 **CONSTRUCTION — Code Generation stages:**
+
 - Load all design artifacts for the current unit being implemented
 - Load the relevant story design and acceptance criteria
 - Load any previously generated code for the current unit
 
 **CONSTRUCTION — Build/Test stages:**
+
 - Load all code outputs for the current unit
 - Load test plans and acceptance criteria
 - Load build configuration artifacts
 
 **CONSTRUCTION — CI Pipeline / Infrastructure:**
+
 - Load infrastructure design artifacts
 - Load code generation outputs for pipeline configuration
 
 **OPERATION stages (4.1–4.7):**
+
 - Load construction outputs (built code, infrastructure design, CI pipeline)
 - Load `<record>/operation/` artifacts completed so far
 - For later stages (4.4+), load deployment outputs from 4.1–4.3
 
 ### Stage re-run
+
 If a stage needs to be re-run (user requested changes after approval):
+
 - Re-read the stage file
 - Load prior artifacts as context
 - Execute the stage again, overwriting previous artifacts
@@ -150,13 +166,16 @@ skipped --reason "<reason>"`. Never call `aidlc-state.ts skip` directly and
 never mark the checkbox by hand.
 
 ### Context compaction
+
 The PreCompact hook validates state file structure in `aidlc-state.md` before compaction.
 After compaction, the orchestrator can re-read state and continue.
 
 **Note:** PreCompact hooks are informational-only and cannot block compaction. The hook writes a `.aidlc-engine/recovery.md` breadcrumb file recording the last validated state (current stage, timestamp). On session resume, the orchestrator compares this breadcrumb with `aidlc-state.md` to detect possible compaction-related state corruption.
 
 ### Corrupted state file recovery
+
 If `aidlc-state.md` exists but cannot be parsed (missing required sections, invalid checkbox syntax, contradictory state):
+
 1. Create a backup: copy `aidlc-state.md` to `aidlc-state.md.bak`
 2. Scan `<record>/` for existing artifacts to determine which stages actually completed
 3. Rebuild `aidlc-state.md` from artifact evidence:
@@ -168,7 +187,9 @@ If `aidlc-state.md` exists but cannot be parsed (missing required sections, inva
 5. Tell the user: "The file tracking this workflow's progress was damaged, so I rebuilt it from the documents already on disk. Please check that the recovered progress looks right before we continue."
 
 ### Missing artifact recovery
+
 If a stage references prior artifacts that do not exist on disk:
+
 1. Check which expected artifacts are missing (list them)
 2. Check whether the producing stage is on the active scope's path at all (SKIP stages never produce). If the producer is SKIP for this scope, the artifact is absent BY DESIGN — this is not an error and re-running the producer is not an option. Proceed with the stage's documented fallback (work from the requirements, the code knowledge base, or the workspace's existing configuration, per the stage body), or, if the human has the artifact from elsewhere, they may provide it manually at the expected path. Do not invent the missing artifact's content and do not treat the gap as a failure.
 3. If the producer IS on the scope path, check if it is marked complete in state
@@ -181,20 +202,23 @@ If a stage references prior artifacts that do not exist on disk:
 
 When errors or issues are detected during workflow execution, classify them by severity:
 
-| Severity | Description | Examples |
-|----------|-------------|----------|
-| **Critical** | Workflow cannot continue | Corrupted state file, missing critical artifacts, unrecoverable parse errors |
-| **High** | Stage output may be incorrect | Contradictory user inputs, incomplete question answers, missing dependencies |
-| **Medium** | Quality may be reduced | Vague user responses, partial context from prior stages, ambiguous requirements |
-| **Low** | Cosmetic or non-blocking | Formatting inconsistencies, minor naming mismatches, style issues |
+| Severity     | Description                   | Examples                                                                        |
+| ------------ | ----------------------------- | ------------------------------------------------------------------------------- |
+| **Critical** | Workflow cannot continue      | Corrupted state file, missing critical artifacts, unrecoverable parse errors    |
+| **High**     | Stage output may be incorrect | Contradictory user inputs, incomplete question answers, missing dependencies    |
+| **Medium**   | Quality may be reduced        | Vague user responses, partial context from prior stages, ambiguous requirements |
+| **Low**      | Cosmetic or non-blocking      | Formatting inconsistencies, minor naming mismatches, style issues               |
 
 **Escalation guidelines:**
+
 - **Critical / High**: Stop and ask the user immediately. Do not attempt to proceed or guess.
 - **Medium**: Attempt resolution (e.g., re-read artifacts, infer from context). If unresolved, ask the user.
 - **Low**: Handle silently and log in `<record>/audit/<host>-<clone>.md`. No user interruption needed.
 
 ### Contradictory inputs recovery
+
 If user inputs from different stages contradict each other (detected during execution):
+
 1. Flag the specific contradiction to the user with quotes from both sources
 2. Do NOT attempt to resolve the contradiction by choosing one interpretation
 3. Ask the user which input takes priority
@@ -208,6 +232,7 @@ If user inputs from different stages contradict each other (detected during exec
 If the user requests changes mid-workflow:
 
 ### New reference material supplied mid-stage:
+
 When the user hands you new material mid-stage — a reference code package to
 study, an example repo, a spec, a competitor's implementation, sample data —
 treat it as **evidence/input for the current stage, never a routing
@@ -222,8 +247,8 @@ instruction**. Supplying material is not a request to advance.
   needed until its answers are coherent.
 - **Then continue through the normal engine transition** — finish the stage,
   present its gate, `report` the outcome, and let the next `next` name the next
-  move. The engine owns advancement; the material only changed the *content* of
-  the current stage, not *which* stage runs.
+  move. The engine owns advancement; the material only changed the _content_ of
+  the current stage, not _which_ stage runs.
 - **Routing changes only on an explicit user action.** Advance past a stage only
   if the user explicitly asks for a jump (`--stage`) or a scope change
   (`--scope`), and only after the normal impact-analysis / gate flow below
@@ -236,36 +261,45 @@ example), the designed home for studying it is the Reverse Engineering stage
 Generation.
 
 ### Minor changes (within current stage):
+
 - Apply changes to current stage artifacts
 - Re-present completion message
 
 ### Major changes (affects prior stages):
+
 1. Identify which prior stages are affected
 2. Present impact analysis to the user via a structured question
 3. If approved, use the stage/phase jump or recompose command that names the affected boundary, then re-run stages in order
 4. Report every rerun lifecycle outcome through `aidlc-orchestrate.ts`; never edit `aidlc-state.md` directly
 
 ### Scope changes (new requirements):
+
 1. Document the change in `<record>/audit/<host>-<clone>.md`
 2. Return to requirements-analysis or delivery-planning as appropriate
 3. Re-plan execution from that point forward
 4. If the stage set changes, run `aidlc-utility.ts recompose` (or a scope change through `aidlc-orchestrate.ts next`); never edit scope configuration in `aidlc-state.md`
 
 ### Archive before change
+
 Before any major change that would overwrite existing artifacts:
+
 1. Create `<record>/archive/` if it does not exist
 2. Copy affected artifacts to `<record>/archive/[ISO-date]-[stage-name]/`
 3. Proceed with the change
-This ensures no prior work is permanently lost.
+   This ensures no prior work is permanently lost.
 
 ### Unit modification handling
+
 If the user wants to add, remove, or split implementation units mid-workflow:
+
 - **Adding a unit**: Add it to the workflow plan, create its story design, slot it into the build order. Do NOT re-run completed units.
 - **Removing a unit**: Recompose the unit plan through the owning stage, archive its artifacts if any exist, and check dependencies. Do not hand-edit a unit or stage checkbox in `aidlc-state.md`.
 - **Splitting a unit**: Archive the original unit's artifacts, create two new unit entries in the plan, distribute the original stories between them, run story design for each new unit.
 
 ### Architectural change handling
+
 If the user requests a change that affects the application architecture (e.g., switching databases, changing deployment model, adding a major integration):
+
 1. Identify the scope: which design artifacts, story designs, and generated code are affected
 2. Present full impact analysis showing all affected artifacts
 3. If approved, return to App Design stage and re-run from there

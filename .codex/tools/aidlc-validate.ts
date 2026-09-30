@@ -1,10 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import {
-  loadStageGraph,
-  PHASES,
-  parseStageFrontmatter,
-} from "./aidlc-lib.ts";
+import { loadStageGraph, PHASES, parseStageFrontmatter } from "./aidlc-lib.ts";
 import { resolveHarnessPath } from "./aidlc-runtime-paths.ts";
 
 // --- Types ---
@@ -25,7 +21,11 @@ interface PhaseResult {
 // --- Stage file resolution ---
 
 function findStageFile(slug: string, phase: string): string | null {
-  const path = join(resolveHarnessPath(["aidlc-common", "stages"]), phase, `${slug}.md`);
+  const path = join(
+    resolveHarnessPath(["aidlc-common", "stages"]),
+    phase,
+    `${slug}.md`,
+  );
   return existsSync(path) ? path : null;
 }
 
@@ -130,9 +130,7 @@ function isOutputReferenced(filename: string, bodyText: string): boolean {
   if (lower.includes(stem.toLowerCase())) return true;
 
   // Strategy 3: keyword matching — split stem on hyphens, check each word
-  const keywords = stem
-    .split("-")
-    .filter((w) => w.length > 2); // filter out short words like "of"
+  const keywords = stem.split("-").filter((w) => w.length > 2); // filter out short words like "of"
 
   if (keywords.length === 0) return true; // too short to validate
 
@@ -175,11 +173,7 @@ function isPhase(s: string): s is (typeof PHASES)[number] {
 
 function handleOutputs(phaseArg: string): void {
   const phases: (typeof PHASES)[number][] | null =
-    phaseArg === "all"
-      ? [...PHASES]
-      : isPhase(phaseArg)
-      ? [phaseArg]
-      : null;
+    phaseArg === "all" ? [...PHASES] : isPhase(phaseArg) ? [phaseArg] : null;
 
   if (!phases) {
     jsonError(`Unknown phase: ${phaseArg}. Valid: ${PHASES.join(", ")}, all`);
@@ -289,9 +283,7 @@ export function main(argv: string[]): void {
       handleOutputs(target);
       break;
     default:
-      jsonError(
-        `Unknown subcommand: ${subcommand}. Valid: outputs`
-      );
+      jsonError(`Unknown subcommand: ${subcommand}. Valid: outputs`);
   }
 }
 

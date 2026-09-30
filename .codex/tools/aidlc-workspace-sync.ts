@@ -52,7 +52,9 @@ import {
 } from "./aidlc-workspace-manifest.ts";
 
 const COLOR =
-  !!process.stdout.isTTY && !process.env.NO_COLOR && process.env.TERM !== "dumb";
+  !!process.stdout.isTTY &&
+  !process.env.NO_COLOR &&
+  process.env.TERM !== "dumb";
 const c = (code: string, value: string) =>
   COLOR ? `\x1b[${code}m${value}\x1b[0m` : value;
 const green = (value: string) => c("32", value);
@@ -152,7 +154,10 @@ function detectDefaultBranch(dir: string): string | null {
   return result.stdout.trim().replace(/^origin\//, "") || null;
 }
 
-function cloneUrl(manifest: WorkspaceManifest, repo: WorkspaceRepoEntry): string {
+function cloneUrl(
+  manifest: WorkspaceManifest,
+  repo: WorkspaceRepoEntry,
+): string {
   return repo.url ?? `git@github.com:${manifest.org}/${repo.name}.git`;
 }
 
@@ -198,7 +203,8 @@ function worktreeSafetyReasons(dir: string): string[] {
   } else {
     const rows = status.stdout.split("\n").filter((row) => row.length > 0);
     if (rows.some((row) => row.startsWith("!!"))) reasons.push("ignored files");
-    if (rows.some((row) => !row.startsWith("!!"))) reasons.push("dirty working tree");
+    if (rows.some((row) => !row.startsWith("!!")))
+      reasons.push("dirty working tree");
 
     // Git status never reports empty untracked directories. A dry-run clean
     // supplies the complementary filesystem view without changing anything.
@@ -206,7 +212,9 @@ function worktreeSafetyReasons(dir: string): string[] {
     if (untracked.status !== 0) {
       reasons.push("untracked filesystem entries could not be verified");
     } else if (rows.length === 0 && untracked.stdout.trim().length > 0) {
-      reasons.push("untracked filesystem entries (including empty directories)");
+      reasons.push(
+        "untracked filesystem entries (including empty directories)",
+      );
     }
   }
 
@@ -226,7 +234,10 @@ function worktreeSafetyReasons(dir: string): string[] {
   return reasons;
 }
 
-function localRemotePath(baseDir: string, url: string): string | null | undefined {
+function localRemotePath(
+  baseDir: string,
+  url: string,
+): string | null | undefined {
   if (/^file:/i.test(url)) {
     try {
       return fileURLToPath(url);
@@ -329,20 +340,30 @@ function remoteStorageReasons(
   if (urls.status !== 0 || urls.stdout.trim().length === 0) {
     return [`remote '${remote}' storage location could not be verified`];
   }
-  for (const url of urls.stdout.split("\n").filter((value) => value.length > 0)) {
+  for (const url of urls.stdout
+    .split("\n")
+    .filter((value) => value.length > 0)) {
     const candidate = localRemotePath(remoteUrlBaseDir, url);
     if (candidate === undefined) continue;
     if (candidate === null) {
-      return [`remote '${remote}' local storage location could not be verified`];
+      return [
+        `remote '${remote}' local storage location could not be verified`,
+      ];
     }
     const contained = pathIsWithin(dir, candidate);
     if (contained === null) {
-      return [`remote '${remote}' local storage location could not be verified`];
+      return [
+        `remote '${remote}' local storage location could not be verified`,
+      ];
     }
     if (contained) {
       return [`remote '${remote}' stores recovery data inside the checkout`];
     }
-    const alternateReasons = localRemoteAlternateReasons(dir, remote, candidate);
+    const alternateReasons = localRemoteAlternateReasons(
+      dir,
+      remote,
+      candidate,
+    );
     if (alternateReasons.length > 0) return alternateReasons;
   }
   return [];
@@ -374,14 +395,14 @@ function verifyRemoteObjectProofs(
       const probeUrl = localPath ?? configuredUrl;
 
       const probeDir = join(probeRoot, `remote-${probes.size}.git`);
-      const initialized = git(probeRoot, ["init", "--quiet", "--bare", probeDir]);
-      if (initialized.status !== 0) return null;
-      const added = git(probeDir, [
-        "remote",
-        "add",
-        "source",
-        probeUrl,
+      const initialized = git(probeRoot, [
+        "init",
+        "--quiet",
+        "--bare",
+        probeDir,
       ]);
+      if (initialized.status !== 0) return null;
+      const added = git(probeDir, ["remote", "add", "source", probeUrl]);
       if (added.status !== 0) return null;
 
       const probe = { dir: probeDir, nextRef: 0 };
@@ -456,7 +477,9 @@ function remoteRecoveryReasons(
     const configuredUrl = url.stdout.trim();
     const localPath = localRemotePath(remoteUrlBaseDir, configuredUrl);
     if (localPath === null) {
-      return [`remote '${remote}' local storage location could not be verified`];
+      return [
+        `remote '${remote}' local storage location could not be verified`,
+      ];
     }
     const result = git(dir, ["ls-remote", localPath ?? configuredUrl]);
     if (result.status !== 0) return [`remote '${remote}' could not be queried`];
@@ -496,9 +519,7 @@ function remoteRecoveryReasons(
       const remote = [...remotes]
         .sort((a, b) => b.length - a.length)
         .find((name) => ref.startsWith(`refs/remotes/${name}/`));
-      const branch = remote
-        ? ref.slice(`refs/remotes/${remote}/`.length)
-        : "";
+      const branch = remote ? ref.slice(`refs/remotes/${remote}/`.length) : "";
       if (!remote || branch.length === 0 || branch === "HEAD") continue;
 
       const sourceRef = `refs/heads/${branch}`;
@@ -564,8 +585,11 @@ function localObjectSafetyReasons(dir: string): string[] {
     "--no-reflogs",
     "--no-progress",
   ]);
-  if (result.status !== 0) return ["local Git object reachability could not be verified"];
-  if (/^(?:dangling|unreachable) /m.test(`${result.stdout}\n${result.stderr}`)) {
+  if (result.status !== 0)
+    return ["local Git object reachability could not be verified"];
+  if (
+    /^(?:dangling|unreachable) /m.test(`${result.stdout}\n${result.stderr}`)
+  ) {
     return ["unreachable local Git objects"];
   }
   return [];
@@ -584,7 +608,10 @@ function repositoryShapeReasons(dir: string): string[] {
 
   const top = git(dir, ["rev-parse", "--show-toplevel"]);
   try {
-    if (top.status !== 0 || realpathSync(top.stdout.trim()) !== realpathSync(dir)) {
+    if (
+      top.status !== 0 ||
+      realpathSync(top.stdout.trim()) !== realpathSync(dir)
+    ) {
       reasons.push("checkout root could not be verified");
     }
   } catch {
@@ -613,7 +640,9 @@ function repositoryShapeReasons(dir: string): string[] {
   const tracked = git(dir, ["ls-files", "--stage"]);
   if (tracked.status !== 0) {
     reasons.push("submodule state could not be verified");
-  } else if (tracked.stdout.split("\n").some((row) => row.startsWith("160000 "))) {
+  } else if (
+    tracked.stdout.split("\n").some((row) => row.startsWith("160000 "))
+  ) {
     reasons.push("submodule repositories");
   }
   const commonDir = gitCommonDir(dir);
@@ -627,7 +656,8 @@ function repositoryShapeReasons(dir: string): string[] {
 
 function lfsSafetyReasons(dir: string): string[] {
   const commonDir = gitCommonDir(dir);
-  if (commonDir === null) return ["Git LFS object storage could not be verified"];
+  if (commonDir === null)
+    return ["Git LFS object storage could not be verified"];
   if (directoryHasContent(join(commonDir, "lfs", "objects"))) {
     return ["local Git LFS objects"];
   }
@@ -635,8 +665,13 @@ function lfsSafetyReasons(dir: string): string[] {
   const files = git(dir, ["ls-files", "-z"]);
   if (files.status !== 0) return ["Git LFS attributes could not be verified"];
   if (files.stdout.length === 0) return [];
-  const attributes = git(dir, ["check-attr", "-z", "--stdin", "filter"], files.stdout);
-  if (attributes.status !== 0) return ["Git LFS attributes could not be verified"];
+  const attributes = git(
+    dir,
+    ["check-attr", "-z", "--stdin", "filter"],
+    files.stdout,
+  );
+  if (attributes.status !== 0)
+    return ["Git LFS attributes could not be verified"];
   const fields = attributes.stdout.split("\0");
   for (let i = 0; i + 2 < fields.length; i += 3) {
     if (fields[i + 1] === "filter" && fields[i + 2] === "lfs") {
@@ -655,10 +690,7 @@ function orphanLocalSafetyReasons(dir: string): string[] {
   ]);
 }
 
-function orphanSafetyReasons(
-  dir: string,
-  remoteUrlBaseDir = dir,
-): string[] {
+function orphanSafetyReasons(dir: string, remoteUrlBaseDir = dir): string[] {
   return unique([
     ...orphanLocalSafetyReasons(dir),
     ...remoteRecoveryReasons(dir, remoteUrlBaseDir),
@@ -680,7 +712,9 @@ function renderGitignore(
     return `${existing.slice(0, begin)}${block}${existing.slice(end + GATE_END.length)}`;
   }
   const prefix =
-    existing.length === 0 || existing.endsWith("\n") ? existing : `${existing}\n`;
+    existing.length === 0 || existing.endsWith("\n")
+      ? existing
+      : `${existing}\n`;
   const separator = existing.length === 0 ? "" : "\n";
   return `${prefix}${separator}${GITIGNORE_HEADER.join("\n")}\n${block}\n`;
 }
@@ -831,8 +865,10 @@ function preflight(
 
   if (broken.length + unsafe.length + needForce.length > 0) {
     console.error(red("\n✗ workspace-sync blocked - no changes made:\n"));
-    for (const message of broken) console.error(red(`  [broken]     ${message}`));
-    for (const message of unsafe) console.error(red(`  [unsafe]     ${message}`));
+    for (const message of broken)
+      console.error(red(`  [broken]     ${message}`));
+    for (const message of unsafe)
+      console.error(red(`  [unsafe]     ${message}`));
     for (const message of needForce) {
       console.error(red(`  [need-force] ${message}`));
     }
@@ -856,11 +892,15 @@ function rollbackMoves(moves: Move[]): string[] {
   const failures: string[] = [];
   for (const operation of [...moves].reverse()) {
     if (!pathEntryExists(operation.to)) {
-      failures.push(`${operation.to} is missing; cannot restore ${operation.from}`);
+      failures.push(
+        `${operation.to} is missing; cannot restore ${operation.from}`,
+      );
       continue;
     }
     if (pathEntryExists(operation.from)) {
-      failures.push(`${operation.from} is occupied; recovery data remains at ${operation.to}`);
+      failures.push(
+        `${operation.from} is occupied; recovery data remains at ${operation.to}`,
+      );
       continue;
     }
     try {
@@ -1011,10 +1051,14 @@ function applyPlan(
     const replaceGitignore =
       !gitignoreBefore.exists || gitignoreBefore.content !== gitignore;
     const replaceCodeWorkspace =
-      !codeWorkspaceBefore.exists || codeWorkspaceBefore.content !== codeWorkspace;
+      !codeWorkspaceBefore.exists ||
+      codeWorkspaceBefore.content !== codeWorkspace;
     if (replaceGitignore && gitignoreBefore.exists) {
       move(liveGitignore, join(backupsDir, "gitignore"), moves);
-      if (readFileSync(join(backupsDir, "gitignore"), "utf-8") !== gitignoreBefore.content) {
+      if (
+        readFileSync(join(backupsDir, "gitignore"), "utf-8") !==
+        gitignoreBefore.content
+      ) {
         throw new SyncFailure(
           `${liveGitignore} changed while workspace-sync was staging; no generated files were replaced`,
         );
@@ -1045,21 +1089,14 @@ function applyPlan(
       installStagedFile(stagedCodeWorkspace, liveCodeWorkspace, moves);
     }
 
-    if (
-      plan.toRemove.length > 0 ||
-      directoryHasContent(backupsDir)
-    ) {
+    if (plan.toRemove.length > 0 || directoryHasContent(backupsDir)) {
       mkdirSync(recoveryDir);
       recoveryDirCreated = true;
       for (const name of plan.toRemove) {
         move(join(orphansDir, name), join(recoveryDir, name), moves);
       }
       if (directoryHasContent(backupsDir)) {
-        move(
-          backupsDir,
-          join(recoveryDir, "generated-file-backups"),
-          moves,
-        );
+        move(backupsDir, join(recoveryDir, "generated-file-backups"), moves);
       }
       retainedRecovery = true;
     }
@@ -1098,7 +1135,9 @@ function applyPlan(
   }
 
   for (const repo of plan.toKeep) {
-    console.log(`  ${green("✓")} ${repo.name} already on disk - leaving untouched`);
+    console.log(
+      `  ${green("✓")} ${repo.name} already on disk - leaving untouched`,
+    );
   }
   for (const repo of plan.toClone) {
     console.log(
@@ -1112,7 +1151,10 @@ function applyPlan(
         `${join(recoveryDir, name)}`,
     );
   }
-  if (retainedRecovery && directoryHasContent(join(recoveryDir, "generated-file-backups"))) {
+  if (
+    retainedRecovery &&
+    directoryHasContent(join(recoveryDir, "generated-file-backups"))
+  ) {
     console.log(
       `  ${green("✓")} prior generated files retained at ` +
         `${join(recoveryDir, "generated-file-backups")}`,

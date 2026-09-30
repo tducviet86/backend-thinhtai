@@ -28,7 +28,8 @@ import {
   runtimeHarnessName,
 } from "./aidlc-runtime-paths.ts";
 
-type Classification = "passthrough" | "translation" | "stub" | "routing-only" | "help";
+type Classification =
+  "passthrough" | "translation" | "stub" | "routing-only" | "help";
 type RouteKind =
   | "top-passthrough"
   | "top-prefix"
@@ -55,13 +56,10 @@ type Visibility = "public" | "hidden" | "legacy";
 type RouteNamespace = RouteNamespaceName;
 type ProjectRequirement = "none" | "optional" | "required";
 type PinPolicy = "active" | "inspect" | "pinned";
-type NetworkPolicy = "forbidden" | "explicit-only" | "interactive-bounded" | "required";
+type NetworkPolicy =
+  "forbidden" | "explicit-only" | "interactive-bounded" | "required";
 type MutationScope =
-  | "none"
-  | "project"
-  | "machine"
-  | "project-and-machine"
-  | "user-home";
+  "none" | "project" | "machine" | "project-and-machine" | "user-home";
 
 export type Route = {
   id: string;
@@ -197,14 +195,16 @@ const HUMAN_TOP_ROUTE_IDS = new Set([
 export const ENGINE_NAMESPACE_HELP: NamespaceHelpOptions = {
   namespace: "engine",
   usage: "aidlc engine <noun> <verb> [args]",
-  header: "Engine machinery - generated harness surfaces only; not for human scripts:",
+  header:
+    "Engine machinery - generated harness surfaces only; not for human scripts:",
   excludedRouteIds: HUMAN_TOP_ROUTE_IDS,
 };
 
 export const SYSTEM_NAMESPACE_HELP: NamespaceHelpOptions = {
   namespace: "system",
   usage: "aidlc system <noun> <verb> [args]",
-  header: "Operations on this user's aidlc installation; never a system-wide or root install:",
+  header:
+    "Operations on this user's aidlc installation; never a system-wide or root install:",
 };
 
 // ROUTES_TABLE_START
@@ -275,7 +275,12 @@ export const ROUTES: readonly Route[] = [
     prefix: ["next", "compose"],
     ...PUBLIC_ENGINE,
     namespace: "public",
-    human: [{ command: "compose [args]", summary: "start composition through orchestrate next compose" }],
+    human: [
+      {
+        command: "compose [args]",
+        summary: "start composition through orchestrate next compose",
+      },
+    ],
     all: ["compose [args]"],
   },
   {
@@ -303,7 +308,10 @@ export const ROUTES: readonly Route[] = [
     ...PUBLIC_ENGINE,
     namespace: "engine",
     human: [
-      { command: "recompose [args]", summary: "rerun composition through the utility handler" },
+      {
+        command: "recompose [args]",
+        summary: "rerun composition through the utility handler",
+      },
     ],
     all: ["recompose [args]"],
   },
@@ -322,7 +330,10 @@ export const ROUTES: readonly Route[] = [
     mutationScope: "project-and-machine",
     outputModes: ["human", "quiet", "json"],
     human: [
-      { command: "doctor [--check-updates]", summary: "run environment diagnostics" },
+      {
+        command: "doctor [--check-updates]",
+        summary: "run environment diagnostics",
+      },
     ],
     all: [
       "doctor [--verbose] [--json] [--quiet] [--check-updates] [--release-base-url <url>] [--ca-bundle <path>] [--offline] [--export] [--output <dir>]",
@@ -342,7 +353,12 @@ export const ROUTES: readonly Route[] = [
     networkPolicy: "forbidden",
     mutationScope: "none",
     outputModes: ["human", "json"],
-    human: [{ command: "version [--json]", summary: "print the installed AIDLC version" }],
+    human: [
+      {
+        command: "version [--json]",
+        summary: "print the installed AIDLC version",
+      },
+    ],
     all: ["version [--json]"],
   },
   {
@@ -374,7 +390,12 @@ export const ROUTES: readonly Route[] = [
     networkPolicy: "explicit-only",
     mutationScope: "project-and-machine",
     outputModes: ["human", "quiet", "json"],
-    human: [{ command: "config [args]", summary: "configure, pin, or refresh this project" }],
+    human: [
+      {
+        command: "config [args]",
+        summary: "configure, pin, or refresh this project",
+      },
+    ],
     all: [
       "config [--harness <name>] [--from <path>] [--mcp <defaults|none>] [--pin <version>|--unpin] [--dry-run] [--yes] [--json] [--quiet] [--force] [--plan-token <token>] [--project-dir <path>]",
       "config models [--show [--json]|--check|--reset|--preset <name>|--from <preset|profile> --save-as <name>] [--local|--project|--global]",
@@ -404,7 +425,10 @@ export const ROUTES: readonly Route[] = [
     mutationScope: "machine",
     outputModes: ["human", "quiet", "json"],
     human: [
-      { command: "update [args]", summary: "install and activate a framework release" },
+      {
+        command: "update [args]",
+        summary: "install and activate a framework release",
+      },
     ],
     all: [
       "update [--version <version>] [--channel <stable|preview>] [--from <dir>] [--release-base-url <url>] [--release-api-url <url>] [--ca-bundle <path>] [--offline] [--check|--dry-run] [--json|--quiet]",
@@ -440,7 +464,9 @@ export const ROUTES: readonly Route[] = [
     networkPolicy: "explicit-only",
     mutationScope: "machine",
     outputModes: ["human", "quiet", "json"],
-    human: [{ command: "use <version>", summary: "select an exact machine release" }],
+    human: [
+      { command: "use <version>", summary: "select an exact machine release" },
+    ],
     all: [
       "use <version> [--from <dir>] [--release-base-url <url>] [--ca-bundle <path>] [--offline] [--json|--quiet]",
     ],
@@ -459,7 +485,12 @@ export const ROUTES: readonly Route[] = [
     networkPolicy: "forbidden",
     mutationScope: "machine",
     outputModes: ["human", "quiet", "json"],
-    human: [{ command: "uninstall [--purge]", summary: "remove the machine installation" }],
+    human: [
+      {
+        command: "uninstall [--purge]",
+        summary: "remove the machine installation",
+      },
+    ],
     all: ["uninstall [--purge] [--yes] [--json|--quiet]"],
   },
   {
@@ -512,7 +543,9 @@ export const ROUTES: readonly Route[] = [
     networkPolicy: "explicit-only",
     mutationScope: "machine",
     outputModes: ["human", "quiet", "json"],
-    human: [{ command: "versions install", summary: "install a retained release" }],
+    human: [
+      { command: "versions install", summary: "install a retained release" },
+    ],
     all: [
       "install <version> [--from <dir>] [--release-base-url <url>] [--ca-bundle <path>]",
     ],
@@ -666,7 +699,10 @@ export const ROUTES: readonly Route[] = [
     mutationScope: "project",
     outputModes: ["human", "json"],
     human: [
-      { command: "attest <verb>", summary: "resolve commits/diffs to reviewed units; anchor commits" },
+      {
+        command: "attest <verb>",
+        summary: "resolve commits/diffs to reviewed units; anchor commits",
+      },
     ],
     all: [
       "resolve [commit|--commit <rev>] [--diff <base>..<head>] [--record-ref <ref>] [--require-trust <level>] [--fail-on <statuses>]",
@@ -727,7 +763,16 @@ export const ROUTES: readonly Route[] = [
     group: "bolt",
     kind: "noun-passthrough",
     classification: "passthrough",
-    verbs: ["start", "complete", "fail", "abort", "set-autonomy", "dispatch-event", "hold-merge", "release-merge"],
+    verbs: [
+      "start",
+      "complete",
+      "fail",
+      "abort",
+      "set-autonomy",
+      "dispatch-event",
+      "hold-merge",
+      "release-merge",
+    ],
     tool: TOOLS.bolt,
     ...HIDDEN_ENGINE,
   },
@@ -816,7 +861,12 @@ export const ROUTES: readonly Route[] = [
     verbs: ["list", "switch", "<name>", "create"],
     custom: "workspace",
     ...PUBLIC_ENGINE,
-    human: [{ command: "space [list|switch|create]", summary: "list, switch, or create a space" }],
+    human: [
+      {
+        command: "space [list|switch|create]",
+        summary: "list, switch, or create a space",
+      },
+    ],
     all: ["list", "switch <name>", "<name>", "create <name>"],
   },
   {
@@ -854,7 +904,17 @@ export const ROUTES: readonly Route[] = [
     group: "config",
     kind: "custom",
     classification: "translation",
-    verbs: ["set depth", "set test-strategy", "set review", "set change-control", "set sensors", "set learnings", "set summary-confirmation", "get", "list"],
+    verbs: [
+      "set depth",
+      "set test-strategy",
+      "set review",
+      "set change-control",
+      "set sensors",
+      "set learnings",
+      "set summary-confirmation",
+      "get",
+      "list",
+    ],
     custom: "config",
     ...PUBLIC_ENGINE,
     visibility: "hidden",
@@ -870,11 +930,30 @@ export const ROUTES: readonly Route[] = [
       list: "config-list",
     },
     human: [
-      { command: "config get <key>", summary: "print supported project configuration" },
-      { command: "config set <key> <value>", summary: "change supported project configuration" },
-      { command: "config list", summary: "list supported project configuration" },
+      {
+        command: "config get <key>",
+        summary: "print supported project configuration",
+      },
+      {
+        command: "config set <key> <value>",
+        summary: "change supported project configuration",
+      },
+      {
+        command: "config list",
+        summary: "list supported project configuration",
+      },
     ],
-    all: ["set depth <value>", "set test-strategy <value>", "set review <value>", "set change-control <strict|relaxed>", "set sensors <on|off>", "set learnings <on|off>", "set summary-confirmation <on|off>", "get <key>", "list"],
+    all: [
+      "set depth <value>",
+      "set test-strategy <value>",
+      "set review <value>",
+      "set change-control <strict|relaxed>",
+      "set sensors <on|off>",
+      "set learnings <on|off>",
+      "set summary-confirmation <on|off>",
+      "get <key>",
+      "list",
+    ],
   },
   {
     id: "plugin",
@@ -894,12 +973,30 @@ export const ROUTES: readonly Route[] = [
     },
     human: [
       { command: "plugin select [names]", summary: "set enabled plugins" },
-      { command: "plugin list [--verbose|--json]", summary: "compare installed and composed plugins" },
-      { command: "plugin sync [--prune-missing]", summary: "transactionally compose installed plugins" },
-      { command: "plugin validate [path]", summary: "validate an authored plugin" },
-      { command: "plugin build <harness> [outDir]", summary: "build an authored plugin for a harness" },
+      {
+        command: "plugin list [--verbose|--json]",
+        summary: "compare installed and composed plugins",
+      },
+      {
+        command: "plugin sync [--prune-missing]",
+        summary: "transactionally compose installed plugins",
+      },
+      {
+        command: "plugin validate [path]",
+        summary: "validate an authored plugin",
+      },
+      {
+        command: "plugin build <harness> [outDir]",
+        summary: "build an authored plugin for a harness",
+      },
     ],
-    all: ["select [names]", "sync [--prune-missing] [--yes]", "list [--verbose] [--json]", "validate [path]", "build <harness> [outDir]"],
+    all: [
+      "select [names]",
+      "sync [--prune-missing] [--yes]",
+      "list [--verbose] [--json]",
+      "validate [path]",
+      "build <harness> [outDir]",
+    ],
   },
   {
     // The plugin AUTHORING surface (v2): `aidlc plugin validate` / `aidlc plugin
@@ -943,18 +1040,34 @@ export const ROUTES: readonly Route[] = [
     // this literal, because reading the route is exactly what missed it.
     kind: "noun-passthrough",
     classification: "passthrough",
-    verbs: ["onboard", "sync", "list", "show", "associate", "dissociate", "rebind", "summarize"],
+    verbs: [
+      "onboard",
+      "sync",
+      "list",
+      "show",
+      "associate",
+      "dissociate",
+      "rebind",
+      "summarize",
+    ],
     tool: TOOLS.knowledge,
     ...PUBLIC_ENGINE,
     // ONE line in the human help, which is capped at 20 lines: it is a summary
     // for a person deciding what to type, not the surface. Every verb still
     // appears in `help --all` via `all` below.
     human: [
-      { command: "knowledge <verb>", summary: "index and read customer documents" },
+      {
+        command: "knowledge <verb>",
+        summary: "index and read customer documents",
+      },
     ],
     all: [
-      "onboard [path]", "sync", "list", "show <id>",
-      "associate <id> --intent [slug]", "dissociate <id> --intent [slug]",
+      "onboard [path]",
+      "sync",
+      "list",
+      "show <id>",
+      "associate <id> --intent [slug]",
+      "dissociate <id> --intent [slug]",
       "rebind <id> --to <path>",
       "summarize <id> --text-file <path> --source-revision <sha256>",
     ],
@@ -964,11 +1077,25 @@ export const ROUTES: readonly Route[] = [
     group: "gen",
     kind: "custom",
     classification: "translation",
-    verbs: ["runners", "runners --check", "runner-list", "runner-scopes", "stage-table", "scope-table"],
+    verbs: [
+      "runners",
+      "runners --check",
+      "runner-list",
+      "runner-scopes",
+      "stage-table",
+      "scope-table",
+    ],
     custom: "gen",
     tool: TOOLS.runnerGen,
     ...HIDDEN_ENGINE,
-    all: ["runners [args]", "runners --check", "runner-list", "runner-scopes", "stage-table [args]", "scope-table [args]"],
+    all: [
+      "runners [args]",
+      "runners --check",
+      "runner-list",
+      "runner-scopes",
+      "stage-table [args]",
+      "scope-table [args]",
+    ],
   },
   {
     id: "workspace",
@@ -1052,21 +1179,21 @@ export const ROUTES: readonly Route[] = [
   ...SENSOR_WORKERS.map(([sensorId, tool]): Route => {
     const group = `sensor-${sensorId}`;
     return {
-    id: `engine-${group}`,
-    namespace: "engine",
-    group,
-    kind: "routing-only",
-    classification: "routing-only",
-    verbs: ["<args>"],
-    tool,
-    routeOnly: "tool-passthrough",
-    visibility: "hidden",
-    projectRequirement: "required",
-    pinPolicy: "pinned",
-    networkPolicy: "forbidden",
-    mutationScope: "project",
-    outputModes: ["human", "quiet", "json"],
-  };
+      id: `engine-${group}`,
+      namespace: "engine",
+      group,
+      kind: "routing-only",
+      classification: "routing-only",
+      verbs: ["<args>"],
+      tool,
+      routeOnly: "tool-passthrough",
+      visibility: "hidden",
+      projectRequirement: "required",
+      pinPolicy: "pinned",
+      networkPolicy: "forbidden",
+      mutationScope: "project",
+      outputModes: ["human", "quiet", "json"],
+    };
   }),
   {
     id: "system-lifecycle",
@@ -1125,8 +1252,20 @@ export type Action =
   | { type: "delegate"; tool: string; args: string[] }
   | { type: "hook"; name: string; path: string; projectDir?: string }
   | { type: "statusline"; path: string; projectDir?: string }
-  | { type: "adapter"; harness: AdapterHarness; target: string; extraArgs: string[]; path: string; projectDir?: string }
-  | { type: "sensor-script-file"; id: string; args: string[]; projectDir?: string }
+  | {
+      type: "adapter";
+      harness: AdapterHarness;
+      target: string;
+      extraArgs: string[];
+      path: string;
+      projectDir?: string;
+    }
+  | {
+      type: "sensor-script-file";
+      id: string;
+      args: string[];
+      projectDir?: string;
+    }
   | { type: "version"; json: boolean }
   | { type: "stub"; message: string; code: number }
   | { type: "help"; scope: "human" | "engine" | "system" | "all" }
@@ -1153,7 +1292,8 @@ function toolsDir(): string {
   // different generated tools tree. Production resolves sibling tools beside
   // this dispatcher.
   const fromEnv = process.env.AIDLC_DISPATCH_TOOLS_DIR;
-  if (fromEnv) return isAbsolute(fromEnv) ? fromEnv : resolve(process.cwd(), fromEnv);
+  if (fromEnv)
+    return isAbsolute(fromEnv) ? fromEnv : resolve(process.cwd(), fromEnv);
   return dispatcherDir();
 }
 
@@ -1191,13 +1331,18 @@ function resolveHookPath(
     ? [ADAPTER_HARNESS_LEAF[harness]]
     : [
         runtimeLeaf,
-        ...discoverProjectHarnesses(projectDir).map((candidate) => candidate.harnessDir),
+        ...discoverProjectHarnesses(projectDir).map(
+          (candidate) => candidate.harnessDir,
+        ),
         ".claude",
         ".kiro",
         ".codex",
         ".cursor",
-      ].filter((value, index, values): value is string =>
-        typeof value === "string" && value.length > 0 && values.indexOf(value) === index
+      ].filter(
+        (value, index, values): value is string =>
+          typeof value === "string" &&
+          value.length > 0 &&
+          values.indexOf(value) === index,
       );
   const installed = leaves.map((leaf) => join(projectDir, leaf, "hooks", file));
   const executableRelative = join(
@@ -1207,7 +1352,9 @@ function resolveHookPath(
     file,
   );
   const candidates = [moduleRelative, ...installed, executableRelative];
-  return candidates.find((candidate) => existsSync(candidate)) ?? moduleRelative;
+  return (
+    candidates.find((candidate) => existsSync(candidate)) ?? moduleRelative
+  );
 }
 
 function routeForms(route: Route): string[] {
@@ -1231,8 +1378,14 @@ export function renderHumanHelp(): string {
     `  ${cmd(`${invoke} <command> [flags]`, out)}`,
     "",
     heading("SET UP A PROJECT", out),
-    row("config", "Set up, refresh, or pin this project (run bare for the guided setup)"),
-    row("doctor", "Check this machine and project, with fixes for anything wrong"),
+    row(
+      "config",
+      "Set up, refresh, or pin this project (run bare for the guided setup)",
+    ),
+    row(
+      "doctor",
+      "Check this machine and project, with fixes for anything wrong",
+    ),
     "",
     heading("MANAGE THE MACHINE INSTALL", out),
     row("update", "Install and switch to a newer release"),
@@ -1248,7 +1401,10 @@ export function renderHumanHelp(): string {
     heading("LEARN MORE", out),
     dim(`  Use '${invoke} <command> --help' for more about a command.`, out),
     dim("  Docs: https://awslabs.github.io/aidlc-workflows/", out),
-    dim(`  Agents: workflows run through '${invoke} engine' - see '${invoke} engine --help'.`, out),
+    dim(
+      `  Agents: workflows run through '${invoke} engine' - see '${invoke} engine --help'.`,
+      out,
+    ),
     "",
   ].join("\n");
 }
@@ -1274,7 +1430,9 @@ const ROOT_CONFIG_HELP_VALUE_FLAGS = new Set([
   "--release-base-url",
 ]);
 
-function publicCommandFromToken(token: string | undefined): PublicCommand | null {
+function publicCommandFromToken(
+  token: string | undefined,
+): PublicCommand | null {
   if ((PUBLIC_COMMANDS as readonly (string | undefined)[]).includes(token)) {
     return token as PublicCommand;
   }
@@ -1284,12 +1442,16 @@ function publicCommandFromToken(token: string | undefined): PublicCommand | null
 }
 
 export function renderCommandHelp(command: PublicCommand): string {
-  const route = ROUTES.find((candidate) =>
-    candidate.namespace === "public" &&
-    candidate.group === "top" &&
-    candidate.verbs.includes(command)
+  const route = ROUTES.find(
+    (candidate) =>
+      candidate.namespace === "public" &&
+      candidate.group === "top" &&
+      candidate.verbs.includes(command),
   );
-  if (!route) throw new Error(`dispatcher route registry is missing public command ${command}`);
+  if (!route)
+    throw new Error(
+      `dispatcher route registry is missing public command ${command}`,
+    );
   const invoke = aidlcInvocation();
   const out = process.stdout;
   if (command === "config") {
@@ -1303,11 +1465,23 @@ export function renderCommandHelp(command: PublicCommand): string {
       `  ${cmd(`${invoke} config <section> [flags]`, out)}`,
       "",
       heading("SECTIONS", out),
-      sectionRow("models", "Which model and effort each agent uses (presets: thorough, balanced, minimal)"),
-      sectionRow("runtime", "Whether hooks can find bun, aidlc, and the selected harness"),
-      sectionRow("providers", "Provider, AWS region/profile, and manual provider actions"),
+      sectionRow(
+        "models",
+        "Which model and effort each agent uses (presets: thorough, balanced, minimal)",
+      ),
+      sectionRow(
+        "runtime",
+        "Whether hooks can find bun, aidlc, and the selected harness",
+      ),
+      sectionRow(
+        "providers",
+        "Provider, AWS region/profile, and manual provider actions",
+      ),
       sectionRow("trust", "Host trust and command allowlist acknowledgement"),
-      sectionRow("flags", "Default scope, swarm, hook debug, sensor timeout, and bypasses"),
+      sectionRow(
+        "flags",
+        "Default scope, swarm, hook debug, sensor timeout, and bypasses",
+      ),
       sectionRow("project", "Plugins, MCP servers, and shell completions"),
       "",
       heading("COMMON FLAGS", out),
@@ -1322,7 +1496,10 @@ export function renderCommandHelp(command: PublicCommand): string {
       `  ${cmd(`${invoke} config models --show`, out)}`,
       `  ${cmd(`${invoke} config models --preset thorough --project --yes`, out)}`,
       "",
-      dim("Every interactive question has an equivalent flag for non-interactive use.", out),
+      dim(
+        "Every interactive question has an equivalent flag for non-interactive use.",
+        out,
+      ),
       dim(`Full flag reference: ${invoke} config <section> --help`, out),
       "",
     ].join("\n");
@@ -1334,16 +1511,17 @@ export function renderCommandHelp(command: PublicCommand): string {
     use: "Switch to an exact installed aidlc release",
     uninstall: "Remove aidlc from this machine",
   };
-  const examples: Partial<Record<Exclude<PublicCommand, "config">, string[]>> = {
-    doctor: [`  ${invoke} doctor`, `  ${invoke} doctor --verbose`],
-    update: [
-      `  ${invoke} update --check`,
-      `  ${invoke} update --dry-run`,
-      `  ${invoke} update --channel preview`,
-    ],
-    use: [`  ${invoke} use 2.6.2`],
-    uninstall: [`  ${invoke} uninstall`, `  ${invoke} uninstall --purge`],
-  };
+  const examples: Partial<Record<Exclude<PublicCommand, "config">, string[]>> =
+    {
+      doctor: [`  ${invoke} doctor`, `  ${invoke} doctor --verbose`],
+      update: [
+        `  ${invoke} update --check`,
+        `  ${invoke} update --dry-run`,
+        `  ${invoke} update --channel preview`,
+      ],
+      use: [`  ${invoke} use 2.6.2`],
+      uninstall: [`  ${invoke} uninstall`, `  ${invoke} uninstall --purge`],
+    };
   return [
     descriptions[command],
     "",
@@ -1353,8 +1531,8 @@ export function renderCommandHelp(command: PublicCommand): string {
       ? [
           "",
           heading("EXAMPLES", out),
-          ...(examples[command] ?? []).map((line) =>
-            `  ${cmd(line.trimStart(), out)}`
+          ...(examples[command] ?? []).map(
+            (line) => `  ${cmd(line.trimStart(), out)}`,
           ),
         ]
       : []),
@@ -1413,9 +1591,8 @@ export function renderNamespaceHelp(
     ) {
       continue;
     }
-    const group = route.group === "top"
-      ? route.id.replace(/^top-/, "")
-      : route.group;
+    const group =
+      route.group === "top" ? route.id.replace(/^top-/, "") : route.group;
     grouped.set(group, [...(grouped.get(group) ?? []), ...routeForms(route)]);
     const summary = summaryOverrides.get(group) ?? route.helpSummary;
     if (summary) summaries.set(group, summary);
@@ -1490,20 +1667,28 @@ function editDistance(left: string, right: string): number {
 function publicCommandError(command: string): Action {
   const invoke = aidlcInvocation();
   const nearest = [...PUBLIC_COMMANDS]
-    .map((candidate) => ({ candidate, distance: editDistance(command, candidate) }))
-    .sort((left, right) =>
-      left.distance - right.distance || left.candidate.localeCompare(right.candidate)
+    .map((candidate) => ({
+      candidate,
+      distance: editDistance(command, candidate),
+    }))
+    .sort(
+      (left, right) =>
+        left.distance - right.distance ||
+        left.candidate.localeCompare(right.candidate),
     )[0];
-  const tip = nearest && nearest.distance <= 2
-    ? `\n  tip: did you mean '${nearest.candidate}'?\n`
-    : "";
+  const tip =
+    nearest && nearest.distance <= 2
+      ? `\n  tip: did you mean '${nearest.candidate}'?\n`
+      : "";
   return {
     type: "error",
     code: 2,
     message: `aidlc: unknown command or noun '${command}'; try 'aidlc --help'\n`,
     humanMessage:
       `${errorLabel("error:", process.stderr)} unknown command '${command}'\n${
-        tip ? `\n  ${tipLabel("tip:", process.stderr)} did you mean '${nearest?.candidate}'?\n` : ""
+        tip
+          ? `\n  ${tipLabel("tip:", process.stderr)} did you mean '${nearest?.candidate}'?\n`
+          : ""
       }\n` +
       `${heading("usage:", process.stderr)} ${invoke} <command> [flags]\n` +
       `For the full list, run '${invoke} --help'.\n`,
@@ -1519,7 +1704,11 @@ function nounError(noun: string, verb: string | undefined): Action {
   };
 }
 
-function requireValue(noun: string, verb: string, value: string | undefined): Action | undefined {
+function requireValue(
+  noun: string,
+  verb: string,
+  value: string | undefined,
+): Action | undefined {
   if (value) return undefined;
   return nounError(noun, verb);
 }
@@ -1544,7 +1733,12 @@ function handleConfig(route: Route, argv: string[]): Action {
   const verb = argv[1];
   if (verb === "get" || verb === "list") {
     const target = route.targets?.[verb];
-    if (target) return { type: "delegate", tool: TOOLS.utility, args: [target, ...argv.slice(2)] };
+    if (target)
+      return {
+        type: "delegate",
+        tool: TOOLS.utility,
+        args: [target, ...argv.slice(2)],
+      };
   }
   if (verb !== "set") return nounError("config", verb);
 
@@ -1554,7 +1748,11 @@ function handleConfig(route: Route, argv: string[]): Action {
   if (target) {
     const missing = requireValue("config", `set ${key}`, value);
     if (missing) return missing;
-    return { type: "delegate", tool: TOOLS.utility, args: [target, `--${key}`, value, ...argv.slice(4)] };
+    return {
+      type: "delegate",
+      tool: TOOLS.utility,
+      args: [target, `--${key}`, value, ...argv.slice(4)],
+    };
   }
   return nounError("config", key ? `set ${key}` : "set");
 }
@@ -1569,7 +1767,11 @@ function handlePlugin(argv: string[]): Action {
   }
   if (command.kind === "run") {
     if (argv[1] === "list" || argv[1] === "sync") {
-      return { type: "delegate", tool: TOOLS.plugin, args: [argv[1], ...argv.slice(2)] };
+      return {
+        type: "delegate",
+        tool: TOOLS.plugin,
+        args: [argv[1], ...argv.slice(2)],
+      };
     }
     return { type: "delegate", tool: TOOLS.utility, args: command.argv };
   }
@@ -1582,18 +1784,38 @@ function handleGen(argv: string[]): Action {
     // Keep --check as a flag-shaped route. Other runner flags are passed
     // through unchanged, including Windows callers that avoid shell redirects.
     if (argv[2] === "--check") {
-      return { type: "delegate", tool: TOOLS.runnerGen, args: ["check", ...argv.slice(3)] };
+      return {
+        type: "delegate",
+        tool: TOOLS.runnerGen,
+        args: ["check", ...argv.slice(3)],
+      };
     }
-    return { type: "delegate", tool: TOOLS.runnerGen, args: ["write", ...argv.slice(2)] };
+    return {
+      type: "delegate",
+      tool: TOOLS.runnerGen,
+      args: ["write", ...argv.slice(2)],
+    };
   }
   if (verb === "runner-list") {
-    return { type: "delegate", tool: TOOLS.runnerGen, args: ["list", ...argv.slice(2)] };
+    return {
+      type: "delegate",
+      tool: TOOLS.runnerGen,
+      args: ["list", ...argv.slice(2)],
+    };
   }
   if (verb === "runner-scopes") {
-    return { type: "delegate", tool: TOOLS.runnerGen, args: ["scopes", ...argv.slice(2)] };
+    return {
+      type: "delegate",
+      tool: TOOLS.runnerGen,
+      args: ["scopes", ...argv.slice(2)],
+    };
   }
   if (verb === "stage-table" || verb === "scope-table") {
-    return { type: "delegate", tool: TOOLS.utility, args: [verb, ...argv.slice(2)] };
+    return {
+      type: "delegate",
+      tool: TOOLS.utility,
+      args: [verb, ...argv.slice(2)],
+    };
   }
   return nounError("gen", verb);
 }
@@ -1620,7 +1842,8 @@ function handleRouteOnly(route: Route, argv: string[]): Action {
     // project-owned, so `aidlc update` alone cannot rewrite it. Resolve those
     // two shipped spellings to the adapter action they meant.
     if (name === "cursor-adapter" || name === "copilot-adapter") {
-      const harness: AdapterHarness = name === "cursor-adapter" ? "cursor" : "copilot";
+      const harness: AdapterHarness =
+        name === "cursor-adapter" ? "cursor" : "copilot";
       const target = argv[2];
       if (!target) return nounError("adapter", undefined);
       if (!isSafeName(target)) return nounError("adapter", target);
@@ -1656,7 +1879,10 @@ function handleRouteOnly(route: Route, argv: string[]): Action {
   return nounError(argv[0], argv[1]);
 }
 
-function resolveAlias(argv: string[], engineNamespace = false): Action | undefined {
+function resolveAlias(
+  argv: string[],
+  engineNamespace = false,
+): Action | undefined {
   const head = argv[0];
   if (engineNamespace && head === "__sensor-script-file") {
     const id = argv[1];
@@ -1683,29 +1909,67 @@ function resolveAlias(argv: string[], engineNamespace = false): Action | undefin
       ? { type: "delegate", tool, args: argv.slice(2) }
       : topLevelError(argv.slice(0, 2).join(" "));
   }
-  if (head === "--status") return { type: "delegate", tool: TOOLS.utility, args: ["status", ...argv.slice(1)] };
-  if (head === "--claim") return { type: "delegate", tool: TOOLS.utility, args: ["claim", ...argv.slice(1)] };
-  if (head === "--release") return { type: "delegate", tool: TOOLS.utility, args: ["release", ...argv.slice(1)] };
-  if (head === "--doctor") return { type: "delegate", tool: TOOLS.doctor, args: ["doctor", ...argv.slice(1)] };
+  if (head === "--status")
+    return {
+      type: "delegate",
+      tool: TOOLS.utility,
+      args: ["status", ...argv.slice(1)],
+    };
+  if (head === "--claim")
+    return {
+      type: "delegate",
+      tool: TOOLS.utility,
+      args: ["claim", ...argv.slice(1)],
+    };
+  if (head === "--release")
+    return {
+      type: "delegate",
+      tool: TOOLS.utility,
+      args: ["release", ...argv.slice(1)],
+    };
+  if (head === "--doctor")
+    return {
+      type: "delegate",
+      tool: TOOLS.doctor,
+      args: ["doctor", ...argv.slice(1)],
+    };
   if (head === "--version") return { type: "version", json: false };
-  if (head === "--resume") return { type: "delegate", tool: TOOLS.orchestrate, args: ["next", "--resume", ...argv.slice(1)] };
-  if (head === "--scope") return { type: "delegate", tool: TOOLS.orchestrate, args: ["next", "--scope", ...argv.slice(1)] };
+  if (head === "--resume")
+    return {
+      type: "delegate",
+      tool: TOOLS.orchestrate,
+      args: ["next", "--resume", ...argv.slice(1)],
+    };
+  if (head === "--scope")
+    return {
+      type: "delegate",
+      tool: TOOLS.orchestrate,
+      args: ["next", "--scope", ...argv.slice(1)],
+    };
   return undefined;
 }
 
 function resolveTop(argv: string[]): Action | undefined {
   const verb = argv[0];
-  for (const route of ROUTES.filter((item) =>
-    item.group === "top" && item.namespace === "public"
+  for (const route of ROUTES.filter(
+    (item) => item.group === "top" && item.namespace === "public",
   )) {
     if (!route.verbs.includes(verb)) continue;
 
     if (route.kind === "top-passthrough" && route.tool) {
       if (verb === "version") return { type: "version", json: false };
-      return { type: "delegate", tool: route.tool, args: [verb, ...argv.slice(1)] };
+      return {
+        type: "delegate",
+        tool: route.tool,
+        args: [verb, ...argv.slice(1)],
+      };
     }
     if (route.kind === "top-prefix" && route.tool && route.prefix) {
-      return { type: "delegate", tool: route.tool, args: [...route.prefix, ...argv.slice(1)] };
+      return {
+        type: "delegate",
+        tool: route.tool,
+        args: [...route.prefix, ...argv.slice(1)],
+      };
     }
     if (route.kind === "top-stub") {
       return {
@@ -1720,10 +1984,13 @@ function resolveTop(argv: string[]): Action | undefined {
   return undefined;
 }
 
-function resolveNoun(argv: string[], namespace: Exclude<RouteNamespace, "public">): Action | undefined {
+function resolveNoun(
+  argv: string[],
+  namespace: Exclude<RouteNamespace, "public">,
+): Action | undefined {
   const noun = argv[0];
-  const routes = ROUTES.filter((item) =>
-    item.namespace === namespace && item.group === noun
+  const routes = ROUTES.filter(
+    (item) => item.namespace === namespace && item.group === noun,
   );
   if (routes.length === 0) return undefined;
 
@@ -1748,7 +2015,11 @@ function resolveNoun(argv: string[], namespace: Exclude<RouteNamespace, "public"
       };
     }
     if (route.kind === "noun-map" && route.tool && route.targets) {
-      return { type: "delegate", tool: route.tool, args: [route.targets[verb], ...argv.slice(2)] };
+      return {
+        type: "delegate",
+        tool: route.tool,
+        args: [route.targets[verb], ...argv.slice(2)],
+      };
     }
   }
 
@@ -1758,7 +2029,12 @@ function resolveNoun(argv: string[], namespace: Exclude<RouteNamespace, "public"
 }
 
 function resolveEngine(argv: string[]): Action {
-  if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h" || argv[0] === "help") {
+  if (
+    argv.length === 0 ||
+    argv[0] === "--help" ||
+    argv[0] === "-h" ||
+    argv[0] === "help"
+  ) {
     return { type: "help", scope: "engine" };
   }
 
@@ -1768,20 +2044,26 @@ function resolveEngine(argv: string[]): Action {
   const noun = resolveNoun(argv, "engine");
   if (noun) return noun;
 
-  const top = ROUTES.find((route) =>
-    route.namespace === "engine" &&
-    route.group === "top" &&
-    route.verbs.includes(argv[0])
+  const top = ROUTES.find(
+    (route) =>
+      route.namespace === "engine" &&
+      route.group === "top" &&
+      route.verbs.includes(argv[0]),
   );
   if (top?.kind === "top-passthrough" && top.tool) {
-    return { type: "delegate", tool: top.tool, args: [argv[0], ...argv.slice(1)] };
+    return {
+      type: "delegate",
+      tool: top.tool,
+      args: [argv[0], ...argv.slice(1)],
+    };
   }
 
-  const routeOnly = ROUTES.find((route) =>
-    route.namespace === "engine" &&
-    route.group === "top" &&
-    route.kind === "routing-only" &&
-    route.verbs.includes(argv[0])
+  const routeOnly = ROUTES.find(
+    (route) =>
+      route.namespace === "engine" &&
+      route.group === "top" &&
+      route.kind === "routing-only" &&
+      route.verbs.includes(argv[0]),
   );
   if (routeOnly) return handleRouteOnly(routeOnly, argv);
 
@@ -1789,20 +2071,30 @@ function resolveEngine(argv: string[]): Action {
 }
 
 function resolveSystem(argv: string[]): Action {
-  if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h" || argv[0] === "help") {
+  if (
+    argv.length === 0 ||
+    argv[0] === "--help" ||
+    argv[0] === "-h" ||
+    argv[0] === "help"
+  ) {
     return { type: "help", scope: "system" };
   }
 
   const noun = resolveNoun(argv, "system");
   if (noun) return noun;
 
-  const top = ROUTES.find((route) =>
-    route.namespace === "system" &&
-    route.group === "top" &&
-    route.verbs.includes(argv[0])
+  const top = ROUTES.find(
+    (route) =>
+      route.namespace === "system" &&
+      route.group === "top" &&
+      route.verbs.includes(argv[0]),
   );
   if (top?.kind === "top-passthrough" && top.tool) {
-    return { type: "delegate", tool: top.tool, args: [argv[0], ...argv.slice(1)] };
+    return {
+      type: "delegate",
+      tool: top.tool,
+      args: [argv[0], ...argv.slice(1)],
+    };
   }
   return topLevelError(`system ${argv[0]}`);
 }
@@ -1816,8 +2108,11 @@ function resolveSystem(argv: string[]): Action {
 function resolvePublicNoun(argv: string[]): Action | undefined {
   const noun = argv[0];
   const verb = argv[1];
-  for (const route of ROUTES.filter((item) =>
-    item.namespace === "public" && item.group !== "top" && item.group === noun
+  for (const route of ROUTES.filter(
+    (item) =>
+      item.namespace === "public" &&
+      item.group !== "top" &&
+      item.group === noun,
   )) {
     if (!verb || !route.verbs.includes(verb)) continue;
     if (route.kind === "noun-passthrough" && route.tool) {
@@ -1828,7 +2123,11 @@ function resolvePublicNoun(argv: string[]): Action | undefined {
       };
     }
     if (route.kind === "noun-map" && route.tool && route.targets) {
-      return { type: "delegate", tool: route.tool, args: [route.targets[verb], ...argv.slice(2)] };
+      return {
+        type: "delegate",
+        tool: route.tool,
+        args: [route.targets[verb], ...argv.slice(2)],
+      };
     }
   }
   return undefined;
@@ -1870,8 +2169,8 @@ function resolveActionWithoutGlobalFlags(argv: string[]): Action {
 // that uses the canonical `engine hook` route.
 function canonicalizeLegacyCopilotHookArgv(argv: string[]): string[] {
   return argv[0] === "hook" &&
-      process.env.AIDLC_HARNESS_NAME === "copilot" &&
-      (process.env.AIDLC_COMPILED_EXECUTABLE ?? "") !== ""
+    process.env.AIDLC_HARNESS_NAME === "copilot" &&
+    (process.env.AIDLC_COMPILED_EXECUTABLE ?? "") !== ""
     ? ["engine", ...argv]
     : argv;
 }
@@ -1890,7 +2189,14 @@ export function resolveAction(rawArgv: string[]): Action {
     }
     if (
       !literalArgs &&
-      ["--json", "--quiet", "--no-color", "--yes", "--offline", "--verbose"].includes(argv[i])
+      [
+        "--json",
+        "--quiet",
+        "--no-color",
+        "--yes",
+        "--offline",
+        "--verbose",
+      ].includes(argv[i])
     ) {
       globalFlags.push(argv[i]);
       continue;
@@ -1899,7 +2205,8 @@ export function resolveAction(rawArgv: string[]): Action {
       return {
         type: "error",
         code: 2,
-        message: "aidlc: --project-dir takes a separate path value; use --project-dir <path>\n",
+        message:
+          "aidlc: --project-dir takes a separate path value; use --project-dir <path>\n",
       };
     }
     if (literalArgs || argv[i] !== "--project-dir") {
@@ -1934,14 +2241,23 @@ export function resolveAction(rawArgv: string[]): Action {
       : resolve(process.cwd(), projectDir);
     if (action.type === "delegate") {
       const delimiter = action.args.indexOf("--");
-      if (delimiter >= 0) action.args.splice(delimiter, 0, "--project-dir", absoluteProjectDir);
+      if (delimiter >= 0)
+        action.args.splice(delimiter, 0, "--project-dir", absoluteProjectDir);
       else action.args.push("--project-dir", absoluteProjectDir);
     } else if (action.type === "hook") {
       action.projectDir = absoluteProjectDir;
-      action.path = resolveHookPath(`aidlc-${action.name}.ts`, undefined, absoluteProjectDir);
+      action.path = resolveHookPath(
+        `aidlc-${action.name}.ts`,
+        undefined,
+        absoluteProjectDir,
+      );
     } else if (action.type === "statusline") {
       action.projectDir = absoluteProjectDir;
-      action.path = resolveHookPath("aidlc-statusline.ts", undefined, absoluteProjectDir);
+      action.path = resolveHookPath(
+        "aidlc-statusline.ts",
+        undefined,
+        absoluteProjectDir,
+      );
     } else if (action.type === "adapter") {
       action.projectDir = absoluteProjectDir;
       const file = adapterFile(action.harness);
@@ -1957,9 +2273,15 @@ export function resolveAction(rawArgv: string[]): Action {
     // so when the caller gave none the resolved directory is pinned ahead of
     // the delimiter. The literal text stays byte-for-byte intact.
     if (delimiter >= 0 && !projectDir) {
-      action.args.splice(delimiter, 0, "--project-dir", dispatcherProjectDirFrom(argv));
+      action.args.splice(
+        delimiter,
+        0,
+        "--project-dir",
+        dispatcherProjectDirFrom(argv),
+      );
     }
-    if (delimiter >= 0) action.args.splice(action.args.indexOf("--"), 0, ...globalFlags);
+    if (delimiter >= 0)
+      action.args.splice(action.args.indexOf("--"), 0, ...globalFlags);
     else action.args.push(...globalFlags);
   }
   return action;
@@ -1971,7 +2293,9 @@ function toolPath(tool: string): string {
 }
 
 function bunExecutable(): string {
-  return basename(process.execPath).startsWith("bun") ? process.execPath : "bun";
+  return basename(process.execPath).startsWith("bun")
+    ? process.execPath
+    : "bun";
 }
 
 function delegatedProjectDir(args: readonly string[]): string | undefined {
@@ -1980,7 +2304,8 @@ function delegatedProjectDir(args: readonly string[]): string | undefined {
 
 function runDelegateDev(tool: string, args: string[]): number {
   try {
-    const child = Bun.spawnSync([bunExecutable(), toolPath(tool), ...args], { /* dev-mode bun spawn */
+    const child = Bun.spawnSync([bunExecutable(), toolPath(tool), ...args], {
+      /* dev-mode bun spawn */
       cwd: process.cwd(),
       stdout: "inherit",
       stderr: "inherit",
@@ -2073,14 +2398,20 @@ async function loadDelegate(tool: string): Promise<DelegateModule | null> {
   }
 }
 
-async function runDelegateInProcess(tool: string, args: string[]): Promise<number> {
+async function runDelegateInProcess(
+  tool: string,
+  args: string[],
+): Promise<number> {
   const previousProjectDir = process.env.AIDLC_PROJECT_DIR;
   const projectDir = delegatedProjectDir(args);
   if (projectDir) process.env.AIDLC_PROJECT_DIR = projectDir;
   try {
     const mod = await loadDelegate(tool);
     if (mod === null || typeof mod.main !== "function") {
-      text(2, `${JSON.stringify({ error: `${tool} does not export main(argv)` })}\n`);
+      text(
+        2,
+        `${JSON.stringify({ error: `${tool} does not export main(argv)` })}\n`,
+      );
       return 1;
     }
     await mod.main(args);
@@ -2155,20 +2486,30 @@ async function withProjectDir(
   }
 }
 
-async function runHook(action: Extract<Action, { type: "hook" }>): Promise<number> {
+async function runHook(
+  action: Extract<Action, { type: "hook" }>,
+): Promise<number> {
   if (!existsSync(action.path)) {
-    text(2, `aidlc engine hook ${action.name}: not available in this install\n`);
+    text(
+      2,
+      `aidlc engine hook ${action.name}: not available in this install\n`,
+    );
     return 1;
   }
   const mod = await import(pathToFileURL(action.path).href);
   if (typeof mod.run !== "function") {
-    text(2, `aidlc engine hook ${action.name}: hook does not export run(input)\n`);
+    text(
+      2,
+      `aidlc engine hook ${action.name}: hook does not export run(input)\n`,
+    );
     return 1;
   }
   return await mod.run(await readStdin());
 }
 
-async function runStatusline(action: Extract<Action, { type: "statusline" }>): Promise<number> {
+async function runStatusline(
+  action: Extract<Action, { type: "statusline" }>,
+): Promise<number> {
   if (!existsSync(action.path)) {
     text(2, "aidlc engine statusline: not available in this install\n");
     return 1;
@@ -2181,9 +2522,14 @@ async function runStatusline(action: Extract<Action, { type: "statusline" }>): P
   return await mod.run(await readStdin());
 }
 
-async function runAdapter(action: Extract<Action, { type: "adapter" }>): Promise<number> {
+async function runAdapter(
+  action: Extract<Action, { type: "adapter" }>,
+): Promise<number> {
   if (!existsSync(action.path)) {
-    text(2, `aidlc engine adapter ${action.harness} ${action.target}: not available in this install\n`);
+    text(
+      2,
+      `aidlc engine adapter ${action.harness} ${action.target}: not available in this install\n`,
+    );
     return 1;
   }
   // Dispatcher startup may already have pinned AIDLC_HARNESS_DIR/NAME from
@@ -2203,7 +2549,10 @@ async function runAdapter(action: Extract<Action, { type: "adapter" }>): Promise
   try {
     const mod = await import(pathToFileURL(action.path).href);
     if (typeof mod.run !== "function") {
-      text(2, `aidlc engine adapter ${action.harness} ${action.target}: adapter does not export run(target, input, extraArgs)\n`);
+      text(
+        2,
+        `aidlc engine adapter ${action.harness} ${action.target}: adapter does not export run(target, input, extraArgs)\n`,
+      );
       return 1;
     }
     let input = "";
@@ -2231,7 +2580,8 @@ async function runAdapter(action: Extract<Action, { type: "adapter" }>): Promise
         // AIDLC_IDE_STDIN_TIMEOUT_MS mirrors the adapter's test seam so both
         // entry points share one contract.
         const override = Number(process.env.AIDLC_IDE_STDIN_TIMEOUT_MS ?? "");
-        const ceiling = Number.isFinite(override) && override > 0 ? override : 2000;
+        const ceiling =
+          Number.isFinite(override) && override > 0 ? override : 2000;
         input = await readStdinWithTimeout(ceiling);
       }
     }
@@ -2239,9 +2589,11 @@ async function runAdapter(action: Extract<Action, { type: "adapter" }>): Promise
   } finally {
     if (previousHarness === undefined) delete process.env.AIDLC_HARNESS_DIR;
     else process.env.AIDLC_HARNESS_DIR = previousHarness;
-    if (previousHarnessName === undefined) delete process.env.AIDLC_HARNESS_NAME;
+    if (previousHarnessName === undefined)
+      delete process.env.AIDLC_HARNESS_NAME;
     else process.env.AIDLC_HARNESS_NAME = previousHarnessName;
-    if (previousExecutable === undefined) delete process.env.AIDLC_COMPILED_EXECUTABLE;
+    if (previousExecutable === undefined)
+      delete process.env.AIDLC_COMPILED_EXECUTABLE;
     else process.env.AIDLC_COMPILED_EXECUTABLE = previousExecutable;
   }
 }
@@ -2249,7 +2601,7 @@ async function runAdapter(action: Extract<Action, { type: "adapter" }>): Promise
 async function runSensorScriptFile(
   action: Extract<Action, { type: "sensor-script-file" }>,
 ): Promise<number> {
-  const sensorModule = await import("./aidlc-sensor.ts") as {
+  const sensorModule = (await import("./aidlc-sensor.ts")) as {
     resolveSensorScriptPath?: (id: string) => string;
   };
   if (typeof sensorModule.resolveSensorScriptPath !== "function") {
@@ -2267,7 +2619,7 @@ async function runSensorScriptFile(
     text(2, `aidlc sensor worker: not found: ${path}\n`);
     return 1;
   }
-  const mod = await import(pathToFileURL(path).href) as {
+  const mod = (await import(pathToFileURL(path).href)) as {
     main?: (argv: string[]) => void | Promise<void>;
   };
   if (typeof mod.main !== "function") {
@@ -2288,17 +2640,15 @@ async function execute(action: Action): Promise<number> {
       : runDelegateDev(action.tool, action.args);
   }
   if (action.type === "help") {
-    const rendered = action.scope === "engine"
-      ? await renderEngineHelp()
-      : action.scope === "system"
-      ? renderNamespaceHelp(SYSTEM_NAMESPACE_HELP)
-      : action.scope === "all"
-      ? renderAllHelp()
-      : renderHumanHelp();
-    text(
-      1,
-      rendered,
-    );
+    const rendered =
+      action.scope === "engine"
+        ? await renderEngineHelp()
+        : action.scope === "system"
+          ? renderNamespaceHelp(SYSTEM_NAMESPACE_HELP)
+          : action.scope === "all"
+            ? renderAllHelp()
+            : renderHumanHelp();
+    text(1, rendered);
     if (action.scope === "human" && process.stdout.isTTY) {
       try {
         const { cachedUpdateNotice } = await import("./aidlc-update.ts");
@@ -2333,10 +2683,17 @@ async function execute(action: Action): Promise<number> {
     return await withProjectDir(action.projectDir, () => runAdapter(action));
   }
   if (action.type === "sensor-script-file") {
-    return await withProjectDir(action.projectDir, () => runSensorScriptFile(action));
+    return await withProjectDir(action.projectDir, () =>
+      runSensorScriptFile(action),
+    );
   }
   if (action.type === "stub" || action.type === "error") {
-    text(2, action.type === "error" ? action.humanMessage ?? action.message : action.message);
+    text(
+      2,
+      action.type === "error"
+        ? (action.humanMessage ?? action.message)
+        : action.message,
+    );
     return action.code;
   }
   return 1;
@@ -2353,7 +2710,14 @@ function withoutProjectDirFlag(argv: readonly string[]): string[] {
     }
     if (
       !literalArgs &&
-      ["--json", "--quiet", "--no-color", "--yes", "--offline", "--verbose"].includes(argv[index])
+      [
+        "--json",
+        "--quiet",
+        "--no-color",
+        "--yes",
+        "--offline",
+        "--verbose",
+      ].includes(argv[index])
     ) {
       continue;
     }
@@ -2422,7 +2786,12 @@ export function routePolicyFor(argv: readonly string[]): Route | null {
     const namespace = head;
     const delegate = clean[1];
     const command = clean[2];
-    if (!delegate || delegate === "--help" || delegate === "-h" || delegate === "help") {
+    if (
+      !delegate ||
+      delegate === "--help" ||
+      delegate === "-h" ||
+      delegate === "help"
+    ) {
       return head === "engine" ? routeById("top-help") : null;
     }
     if (
@@ -2431,42 +2800,50 @@ export function routePolicyFor(argv: readonly string[]): Route | null {
     ) {
       return routeById("sensor");
     }
-    const nounRoutes = ROUTES.filter((route) =>
-      route.namespace === namespace && route.group === delegate
+    const nounRoutes = ROUTES.filter(
+      (route) => route.namespace === namespace && route.group === delegate,
     );
     if (nounRoutes.length > 0) {
-      const matched = nounRoutes.find((route) => route.verbs.includes(command ?? "")) ??
-        nounRoutes.find((route) =>
-          route.kind === "custom" &&
-          route.verbs.includes(`${command ?? ""} ${clean[3] ?? ""}`)
+      const matched =
+        nounRoutes.find((route) => route.verbs.includes(command ?? "")) ??
+        nounRoutes.find(
+          (route) =>
+            route.kind === "custom" &&
+            route.verbs.includes(`${command ?? ""} ${clean[3] ?? ""}`),
         ) ??
-        nounRoutes.find((route) =>
-          route.kind === "custom" &&
-          route.verbs.includes("<name>") &&
-          Boolean(command && isSafeName(command))
+        nounRoutes.find(
+          (route) =>
+            route.kind === "custom" &&
+            route.verbs.includes("<name>") &&
+            Boolean(command && isSafeName(command)),
         ) ??
         nounRoutes.find((route) => route.kind === "routing-only") ??
         undefined;
       if (matched) return matched;
     }
-    return ROUTES.find((route) =>
-      route.namespace === namespace &&
-      route.group === "top" &&
-      route.verbs.includes(delegate)
-    ) ?? null;
+    return (
+      ROUTES.find(
+        (route) =>
+          route.namespace === namespace &&
+          route.group === "top" &&
+          route.verbs.includes(delegate),
+      ) ?? null
+    );
   }
 
-  const top = ROUTES.find((route) =>
-    route.namespace === "public" &&
-    route.group === "top" &&
-    route.verbs.includes(head)
+  const top = ROUTES.find(
+    (route) =>
+      route.namespace === "public" &&
+      route.group === "top" &&
+      route.verbs.includes(head),
   );
   if (top) return top;
-  const publicNoun = ROUTES.find((route) =>
-    route.namespace === "public" &&
-    route.group !== "top" &&
-    route.group === head &&
-    route.verbs.includes(clean[1] ?? "")
+  const publicNoun = ROUTES.find(
+    (route) =>
+      route.namespace === "public" &&
+      route.group !== "top" &&
+      route.group === head &&
+      route.verbs.includes(clean[1] ?? ""),
   );
   if (publicNoun) return publicNoun;
   return null;
@@ -2474,10 +2851,7 @@ export function routePolicyFor(argv: readonly string[]): Route | null {
 
 function routePinPolicy(argv: readonly string[]): PinPolicy {
   const route = routePolicyFor(argv);
-  if (
-    route &&
-    (route.pinPolicy === "pinned") !== launcherRouteUsesPin(argv)
-  ) {
+  if (route && (route.pinPolicy === "pinned") !== launcherRouteUsesPin(argv)) {
     throw new Error(`launcher pin policy drift for route ${route.id}`);
   }
   return route?.pinPolicy ?? "active";
@@ -2485,10 +2859,15 @@ function routePinPolicy(argv: readonly string[]): PinPolicy {
 
 function dispatcherProjectDirFrom(argv: readonly string[]): string {
   const explicit = projectDirFlag(argv).value;
-  const value = explicit || process.env.AIDLC_PROJECT_DIR ||
-    process.env.CLAUDE_PROJECT_DIR || process.env.KIRO_PROJECT_DIR;
+  const value =
+    explicit ||
+    process.env.AIDLC_PROJECT_DIR ||
+    process.env.CLAUDE_PROJECT_DIR ||
+    process.env.KIRO_PROJECT_DIR;
   return value
-    ? (isAbsolute(value) ? value : resolve(process.cwd(), value))
+    ? isAbsolute(value)
+      ? value
+      : resolve(process.cwd(), value)
     : process.cwd();
 }
 
@@ -2507,7 +2886,10 @@ function projectDirFlag(argv: readonly string[]): {
     const token = argv[index];
     if (token === "--") break;
     if (token.startsWith("--project-dir=")) {
-      return { error: "--project-dir takes a separate path value; use --project-dir <path>" };
+      return {
+        error:
+          "--project-dir takes a separate path value; use --project-dir <path>",
+      };
     }
     if (token !== "--project-dir") continue;
     const candidate = argv[++index];
@@ -2530,10 +2912,8 @@ async function dispatchPinnedVersion(
   const projectDir = dispatcherProjectDirFrom(argv);
   const pinPath = join(projectDir, ".aidlc-version");
   if (!existsSync(pinPath)) return null;
-  const {
-    reserveDispatchedVersion,
-    resolvePinnedDispatch,
-  } = await import("./aidlc-lifecycle.ts");
+  const { reserveDispatchedVersion, resolvePinnedDispatch } =
+    await import("./aidlc-lifecycle.ts");
   const result = resolvePinnedDispatch(argv, projectDir);
   if (result.kind === "none") return null;
   if (result.kind === "failure") {
@@ -2583,7 +2963,9 @@ function refuseUnpinnedMajorSkew(argv: readonly string[]): number | null {
   return null;
 }
 
-function requestedOutputMode(argv: readonly string[]): "human" | "quiet" | "json" {
+function requestedOutputMode(
+  argv: readonly string[],
+): "human" | "quiet" | "json" {
   const delimiter = argv.indexOf("--");
   const globalArgs = delimiter < 0 ? argv : argv.slice(0, delimiter);
   if (globalArgs.includes("--json")) return "json";
@@ -2600,16 +2982,17 @@ function renderDispatcherFailure(
   const cleanMessage = message.replace(/^aidlc:\s*/, "").trim();
   const mode = requestedOutputMode(argv);
   if (mode === "json") {
-    text(1, `${
-      JSON.stringify({
+    text(
+      1,
+      `${JSON.stringify({
         schemaVersion: 1,
         ok: false,
         code,
         status: code === 2 ? "usage" : code === 3 ? "unavailable" : "failed",
         message: cleanMessage,
         ...(remediation ? { remediation } : {}),
-      })
-    }\n`);
+      })}\n`,
+    );
   } else if (mode === "quiet") {
     text(1, `${remediation ?? cleanMessage}\n`);
   } else {
@@ -2621,7 +3004,10 @@ function renderDispatcherFailure(
   return code;
 }
 
-function basicPolicyError(route: Route, argv: readonly string[]): string | null {
+function basicPolicyError(
+  route: Route,
+  argv: readonly string[],
+): string | null {
   const output = requestedOutputMode(argv);
   if (!route.outputModes.includes(output)) {
     return `${route.id} does not support --${output}`;
@@ -2713,10 +3099,7 @@ async function publicCommandGrammarError(
   route: Route | null,
   argv: readonly string[],
 ): Promise<string | null> {
-  if (
-    route?.namespace !== "public" ||
-    route.group !== "top"
-  ) {
+  if (route?.namespace !== "public" || route.group !== "top") {
     return null;
   }
   const command = route.verbs[0] as PublicCommand | undefined;
@@ -2734,7 +3117,8 @@ async function publicCommandGrammarError(
     return validatePublicConfigArgs(normalized);
   }
   if (command === "update" || command === "use" || command === "uninstall") {
-    const { validatePublicLifecycleArgs } = await import("./aidlc-lifecycle.ts");
+    const { validatePublicLifecycleArgs } =
+      await import("./aidlc-lifecycle.ts");
     return validatePublicLifecycleArgs(normalized);
   }
   return validateSimplePublicGrammar(command, normalized);
@@ -2763,9 +3147,10 @@ function renderPublicGrammarFailure(
         candidate,
         distance: editDistance(configSection, candidate),
       }))
-      .sort((left, right) =>
-        left.distance - right.distance ||
-        left.candidate.localeCompare(right.candidate)
+      .sort(
+        (left, right) =>
+          left.distance - right.distance ||
+          left.candidate.localeCompare(right.candidate),
       )[0];
     text(
       2,
@@ -2787,17 +3172,21 @@ function renderPublicGrammarFailure(
   return renderDispatcherFailure(argv, 2, message);
 }
 
-function projectPolicyError(route: Route, argv: readonly string[]): string | null {
+function projectPolicyError(
+  route: Route,
+  argv: readonly string[],
+): string | null {
   if (route.projectRequirement !== "required") return null;
   const projectDir = dispatcherProjectDirFrom(argv);
-  const recognized = [
-    ".git",
-    "package.json",
-    "Cargo.toml",
-    "go.mod",
-    "pyproject.toml",
-    "aidlc",
-  ].some((entry) => existsSync(join(projectDir, entry))) ||
+  const recognized =
+    [
+      ".git",
+      "package.json",
+      "Cargo.toml",
+      "go.mod",
+      "pyproject.toml",
+      "aidlc",
+    ].some((entry) => existsSync(join(projectDir, entry))) ||
     discoverProjectHarnesses(projectDir).length > 0;
   return recognized
     ? null
@@ -2822,9 +3211,8 @@ async function projectMachineOverlapError(
     return null;
   }
   const projectDir = dispatcherProjectDirFrom(argv);
-  const { isMachineOwnedPath, projectPathOverlapsMachineRoots } = await import(
-    "./aidlc-install-paths.ts"
-  );
+  const { isMachineOwnedPath, projectPathOverlapsMachineRoots } =
+    await import("./aidlc-install-paths.ts");
   const overlaps = required
     ? projectPathOverlapsMachineRoots(projectDir)
     : isMachineOwnedPath(projectDir);
@@ -2838,16 +3226,17 @@ function effectiveMutationScope(
   argv: readonly string[],
 ): MutationScope {
   const clean = withoutProjectDirFlag(argv);
-  if (
-    route.id === "system-lifecycle" &&
-    clean[2] === "install-profile"
-  ) {
+  if (route.id === "system-lifecycle" && clean[2] === "install-profile") {
     return "user-home";
   }
   return route.mutationScope;
 }
 
-async function withRoutePolicy(route: Route, argv: readonly string[], run: () => Promise<number>): Promise<number> {
+async function withRoutePolicy(
+  route: Route,
+  argv: readonly string[],
+  run: () => Promise<number>,
+): Promise<number> {
   const values: Record<string, string> = {
     AIDLC_ROUTE_ID: route.id,
     AIDLC_ROUTE_NETWORK_POLICY: route.networkPolicy,
@@ -2930,9 +3319,8 @@ export async function main(rawArgv: string[]): Promise<void> {
     !["doctor", "--doctor", "uninstall"].includes(argv[0] ?? "")
   ) {
     try {
-      const { recoverWindowsUninstallContinuations } = await import(
-        "./aidlc-windows-uninstall.ts"
-      );
+      const { recoverWindowsUninstallContinuations } =
+        await import("./aidlc-windows-uninstall.ts");
       const recovered = recoverWindowsUninstallContinuations();
       if (recovered > 0) {
         process.exitCode = renderDispatcherFailure(
@@ -2955,7 +3343,8 @@ export async function main(rawArgv: string[]): Promise<void> {
   if (
     route?.routeOnly === "hook" ||
     route?.routeOnly === "statusline" ||
-    (route?.routeOnly === "adapter" && withoutProjectDirFlag(argv)[2] !== "kiro-ide")
+    (route?.routeOnly === "adapter" &&
+      withoutProjectDirFlag(argv)[2] !== "kiro-ide")
   ) {
     await readStdin();
   }
@@ -2988,7 +3377,11 @@ export async function main(rawArgv: string[]): Promise<void> {
     (action.type === "error" || action.type === "stub") &&
     requestedOutputMode(argv) !== "human"
   ) {
-    process.exitCode = renderDispatcherFailure(argv, action.code, action.message);
+    process.exitCode = renderDispatcherFailure(
+      argv,
+      action.code,
+      action.message,
+    );
     return;
   }
   const code = route

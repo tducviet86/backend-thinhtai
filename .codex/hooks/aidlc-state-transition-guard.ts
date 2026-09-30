@@ -115,7 +115,8 @@ function maskHeredocBodies(command: string): string {
       if (candidate === active.delimiter) pending.shift();
       continue;
     }
-    const heredoc = /<<(-)?\s*(?:'([^']+)'|"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))/g;
+    const heredoc =
+      /<<(-)?\s*(?:'([^']+)'|"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))/g;
     for (const match of lines[i].matchAll(heredoc)) {
       const delimiter = match[2] ?? match[3] ?? match[4];
       if (delimiter) {
@@ -168,7 +169,8 @@ function maskFunctionDefinitions(command: string): string {
       }
     }
     if (depth !== 0) break;
-    const start = match.index +
+    const start =
+      match.index +
       (match[0].startsWith(";") || match[0].startsWith("\n") ? 1 : 0);
     for (let i = start; i <= end; i++) {
       if (chars[i] !== "\n") chars[i] = " ";
@@ -242,7 +244,8 @@ export function isLifecycleBoundaryCommand(command: string): boolean {
   for (const match of executableShellText(command).matchAll(nativeInvocation)) {
     const tool = match[1];
     const verb = match[2];
-    if (tool === "orchestrate" && (verb === "report" || verb === "park")) return true;
+    if (tool === "orchestrate" && (verb === "report" || verb === "park"))
+      return true;
     if (tool === "state" && BLOCKED_STATE_TRANSITIONS.has(verb)) return true;
     if (tool === "jump" && verb === "execute") return true;
   }
@@ -417,7 +420,9 @@ function heredocSubstitutionBodies(command: string): string[] {
       const candidate = active.stripTabs ? line.replace(/^\t+/, "") : line;
       if (candidate === active.delimiter) {
         if (active.executable) {
-          bodies.push(...executableSubstitutions(active.lines.join("\n")).bodies);
+          bodies.push(
+            ...executableSubstitutions(active.lines.join("\n")).bodies,
+          );
         }
         pending.shift();
       } else {
@@ -425,7 +430,8 @@ function heredocSubstitutionBodies(command: string): string[] {
       }
       continue;
     }
-    const heredoc = /<<(-)?\s*(?:'([^']+)'|"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))/g;
+    const heredoc =
+      /<<(-)?\s*(?:'([^']+)'|"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))/g;
     for (const match of line.matchAll(heredoc)) {
       const delimiter = match[2] ?? match[3] ?? match[4];
       if (delimiter) {
@@ -512,7 +518,8 @@ function commandBasename(command: string | undefined): string {
   return (command ?? "").replace(/\\/g, "/").split("/").at(-1) ?? "";
 }
 
-const UNINSPECTABLE_EXECUTION_WRAPPER = "__aidlc_uninspectable_execution_wrapper__";
+const UNINSPECTABLE_EXECUTION_WRAPPER =
+  "__aidlc_uninspectable_execution_wrapper__";
 
 function executableArgv(segment: string): string[] {
   let words = shellWords(segment);
@@ -639,7 +646,11 @@ function executableArgv(segment: string): string[] {
           /^(?:--unset|--chdir)=.+/.test(word) ||
           /^-[iv]+$/.test(word) ||
           word === "-" ||
-          ["--ignore-environment", "--debug", "--list-signal-handling"].includes(word) ||
+          [
+            "--ignore-environment",
+            "--debug",
+            "--list-signal-handling",
+          ].includes(word) ||
           /^--(?:block|default|ignore)-signal(?:=.*)?$/.test(word)
         ) {
           cursor++;
@@ -774,9 +785,7 @@ function delegatedDispatcherCommand(
   rawArgs: string[],
 ): string | null {
   const raw = withoutProjectDir(rawArgs);
-  const namespace = raw[0] === "engine" || raw[0] === "system"
-    ? raw[0]
-    : null;
+  const namespace = raw[0] === "engine" || raw[0] === "system" ? raw[0] : null;
   const args = namespace ? raw.slice(1) : raw;
   const routePrefix = namespace ? `${prefix} ${namespace}` : prefix;
   const group = args[0] ?? "";
@@ -829,8 +838,14 @@ function delegatedUtilityCommand(
   const { positional } = parseArgs(rawArgs);
   const verb = positional[0] ?? "";
   if (
-    ["scope-change", "config-change", "recompose", "intent-create", "state-init", "space-create"]
-      .includes(verb)
+    [
+      "scope-change",
+      "config-change",
+      "recompose",
+      "intent-create",
+      "state-init",
+      "space-create",
+    ].includes(verb)
   ) {
     return `${prefix} ${verb}`;
   }
@@ -843,12 +858,17 @@ function assignment(word: string): { name: string; value: string } | null {
 }
 
 function variableReference(word: string): string | null {
-  return word.match(/^\$([A-Za-z_][A-Za-z0-9_]*)$/)?.[1] ??
+  return (
+    word.match(/^\$([A-Za-z_][A-Za-z0-9_]*)$/)?.[1] ??
     word.match(/^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/)?.[1] ??
-    null;
+    null
+  );
 }
 
-function delegatedLifecycleCommandAtDepth(command: string, depth: number): string | null {
+function delegatedLifecycleCommandAtDepth(
+  command: string,
+  depth: number,
+): string | null {
   if (depth > 8) return "nested shell command beyond guard inspection limit";
   const heredocBodies = heredocSubstitutionBodies(command);
   const source = maskHeredocBodies(command);
@@ -912,7 +932,9 @@ function delegatedLifecycleCommandAtDepth(command: string, depth: number): strin
     if (/^(?:ba|da|a|k|z)?sh(?:\.exe)?$/.test(executable)) {
       for (let i = 1; i < argv.length; i++) {
         const option = argv[i];
-        if (["-O", "+O", "-o", "+o", "--rcfile", "--init-file"].includes(option)) {
+        if (
+          ["-O", "+O", "-o", "+o", "--rcfile", "--init-file"].includes(option)
+        ) {
           i++;
           continue;
         }
@@ -931,7 +953,10 @@ function delegatedLifecycleCommandAtDepth(command: string, depth: number): strin
           if (nestedCommand.includes("$")) {
             return "dynamic shell command beyond guard inspection";
           }
-          const nested = delegatedLifecycleCommandAtDepth(nestedCommand, depth + 1);
+          const nested = delegatedLifecycleCommandAtDepth(
+            nestedCommand,
+            depth + 1,
+          );
           if (nested !== null) return nested;
           break;
         }
@@ -948,13 +973,16 @@ function delegatedLifecycleCommandAtDepth(command: string, depth: number): strin
       script = invocation.script;
       args = invocation.args;
     }
-    const authored = script.match(/^aidlc-(orchestrate|state|jump|utility)\.ts$/);
+    const authored = script.match(
+      /^aidlc-(orchestrate|state|jump|utility)\.ts$/,
+    );
     if (authored) {
       const tool = authored[1];
       const positional = withoutProjectDir(args);
       const verb = positional[0] ?? "";
       if (
-        (tool === "orchestrate" && ["next", "continue", "report", "park"].includes(verb)) ||
+        (tool === "orchestrate" &&
+          ["next", "continue", "report", "park"].includes(verb)) ||
         (tool === "state" && DELEGATED_STATE_MUTATIONS.has(verb)) ||
         (tool === "jump" && verb === "execute")
       ) {

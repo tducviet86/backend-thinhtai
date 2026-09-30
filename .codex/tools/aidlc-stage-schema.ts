@@ -25,7 +25,8 @@ export interface StageFrontmatter {
   // means the item belongs to core. An open set (plugin names), so string-only —
   // no enum. Stored only when authored, so core stages stay byte-identical.
   plugin?: string;
-  phase: "initialization" | "ideation" | "inception" | "construction" | "operation";
+  phase:
+    "initialization" | "ideation" | "inception" | "construction" | "operation";
   execution: "ALWAYS" | "CONDITIONAL";
   condition: string;
   lead_agent: string;
@@ -106,8 +107,7 @@ export interface StageFrontmatter {
 }
 
 export type ValidationResult =
-  | { valid: true; data: StageFrontmatter }
-  | { valid: false; errors: string[] };
+  { valid: true; data: StageFrontmatter } | { valid: false; errors: string[] };
 
 export interface ValidationContext {
   /**
@@ -130,7 +130,13 @@ export const VALID_PHASES = [
 
 export const VALID_EXECUTIONS = ["ALWAYS", "CONDITIONAL"] as const;
 
-export const VALID_MODES = ["inline", "subagent", "pipeline", "mob", "agent-team"] as const;
+export const VALID_MODES = [
+  "inline",
+  "subagent",
+  "pipeline",
+  "mob",
+  "agent-team",
+] as const;
 
 // The two ensemble topologies whose semantics are meaningless without
 // collaborators: a chain with no links and a room with one occupant are both
@@ -179,7 +185,24 @@ const REQUIRED_FIELDS = [
   "outputs",
 ] as const;
 
-const OPTIONAL_FIELDS = ["number", "name", "plugin", "for_each", "workspace_requires", "optional_produces", "produces_kinds", "sensors", "scopes", "reviewer", "review_artifact", "reviewer_max_iterations", "review_class", "summary_confirmation", "when", "required_sections"] as const;
+const OPTIONAL_FIELDS = [
+  "number",
+  "name",
+  "plugin",
+  "for_each",
+  "workspace_requires",
+  "optional_produces",
+  "produces_kinds",
+  "sensors",
+  "scopes",
+  "reviewer",
+  "review_artifact",
+  "reviewer_max_iterations",
+  "review_class",
+  "summary_confirmation",
+  "when",
+  "required_sections",
+] as const;
 
 const KNOWN_FIELDS = new Set<string>([...REQUIRED_FIELDS, ...OPTIONAL_FIELDS]);
 
@@ -205,7 +228,7 @@ const ARTIFACT_SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
 export function validateStageFrontmatter(
   obj: unknown,
-  ctx?: ValidationContext
+  ctx?: ValidationContext,
 ): ValidationResult {
   // Rule 1: shape. Must be a plain object. If not, return a single error —
   // we can't collect field-level errors on a non-object. After this guard,
@@ -233,7 +256,7 @@ export function validateStageFrontmatter(
   // collection-of-plugins concept) — so name the fix instead of "unknown key".
   for (const key of Object.keys(raw)) {
     if (key === "bundle") {
-      errors.push('bundle: was renamed; write plugin: for ownership');
+      errors.push("bundle: was renamed; write plugin: for ownership");
       continue;
     }
     if (!KNOWN_FIELDS.has(key) && !(key in RESERVED_KEYS)) {
@@ -325,7 +348,7 @@ export function validateStageFrontmatter(
   if ("workspace_requires" in o && o.workspace_requires !== undefined) {
     if (typeof o.workspace_requires !== "boolean") {
       errors.push(
-        `workspace_requires must be boolean, got ${describe(o.workspace_requires)}`
+        `workspace_requires must be boolean, got ${describe(o.workspace_requires)}`,
       );
     }
   }
@@ -420,12 +443,14 @@ export function validateStageFrontmatter(
     } else {
       const keys = Object.keys(w);
       if (keys.length !== 1) {
-        errors.push(`when must have exactly one predicate key, got ${keys.length}`);
+        errors.push(
+          `when must have exactly one predicate key, got ${keys.length}`,
+        );
       }
       for (const k of keys) {
         if (!(WHEN_PREDICATE_KEYS as readonly string[]).includes(k)) {
           errors.push(
-            `when has unknown predicate "${k}"; allowed: ${WHEN_PREDICATE_KEYS.join(" | ")}`
+            `when has unknown predicate "${k}"; allowed: ${WHEN_PREDICATE_KEYS.join(" | ")}`,
           );
         } else if (typeof w[k] !== "string" || (w[k] as string).trim() === "") {
           errors.push(`when.${k} must be a non-empty artifact slug`);
@@ -448,7 +473,9 @@ export function validateStageFrontmatter(
       const opt: unknown[] = optVal;
       opt.forEach((name: unknown, i: number) => {
         if (typeof name === "string" && !ARTIFACT_SLUG_RE.test(name)) {
-          errors.push(`optional_produces[${i}] must be kebab-case, got "${name}"`);
+          errors.push(
+            `optional_produces[${i}] must be kebab-case, got "${name}"`,
+          );
         }
       });
     }
@@ -478,11 +505,18 @@ export function validateStageFrontmatter(
           errors.push(`produces_kinds key "${name}" is not in produces`);
         }
         if (!Array.isArray(kinds) || kinds.length === 0) {
-          errors.push(`produces_kinds.${name} must be a non-empty list of unit kinds`);
+          errors.push(
+            `produces_kinds.${name} must be a non-empty list of unit kinds`,
+          );
         } else {
           for (const k of kinds) {
-            if (typeof k !== "string" || !(UNIT_KINDS as readonly string[]).includes(k)) {
-              errors.push(`produces_kinds.${name} lists unknown kind "${typeof k === "string" ? k : describe(k)}"`);
+            if (
+              typeof k !== "string" ||
+              !(UNIT_KINDS as readonly string[]).includes(k)
+            ) {
+              errors.push(
+                `produces_kinds.${name} lists unknown kind "${typeof k === "string" ? k : describe(k)}"`,
+              );
             }
           }
         }
@@ -555,25 +589,35 @@ export function validateStageFrontmatter(
         if (!("artifact" in e)) {
           errors.push(`consumes[${i}].artifact missing`);
         } else if (typeof e.artifact !== "string") {
-          errors.push(`consumes[${i}].artifact must be string, got ${describe(e.artifact)}`);
+          errors.push(
+            `consumes[${i}].artifact must be string, got ${describe(e.artifact)}`,
+          );
         } else if (!ARTIFACT_SLUG_RE.test(e.artifact)) {
-          errors.push(`consumes[${i}].artifact must be kebab-case, got "${e.artifact}"`);
+          errors.push(
+            `consumes[${i}].artifact must be kebab-case, got "${e.artifact}"`,
+          );
         }
 
         if (!("required" in e)) {
           errors.push(`consumes[${i}].required missing`);
         } else if (typeof e.required !== "boolean") {
-          errors.push(`consumes[${i}].required must be boolean, got ${describe(e.required)}`);
+          errors.push(
+            `consumes[${i}].required must be boolean, got ${describe(e.required)}`,
+          );
         }
 
         if ("conditional_on" in e && e.conditional_on !== undefined) {
           if (typeof e.conditional_on !== "string") {
             errors.push(
-              `consumes[${i}].conditional_on must be string, got ${describe(e.conditional_on)}`
+              `consumes[${i}].conditional_on must be string, got ${describe(e.conditional_on)}`,
             );
-          } else if (!(VALID_CONDITIONAL_ON as readonly string[]).includes(e.conditional_on)) {
+          } else if (
+            !(VALID_CONDITIONAL_ON as readonly string[]).includes(
+              e.conditional_on,
+            )
+          ) {
             errors.push(
-              `consumes[${i}].conditional_on must be one of ${VALID_CONDITIONAL_ON.join(" | ")}, got "${e.conditional_on}"`
+              `consumes[${i}].conditional_on must be one of ${VALID_CONDITIONAL_ON.join(" | ")}, got "${e.conditional_on}"`,
             );
           }
         }
@@ -631,7 +675,9 @@ export function validateStageFrontmatter(
       o.lead_agent !== RESERVED_AGENT_SLUG &&
       !known.has(o.lead_agent)
     ) {
-      errors.push(`lead_agent "${o.lead_agent}" has no matching .claude/agents/*.md`);
+      errors.push(
+        `lead_agent "${o.lead_agent}" has no matching .claude/agents/*.md`,
+      );
     }
     const supportAgentsVal: unknown = o.support_agents;
     if (Array.isArray(supportAgentsVal)) {
@@ -642,7 +688,9 @@ export function validateStageFrontmatter(
           a !== RESERVED_AGENT_SLUG &&
           !known.has(a)
         ) {
-          errors.push(`support_agents[${i}] "${a}" has no matching .claude/agents/*.md`);
+          errors.push(
+            `support_agents[${i}] "${a}" has no matching .claude/agents/*.md`,
+          );
         }
       });
     }
@@ -655,7 +703,9 @@ export function validateStageFrontmatter(
       o.reviewer !== RESERVED_AGENT_SLUG &&
       !known.has(o.reviewer)
     ) {
-      errors.push(`reviewer "${o.reviewer}" has no matching .claude/agents/*.md`);
+      errors.push(
+        `reviewer "${o.reviewer}" has no matching .claude/agents/*.md`,
+      );
     }
   }
 
@@ -683,7 +733,11 @@ function describe(v: unknown): string {
   return typeof v;
 }
 
-function checkString(o: Record<string, unknown>, field: string, errors: string[]): void {
+function checkString(
+  o: Record<string, unknown>,
+  field: string,
+  errors: string[],
+): void {
   if (!(field in o)) return;
   if (typeof o[field] !== "string") {
     errors.push(`${field} must be string, got ${describe(o[field])}`);
@@ -711,7 +765,7 @@ function checkPositiveInteger(
 function checkStringArray(
   o: Record<string, unknown>,
   field: string,
-  errors: string[]
+  errors: string[],
 ): void {
   if (!(field in o)) return;
   const v: unknown = o[field];
@@ -731,7 +785,7 @@ function checkEnum(
   o: Record<string, unknown>,
   field: string,
   allowed: readonly string[],
-  errors: string[]
+  errors: string[],
 ): void {
   if (!(field in o)) return;
   const v = o[field];
@@ -746,7 +800,7 @@ function checkSlugPattern(
   field: string,
   re: RegExp,
   shape: string,
-  errors: string[]
+  errors: string[],
 ): void {
   if (!(field in o)) return;
   const v = o[field];

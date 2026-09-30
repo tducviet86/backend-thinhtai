@@ -14,14 +14,15 @@ Anti-pattern: the **ice cream cone** (mostly manual/e2e tests, few unit tests) l
 
 ## Test Doubles
 
-| Type | Purpose | Example |
-|------|---------|---------|
-| **Mock** | Verify interactions (was method X called with args Y?) | `jest.fn()`, `unittest.mock.Mock` |
-| **Stub** | Return predetermined data; no interaction verification | Hard-coded return values |
-| **Fake** | Working implementation with shortcuts (in-memory DB) | SQLite for integration tests |
-| **Spy** | Wraps real object; records calls while executing real logic | `jest.spyOn()`, Sinon spies |
+| Type     | Purpose                                                     | Example                           |
+| -------- | ----------------------------------------------------------- | --------------------------------- |
+| **Mock** | Verify interactions (was method X called with args Y?)      | `jest.fn()`, `unittest.mock.Mock` |
+| **Stub** | Return predetermined data; no interaction verification      | Hard-coded return values          |
+| **Fake** | Working implementation with shortcuts (in-memory DB)        | SQLite for integration tests      |
+| **Spy**  | Wraps real object; records calls while executing real logic | `jest.spyOn()`, Sinon spies       |
 
 Guidelines:
+
 - Prefer stubs over mocks to keep tests less coupled to implementation.
 - Use fakes (LocalStack, testcontainers) for integration tests to increase realism.
 - Avoid mocking what you do not own; wrap third-party libraries behind an interface and mock the interface.

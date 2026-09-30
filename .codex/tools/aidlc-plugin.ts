@@ -16,11 +16,7 @@ import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
-import {
-  errorMessage,
-  parseArgs,
-  resolveProjectDir,
-} from "./aidlc-lib.ts";
+import { errorMessage, parseArgs, resolveProjectDir } from "./aidlc-lib.ts";
 import {
   compiledExecutable,
   runtimeHarnessDir,
@@ -34,7 +30,8 @@ import {
 } from "./aidlc-transaction.ts";
 
 const SAFE_PLUGIN_KEY = /^[a-z][a-z0-9-]*$/;
-const STRICT_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
+const STRICT_SEMVER =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 const COMPOSE_DIRS = [
   "agents",
   "contributions",
@@ -136,7 +133,9 @@ function regularFiles(root: string): string[] {
       } else if (stat.isFile()) {
         files.push(path);
       } else {
-        throw new Error(`${path}: plugin source contains a link or special file`);
+        throw new Error(
+          `${path}: plugin source contains a link or special file`,
+        );
       }
     }
   };
@@ -173,7 +172,7 @@ export function pluginSourceHash(root: string): string {
     regularFiles(join(root, directory)).map((path) => ({
       path,
       relative: relative(root, path).split(sep).join("/"),
-    }))
+    })),
   ).sort((left, right) => left.relative.localeCompare(right.relative));
   const hash = createHash("sha256");
   for (const file of files) {
@@ -200,7 +199,11 @@ export function normalizeInstalledPlugin(
   expectedVersion?: string,
 ): InstalledPlugin {
   const canonicalRoot = absolute(root);
-  const manifestPath = join(canonicalRoot, hostManifestDirectory(harness), "plugin.json");
+  const manifestPath = join(
+    canonicalRoot,
+    hostManifestDirectory(harness),
+    "plugin.json",
+  );
   if (!existsSync(manifestPath)) {
     throw new Error(`${manifestPath}: installed plugin manifest is missing`);
   }
@@ -214,17 +217,23 @@ export function normalizeInstalledPlugin(
     throw new Error(`${manifestPath}: manifest must be a JSON object`);
   }
   const manifest = parsed as Record<string, unknown>;
-  const hostName = typeof manifest.name === "string" ? manifest.name.trim() : "";
-  const version = typeof manifest.version === "string" ? manifest.version.trim() : "";
+  const hostName =
+    typeof manifest.name === "string" ? manifest.name.trim() : "";
+  const version =
+    typeof manifest.version === "string" ? manifest.version.trim() : "";
   if (!hostName.startsWith("aidlc-")) {
-    throw new Error(`${manifestPath}: owned plugin name must start with "aidlc-"`);
+    throw new Error(
+      `${manifestPath}: owned plugin name must start with "aidlc-"`,
+    );
   }
   const key = hostName.slice("aidlc-".length);
   if (!SAFE_PLUGIN_KEY.test(key)) {
     throw new Error(`${manifestPath}: plugin key "${key}" is not safe`);
   }
   if (!STRICT_SEMVER.test(version)) {
-    throw new Error(`${manifestPath}: version "${version}" is not valid semver`);
+    throw new Error(
+      `${manifestPath}: version "${version}" is not valid semver`,
+    );
   }
   if (expectedVersion !== undefined && expectedVersion !== version) {
     throw new Error(
@@ -243,14 +252,23 @@ export function normalizeInstalledPlugin(
 }
 
 function currentRoots(): string[] {
-  return [...new Set([
-    process.env.CLAUDE_PLUGIN_ROOT,
-    process.env.PLUGIN_ROOT,
-    process.env.AIDLC_PLUGIN_ROOT,
-  ].map((value) => value?.trim() ?? "").filter(Boolean).map(absolute))];
+  return [
+    ...new Set(
+      [
+        process.env.CLAUDE_PLUGIN_ROOT,
+        process.env.PLUGIN_ROOT,
+        process.env.AIDLC_PLUGIN_ROOT,
+      ]
+        .map((value) => value?.trim() ?? "")
+        .filter(Boolean)
+        .map(absolute),
+    ),
+  ];
 }
 
-function harnessKind(harnessDir = runtimeHarnessDir()): PluginInventory["harness"] {
+function harnessKind(
+  harnessDir = runtimeHarnessDir(),
+): PluginInventory["harness"] {
   const declared = process.env.AIDLC_HARNESS_NAME?.trim();
   if (
     declared === "claude" ||
@@ -313,7 +331,9 @@ function deduplicateInventory(
   const duplicateNames = new Set(
     [...byName].filter(([, values]) => values.length > 1).map(([name]) => name),
   );
-  const unique = installed.filter((entry) => !duplicateNames.has(entry.hostName));
+  const unique = installed.filter(
+    (entry) => !duplicateNames.has(entry.hostName),
+  );
   for (const name of duplicateNames) {
     const values = byName.get(name) ?? [];
     invalid.push({
@@ -323,11 +343,15 @@ function deduplicateInventory(
   }
   return {
     installed: unique.sort((left, right) => left.key.localeCompare(right.key)),
-    invalid: invalid.sort((left, right) => left.message.localeCompare(right.message)),
+    invalid: invalid.sort((left, right) =>
+      left.message.localeCompare(right.message),
+    ),
   };
 }
 
-function currentRootInventory(harness: PluginInventory["harness"]): PluginInventory {
+function currentRootInventory(
+  harness: PluginInventory["harness"],
+): PluginInventory {
   const installed: InstalledPlugin[] = [];
   const invalid: InvalidInstalledPlugin[] = [];
   for (const root of currentRoots()) {
@@ -347,12 +371,19 @@ function currentRootInventory(harness: PluginInventory["harness"]): PluginInvent
 function claudeInventory(): PluginInventory {
   const registryPath = absolute(
     process.env.AIDLC_CLAUDE_PLUGIN_REGISTRY ??
-      join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"), "plugins", "installed_plugins.json"),
+      join(
+        process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),
+        "plugins",
+        "installed_plugins.json",
+      ),
   );
   if (!existsSync(registryPath)) return currentRootInventory("claude");
   const settingsPath = absolute(
     process.env.AIDLC_CLAUDE_SETTINGS ??
-      join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"), "settings.json"),
+      join(
+        process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),
+        "settings.json",
+      ),
   );
   const invalid: InvalidInstalledPlugin[] = [];
   const installed: InstalledPlugin[] = [];
@@ -365,7 +396,12 @@ function claudeInventory(): PluginInventory {
       harness: "claude",
       source: registryPath,
       installed,
-      invalid: [{ paths: [registryPath], message: `invalid Claude plugin registry: ${errorMessage(error)}` }],
+      invalid: [
+        {
+          paths: [registryPath],
+          message: `invalid Claude plugin registry: ${errorMessage(error)}`,
+        },
+      ],
     };
   }
   let enabledPlugins: Record<string, unknown> = {};
@@ -381,47 +417,80 @@ function claudeInventory(): PluginInventory {
     }
     const rawEnabled = (settings as Record<string, unknown>).enabledPlugins;
     if (rawEnabled !== undefined) {
-      if (!rawEnabled || typeof rawEnabled !== "object" || Array.isArray(rawEnabled)) {
+      if (
+        !rawEnabled ||
+        typeof rawEnabled !== "object" ||
+        Array.isArray(rawEnabled)
+      ) {
         return currentRootInventory("claude");
       }
       enabledPlugins = rawEnabled as Record<string, unknown>;
     }
   }
-  const plugins = registry && typeof registry === "object" &&
-      !Array.isArray(registry) &&
-      (registry as Record<string, unknown>).version === 2 &&
-      typeof (registry as Record<string, unknown>).plugins === "object" &&
-      (registry as Record<string, unknown>).plugins !== null
-    ? (registry as { plugins: Record<string, unknown> }).plugins
-    : null;
+  const plugins =
+    registry &&
+    typeof registry === "object" &&
+    !Array.isArray(registry) &&
+    (registry as Record<string, unknown>).version === 2 &&
+    typeof (registry as Record<string, unknown>).plugins === "object" &&
+    (registry as Record<string, unknown>).plugins !== null
+      ? (registry as { plugins: Record<string, unknown> }).plugins
+      : null;
   if (plugins === null) {
     invalid.push({
       paths: [registryPath],
-      message: "Claude plugin registry must use schema version 2 with a plugins object",
+      message:
+        "Claude plugin registry must use schema version 2 with a plugins object",
     });
   } else {
-    for (const [id, rawEntries] of Object.entries(plugins).sort(([a], [b]) => a.localeCompare(b))) {
+    for (const [id, rawEntries] of Object.entries(plugins).sort(([a], [b]) =>
+      a.localeCompare(b),
+    )) {
       const registryName = id.split("@", 1)[0];
       if (!registryName.startsWith("aidlc-")) continue;
       if (!Array.isArray(rawEntries) || rawEntries.length === 0) {
-        invalid.push({ paths: [registryPath], message: `Claude plugin "${id}" has no installed records` });
+        invalid.push({
+          paths: [registryPath],
+          message: `Claude plugin "${id}" has no installed records`,
+        });
         continue;
       }
       for (const rawEntry of rawEntries) {
-        if (!rawEntry || typeof rawEntry !== "object" || Array.isArray(rawEntry)) {
-          invalid.push({ paths: [registryPath], message: `Claude plugin "${id}" has an invalid installed record` });
+        if (
+          !rawEntry ||
+          typeof rawEntry !== "object" ||
+          Array.isArray(rawEntry)
+        ) {
+          invalid.push({
+            paths: [registryPath],
+            message: `Claude plugin "${id}" has an invalid installed record`,
+          });
           continue;
         }
         const entry = rawEntry as Record<string, unknown>;
-        const root = typeof entry.installPath === "string" ? entry.installPath : "";
-        const version = typeof entry.version === "string" ? entry.version : undefined;
+        const root =
+          typeof entry.installPath === "string" ? entry.installPath : "";
+        const version =
+          typeof entry.version === "string" ? entry.version : undefined;
         if (!root) {
-          invalid.push({ paths: [registryPath], message: `Claude plugin "${id}" has no installPath` });
+          invalid.push({
+            paths: [registryPath],
+            message: `Claude plugin "${id}" has no installPath`,
+          });
           continue;
         }
-        const normalized = invalidFromRoot(root, "claude", enabledPlugins[id] !== false, version);
+        const normalized = invalidFromRoot(
+          root,
+          "claude",
+          enabledPlugins[id] !== false,
+          version,
+        );
         if ("root" in normalized) installed.push(normalized);
-        else invalid.push({ ...normalized, key: registryName.slice("aidlc-".length) });
+        else
+          invalid.push({
+            ...normalized,
+            key: registryName.slice("aidlc-".length),
+          });
       }
     }
   }
@@ -436,8 +505,14 @@ function claudeInventory(): PluginInventory {
 }
 
 function codexInventory(): PluginInventory {
-  const codexHome = absolute(process.env.AIDLC_CODEX_HOME ?? process.env.CODEX_HOME ?? join(homedir(), ".codex"));
-  const configPath = absolute(process.env.AIDLC_CODEX_CONFIG ?? join(codexHome, "config.toml"));
+  const codexHome = absolute(
+    process.env.AIDLC_CODEX_HOME ??
+      process.env.CODEX_HOME ??
+      join(homedir(), ".codex"),
+  );
+  const configPath = absolute(
+    process.env.AIDLC_CODEX_CONFIG ?? join(codexHome, "config.toml"),
+  );
   if (!existsSync(configPath)) return currentRootInventory("codex");
   let parsed: unknown;
   try {
@@ -448,34 +523,59 @@ function codexInventory(): PluginInventory {
       harness: "codex",
       source: configPath,
       installed: [],
-      invalid: [{ paths: [configPath], message: `invalid Codex config: ${errorMessage(error)}` }],
+      invalid: [
+        {
+          paths: [configPath],
+          message: `invalid Codex config: ${errorMessage(error)}`,
+        },
+      ],
     };
   }
-  const plugins = parsed && typeof parsed === "object" && !Array.isArray(parsed)
-    ? (parsed as Record<string, unknown>).plugins
-    : undefined;
-  const declared = plugins && typeof plugins === "object" && !Array.isArray(plugins)
-    ? plugins as Record<string, unknown>
-    : {};
+  const plugins =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>).plugins
+      : undefined;
+  const declared =
+    plugins && typeof plugins === "object" && !Array.isArray(plugins)
+      ? (plugins as Record<string, unknown>)
+      : {};
   const installed: InstalledPlugin[] = [];
   const invalid: InvalidInstalledPlugin[] = [];
-  for (const [id, rawConfig] of Object.entries(declared).sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [id, rawConfig] of Object.entries(declared).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
     const at = id.lastIndexOf("@");
     const pluginName = at > 0 ? id.slice(0, at) : "";
     const marketplace = at > 0 ? id.slice(at + 1) : "";
     const safeSegment = (value: string): boolean =>
-      /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) && value !== "." && value !== "..";
-    if (!pluginName || !marketplace || !safeSegment(pluginName) ||
-      !safeSegment(marketplace)) {
-      invalid.push({ paths: [configPath], message: `Codex plugin id "${id}" is not name@marketplace` });
+      /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) &&
+      value !== "." &&
+      value !== "..";
+    if (
+      !pluginName ||
+      !marketplace ||
+      !safeSegment(pluginName) ||
+      !safeSegment(marketplace)
+    ) {
+      invalid.push({
+        paths: [configPath],
+        message: `Codex plugin id "${id}" is not name@marketplace`,
+      });
       continue;
     }
     if (!pluginName.startsWith("aidlc-")) continue;
-    const pluginConfig = rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig)
-      ? rawConfig as Record<string, unknown>
-      : {};
+    const pluginConfig =
+      rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig)
+        ? (rawConfig as Record<string, unknown>)
+        : {};
     const enabled = pluginConfig.enabled !== false;
-    const cacheRoot = join(codexHome, "plugins", "cache", marketplace, pluginName);
+    const cacheRoot = join(
+      codexHome,
+      "plugins",
+      "cache",
+      marketplace,
+      pluginName,
+    );
     if (!existsSync(cacheRoot)) {
       invalid.push({
         paths: [cacheRoot],
@@ -483,27 +583,36 @@ function codexInventory(): PluginInventory {
       });
       continue;
     }
-    const versions = readdirSync(cacheRoot).filter((entry) => {
-      const path = join(cacheRoot, entry);
-      return (entry === "local" || STRICT_SEMVER.test(entry)) &&
-        !lstatSync(path).isSymbolicLink() &&
-        lstatSync(path).isDirectory();
-    }).sort();
+    const versions = readdirSync(cacheRoot)
+      .filter((entry) => {
+        const path = join(cacheRoot, entry);
+        return (
+          (entry === "local" || STRICT_SEMVER.test(entry)) &&
+          !lstatSync(path).isSymbolicLink() &&
+          lstatSync(path).isDirectory()
+        );
+      })
+      .sort();
     if (versions.length === 0) {
-      invalid.push({ paths: [cacheRoot], message: `Codex plugin "${id}" has no installed tree` });
+      invalid.push({
+        paths: [cacheRoot],
+        message: `Codex plugin "${id}" has no installed tree`,
+      });
       continue;
     }
     const selectedVersion = versions.includes("local")
       ? "local"
-      : versions.sort((left, right) => {
-        const a = left.match(STRICT_SEMVER) as RegExpMatchArray;
-        const b = right.match(STRICT_SEMVER) as RegExpMatchArray;
-        for (let index = 1; index <= 3; index++) {
-          const difference = Number(a[index]) - Number(b[index]);
-          if (difference !== 0) return difference;
-        }
-        return left < right ? -1 : left > right ? 1 : 0;
-      }).at(-1) as string;
+      : (versions
+          .sort((left, right) => {
+            const a = left.match(STRICT_SEMVER) as RegExpMatchArray;
+            const b = right.match(STRICT_SEMVER) as RegExpMatchArray;
+            for (let index = 1; index <= 3; index++) {
+              const difference = Number(a[index]) - Number(b[index]);
+              if (difference !== 0) return difference;
+            }
+            return left < right ? -1 : left > right ? 1 : 0;
+          })
+          .at(-1) as string);
     const root = join(cacheRoot, selectedVersion);
     const normalized = invalidFromRoot(
       root,
@@ -512,7 +621,8 @@ function codexInventory(): PluginInventory {
       selectedVersion === "local" ? undefined : selectedVersion,
     );
     if ("root" in normalized) installed.push(normalized);
-    else invalid.push({ ...normalized, key: pluginName.slice("aidlc-".length) });
+    else
+      invalid.push({ ...normalized, key: pluginName.slice("aidlc-".length) });
   }
   const normalized = deduplicateInventory(installed, invalid);
   return {
@@ -524,7 +634,9 @@ function codexInventory(): PluginInventory {
   };
 }
 
-export function discoverPluginInventory(harnessDir = runtimeHarnessDir()): PluginInventory {
+export function discoverPluginInventory(
+  harnessDir = runtimeHarnessDir(),
+): PluginInventory {
   const harness = harnessKind(harnessDir);
   if (harness === "claude") return claudeInventory();
   if (harness === "codex") return codexInventory();
@@ -563,7 +675,8 @@ function parseOwnership(path: string): OwnershipRecord | null {
       typeof value.name !== "string" ||
       !SAFE_PLUGIN_KEY.test(value.name) ||
       !Array.isArray(value.files)
-    ) return null;
+    )
+      return null;
     const files: OwnershipFile[] = [];
     for (const file of value.files) {
       if (
@@ -574,7 +687,8 @@ function parseOwnership(path: string): OwnershipRecord | null {
         (file as OwnershipFile).path.split(/[\\/]/).includes("..") ||
         typeof (file as OwnershipFile).sha256 !== "string" ||
         !/^sha256:[0-9a-f]{64}$/.test((file as OwnershipFile).sha256)
-      ) return null;
+      )
+        return null;
       files.push(file as OwnershipFile);
     }
     return { schemaVersion: 1, name: value.name, files };
@@ -583,7 +697,10 @@ function parseOwnership(path: string): OwnershipRecord | null {
   }
 }
 
-function projectEvidence(projectDir: string, harnessDir: string): ProjectEvidence {
+function projectEvidence(
+  projectDir: string,
+  harnessDir: string,
+): ProjectEvidence {
   const dataDir = harnessDataDir(projectDir, harnessDir);
   const stamps = new Map<string, CompositionStamp>();
   const legacy = new Set<string>();
@@ -613,7 +730,8 @@ function projectEvidence(projectDir: string, harnessDir: string): ProjectEvidenc
       for (const node of graph) {
         if (!node || typeof node !== "object" || Array.isArray(node)) continue;
         const plugin = (node as Record<string, unknown>).plugin;
-        if (typeof plugin === "string" && SAFE_PLUGIN_KEY.test(plugin)) legacy.add(plugin);
+        if (typeof plugin === "string" && SAFE_PLUGIN_KEY.test(plugin))
+          legacy.add(plugin);
       }
     }
   } catch {
@@ -623,19 +741,32 @@ function projectEvidence(projectDir: string, harnessDir: string): ProjectEvidenc
   return { stamps, legacy, ownership };
 }
 
-function selectedPlugins(projectDir: string, harnessDir: string): Set<string> | null {
+function selectedPlugins(
+  projectDir: string,
+  harnessDir: string,
+): Set<string> | null {
   try {
-    const parsed = readJson(join(harnessDataDir(projectDir, harnessDir), "harness.json")) as {
+    const parsed = readJson(
+      join(harnessDataDir(projectDir, harnessDir), "harness.json"),
+    ) as {
       plugins?: unknown;
     };
-    if (!Object.hasOwn(parsed, "plugins") || !Array.isArray(parsed.plugins)) return null;
-    return new Set(parsed.plugins.filter((value): value is string => typeof value === "string"));
+    if (!Object.hasOwn(parsed, "plugins") || !Array.isArray(parsed.plugins))
+      return null;
+    return new Set(
+      parsed.plugins.filter(
+        (value): value is string => typeof value === "string",
+      ),
+    );
   } catch {
     return null;
   }
 }
 
-function semverDirection(installed: string, composed: string): "upgrade" | "downgrade" | null {
+function semverDirection(
+  installed: string,
+  composed: string,
+): "upgrade" | "downgrade" | null {
   const left = installed.match(STRICT_SEMVER);
   const right = composed.match(STRICT_SEMVER);
   if (!left || !right) return null;
@@ -653,21 +784,26 @@ export function comparePluginState(
   selection: Set<string> | null,
 ): PluginStatus[] {
   if (inventory.capability !== "full-inventory") {
-    return [{
-      key: null,
-      installedVersion: null,
-      composedVersion: null,
-      state: "inventory-unavailable",
-      action: "attention",
-      message: "host inventory unavailable; run sync through the host SessionStart adapter",
-    }];
+    return [
+      {
+        key: null,
+        installedVersion: null,
+        composedVersion: null,
+        state: "inventory-unavailable",
+        action: "attention",
+        message:
+          "host inventory unavailable; run sync through the host SessionStart adapter",
+      },
+    ];
   }
   const rows: PluginStatus[] = [];
   for (const invalid of inventory.invalid) {
     rows.push({
       key: invalid.key ?? null,
       installedVersion: null,
-      composedVersion: invalid.key ? evidence.stamps.get(invalid.key)?.version ?? null : null,
+      composedVersion: invalid.key
+        ? (evidence.stamps.get(invalid.key)?.version ?? null)
+        : null,
       state: "invalid-installed",
       action: "attention",
       message: `${invalid.message}: ${invalid.paths.join(", ")}`,
@@ -678,7 +814,8 @@ export function comparePluginState(
   for (const plugin of inventory.installed) {
     installedKeys.add(plugin.key);
     const stamp = evidence.stamps.get(plugin.key);
-    const enabled = plugin.enabled && (selection === null || selection.has(plugin.key));
+    const enabled =
+      plugin.enabled && (selection === null || selection.has(plugin.key));
     if (!enabled) {
       rows.push({
         key: plugin.key,
@@ -706,7 +843,9 @@ export function comparePluginState(
         composedVersion: stamp.version,
         state: "version-differs",
         action: "sync",
-        message: direction ? `version differs (${direction})` : "version differs",
+        message: direction
+          ? `version differs (${direction})`
+          : "version differs",
       });
     } else if (plugin.sourceHash !== stamp.sourceHash) {
       rows.push({
@@ -733,7 +872,9 @@ export function comparePluginState(
     ...evidence.ownership.keys(),
     ...evidence.legacy,
   ]);
-  const invalidKeys = new Set(inventory.invalid.flatMap((item) => item.key ? [item.key] : []));
+  const invalidKeys = new Set(
+    inventory.invalid.flatMap((item) => (item.key ? [item.key] : [])),
+  );
   for (const key of [...composedKeys].sort()) {
     if (installedKeys.has(key) || invalidKeys.has(key)) continue;
     rows.push({
@@ -742,11 +883,14 @@ export function comparePluginState(
       composedVersion: evidence.stamps.get(key)?.version ?? null,
       state: "installed-missing",
       action: "attention",
-      message: "installed plugin missing; reinstall via host, or sync --prune-missing",
+      message:
+        "installed plugin missing; reinstall via host, or sync --prune-missing",
     });
   }
-  return rows.sort((left, right) =>
-    (left.key ?? "").localeCompare(right.key ?? "") || left.state.localeCompare(right.state)
+  return rows.sort(
+    (left, right) =>
+      (left.key ?? "").localeCompare(right.key ?? "") ||
+      left.state.localeCompare(right.state),
   );
 }
 
@@ -769,7 +913,10 @@ function humanAction(status: PluginStatus): string {
   return `needs attention: ${status.message}`;
 }
 
-export function renderPluginStatuses(statuses: PluginStatus[], verbose = false): string {
+export function renderPluginStatuses(
+  statuses: PluginStatus[],
+  verbose = false,
+): string {
   const headings = ["PLUGIN", "INSTALLED", "COMPOSED", "STATUS"];
   const values = statuses.map((status) => [
     status.key ?? "-",
@@ -778,10 +925,14 @@ export function renderPluginStatuses(statuses: PluginStatus[], verbose = false):
     `${humanAction(status)}${verbose ? ` [${status.state}]` : ""}`,
   ]);
   const widths = headings.map((heading, index) =>
-    Math.max(heading.length, ...values.map((row) => row[index].length))
+    Math.max(heading.length, ...values.map((row) => row[index].length)),
   );
   const render = (row: string[]): string =>
-    row.map((value, index) => index === row.length - 1 ? value : value.padEnd(widths[index])).join("  ");
+    row
+      .map((value, index) =>
+        index === row.length - 1 ? value : value.padEnd(widths[index]),
+      )
+      .join("  ");
   return `${[render(headings), ...values.map(render)].join("\n")}\n`;
 }
 
@@ -821,7 +972,9 @@ function pluginPrimitiveTargets(
 function projectedSourceBytes(source: string, harnessDir: string): Buffer {
   const bytes = readFileSync(source);
   return source.endsWith(".md")
-    ? Buffer.from(bytes.toString("utf-8").replaceAll("{{HARNESS_DIR}}", harnessDir))
+    ? Buffer.from(
+        bytes.toString("utf-8").replaceAll("{{HARNESS_DIR}}", harnessDir),
+      )
     : bytes;
 }
 
@@ -836,18 +989,33 @@ function writeCompositionRecords(
   const dataDir = harnessDataDir(stagedProject, harnessDir);
   mkdirSync(dataDir, { recursive: true });
   const files = new Map<string, OwnershipFile>();
-  for (const candidate of pluginPrimitiveTargets(plugin, stagedProject, harnessDir)) {
+  for (const candidate of pluginPrimitiveTargets(
+    plugin,
+    stagedProject,
+    harnessDir,
+  )) {
     if (claimedPaths.has(candidate.path)) continue;
     const target = join(stagedProject, candidate.path);
     if (
       !lstatSync(target).isFile() ||
-      !readFileSync(target).equals(projectedSourceBytes(candidate.source, harnessDir))
-    ) continue;
+      !readFileSync(target).equals(
+        projectedSourceBytes(candidate.source, harnessDir),
+      )
+    )
+      continue;
     const liveTarget = join(liveProject, candidate.path);
-    const legacyMatch = existsSync(liveTarget) &&
+    const legacyMatch =
+      existsSync(liveTarget) &&
       lstatSync(liveTarget).isFile() &&
-      readFileSync(liveTarget).equals(projectedSourceBytes(candidate.source, harnessDir));
-    if (existsSync(liveTarget) && !legacyMatch && !priorOwnedPaths.has(candidate.path)) continue;
+      readFileSync(liveTarget).equals(
+        projectedSourceBytes(candidate.source, harnessDir),
+      );
+    if (
+      existsSync(liveTarget) &&
+      !legacyMatch &&
+      !priorOwnedPaths.has(candidate.path)
+    )
+      continue;
     files.set(candidate.path, {
       path: candidate.path,
       sha256: sha256File(target),
@@ -857,7 +1025,9 @@ function writeCompositionRecords(
   const ownership: OwnershipRecord = {
     schemaVersion: 1,
     name: plugin.key,
-    files: [...files.values()].sort((left, right) => left.path.localeCompare(right.path)),
+    files: [...files.values()].sort((left, right) =>
+      left.path.localeCompare(right.path),
+    ),
   };
   const stamp: CompositionStamp = {
     schemaVersion: 1,
@@ -881,9 +1051,16 @@ export function copyProjectSurfaces(
   harnessDir: string,
 ): void {
   mkdirSync(stagedProject, { recursive: true });
-  for (const entry of [harnessDir, ".agents", ".github", ".opencode", "aidlc"]) {
+  for (const entry of [
+    harnessDir,
+    ".agents",
+    ".github",
+    ".opencode",
+    "aidlc",
+  ]) {
     const source = join(projectDir, entry);
-    if (existsSync(source)) cpSync(source, join(stagedProject, entry), { recursive: true });
+    if (existsSync(source))
+      cpSync(source, join(stagedProject, entry), { recursive: true });
   }
 }
 
@@ -926,10 +1103,14 @@ async function runComposer(
       "PLUGIN_ROOT",
       "AIDLC_COMPILED_EXECUTABLE",
     ] as const;
-    const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    const previous = Object.fromEntries(
+      keys.map((key) => [key, process.env[key]]),
+    );
     Object.assign(process.env, env, { AIDLC_COMPILED_EXECUTABLE: executable });
     try {
-      const module = await import(`${pathToFileURL(composePath).href}?aidlc=${Date.now()}-${plugin.key}`) as {
+      const module = (await import(
+        `${pathToFileURL(composePath).href}?aidlc=${Date.now()}-${plugin.key}`
+      )) as {
         compose?: () => void | Promise<void>;
       };
       if (typeof module.compose !== "function") {
@@ -955,9 +1136,15 @@ async function runComposer(
       );
     }
   }
-  const retryMarker = join(stagedProject, "aidlc", `.plugin-compose-retry-${plugin.key}`);
+  const retryMarker = join(
+    stagedProject,
+    "aidlc",
+    `.plugin-compose-retry-${plugin.key}`,
+  );
   if (existsSync(retryMarker)) {
-    throw new Error(`plugin ${plugin.key} composition did not complete; retry marker remains`);
+    throw new Error(
+      `plugin ${plugin.key} composition did not complete; retry marker remains`,
+    );
   }
   const drops: string[] = [];
   const aidlcRoot = join(stagedProject, "aidlc");
@@ -966,11 +1153,14 @@ async function runComposer(
       if (
         basename(file) === `plugin-compose-${plugin.key}.drops` &&
         readFileSync(file, "utf-8").includes("[degraded]")
-      ) drops.push(file);
+      )
+        drops.push(file);
     }
   }
   if (drops.length > 0) {
-    throw new Error(`plugin ${plugin.key} composition reported degraded drops: ${drops.join(", ")}`);
+    throw new Error(
+      `plugin ${plugin.key} composition reported degraded drops: ${drops.join(", ")}`,
+    );
   }
   if (pluginSourceHash(plugin.root) !== plugin.sourceHash) {
     throw new Error(`plugin ${plugin.key} source changed during composition`);
@@ -1001,51 +1191,85 @@ function removeListValues(
   const kept = [...match[1].matchAll(/^ {2}- (.+)$/gm)]
     .map((entry) => entry[1])
     .filter((value) => {
-      const bare = value.trim().replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+      const bare = value
+        .trim()
+        .replace(/^"(.*)"$/, "$1")
+        .replace(/^'(.*)'$/, "$1");
       return !values.has(bare) && !values.has(value.trim());
     });
-  const replacement = kept.length > 0
-    ? `${field}:\n${kept.map((value) => `  - ${value}`).join("\n")}\n`
-    : dropEmptyField ? "" : `${field}: []\n`;
+  const replacement =
+    kept.length > 0
+      ? `${field}:\n${kept.map((value) => `  - ${value}`).join("\n")}\n`
+      : dropEmptyField
+        ? ""
+        : `${field}: []\n`;
   return content.replace(block, replacement);
 }
 
-function removeConsumes(content: string, artifacts: ReadonlySet<string>): string {
-  const block = /^consumes:\n((?: {2}- artifact:.*\n(?: {4}(?:required|conditional_on):.*\n)*)*)/m;
+function removeConsumes(
+  content: string,
+  artifacts: ReadonlySet<string>,
+): string {
+  const block =
+    /^consumes:\n((?: {2}- artifact:.*\n(?: {4}(?:required|conditional_on):.*\n)*)*)/m;
   const match = content.match(block);
   if (!match) return content;
-  const kept = [...match[1].matchAll(/^ {2}- artifact:\s*([\w-]+).*\n(?: {4}(?:required|conditional_on):.*\n)*/gm)]
+  const kept = [
+    ...match[1].matchAll(
+      /^ {2}- artifact:\s*([\w-]+).*\n(?: {4}(?:required|conditional_on):.*\n)*/gm,
+    ),
+  ]
     .filter((entry) => !artifacts.has(entry[1]))
     .map((entry) => entry[0]);
-  return content.replace(block, kept.length > 0 ? `consumes:\n${kept.join("")}` : "consumes: []\n");
+  return content.replace(
+    block,
+    kept.length > 0 ? `consumes:\n${kept.join("")}` : "consumes: []\n",
+  );
 }
 
 function removeFragments(content: string, key: string, path: string): string {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const opening = new RegExp(`<!-- plugin:${escaped}:.+?:\\d+:[0-9a-f]+ -->`, "g");
+  const opening = new RegExp(
+    `<!-- plugin:${escaped}:.+?:\\d+:[0-9a-f]+ -->`,
+    "g",
+  );
   let output = content;
   let match = opening.exec(output);
   while (match) {
     const closing = `<!-- /${match[0].slice(5)}`;
     const end = output.indexOf(closing, match.index);
-    if (end === -1) throw new Error(`${path}: unpaired plugin fragment for ${key}`);
-    output = `${output.slice(0, match.index)}${output.slice(end + closing.length)}`
-      .replace(/\n{3,}/g, "\n\n");
+    if (end === -1)
+      throw new Error(`${path}: unpaired plugin fragment for ${key}`);
+    output =
+      `${output.slice(0, match.index)}${output.slice(end + closing.length)}`.replace(
+        /\n{3,}/g,
+        "\n\n",
+      );
     opening.lastIndex = 0;
     match = opening.exec(output);
   }
   return output;
 }
 
-function pruneContributions(stagedProject: string, harnessDir: string, key: string): void {
-  const sidecar = join(harnessDataDir(stagedProject, harnessDir), `plugin-contrib-${key}.json`);
-  let records: Record<string, {
-    produces?: string[];
-    sensors?: string[];
-    consumes?: string[];
-    required_sections?: string[];
-    required_sections_created?: boolean;
-  }> = {};
+function pruneContributions(
+  stagedProject: string,
+  harnessDir: string,
+  key: string,
+): void {
+  const sidecar = join(
+    harnessDataDir(stagedProject, harnessDir),
+    `plugin-contrib-${key}.json`,
+  );
+  let records: Record<
+    string,
+    {
+      produces?: string[];
+      sensors?: string[];
+      consumes?: string[];
+      required_sections?: string[];
+      required_sections_created?: boolean;
+    }
+  > = {};
   if (existsSync(sidecar)) {
     try {
       const parsed = readJson(sidecar);
@@ -1054,19 +1278,36 @@ function pruneContributions(stagedProject: string, harnessDir: string, key: stri
       }
       records = parsed as typeof records;
     } catch (error) {
-      throw new Error(`${sidecar}: ownership sidecar is invalid: ${errorMessage(error)}`);
+      throw new Error(
+        `${sidecar}: ownership sidecar is invalid: ${errorMessage(error)}`,
+      );
     }
   }
   const stagesRoot = join(stagedProject, harnessDir, "aidlc-common", "stages");
   if (existsSync(stagesRoot)) {
-    for (const path of regularFiles(stagesRoot).filter((value) => value.endsWith(".md"))) {
+    for (const path of regularFiles(stagesRoot).filter((value) =>
+      value.endsWith(".md"),
+    )) {
       const before = readFileSync(path, "utf-8");
       let after = before;
       const record = records[basename(path, ".md")];
       if (record) {
-        if (record.produces?.length) after = removeListValues(after, "produces", new Set(record.produces), false);
-        if (record.sensors?.length) after = removeListValues(after, "sensors", new Set(record.sensors), false);
-        if (record.consumes?.length) after = removeConsumes(after, new Set(record.consumes));
+        if (record.produces?.length)
+          after = removeListValues(
+            after,
+            "produces",
+            new Set(record.produces),
+            false,
+          );
+        if (record.sensors?.length)
+          after = removeListValues(
+            after,
+            "sensors",
+            new Set(record.sensors),
+            false,
+          );
+        if (record.consumes?.length)
+          after = removeConsumes(after, new Set(record.consumes));
         if (record.required_sections?.length) {
           after = removeListValues(
             after,
@@ -1090,13 +1331,17 @@ function pruneOwnedPlugin(
   ownership: OwnershipRecord | undefined,
 ): void {
   if (!ownership) {
-    throw new Error(`cannot prune ${key}: no composition ownership record proves its files`);
+    throw new Error(
+      `cannot prune ${key}: no composition ownership record proves its files`,
+    );
   }
   for (const file of ownership.files) {
     const target = assertOwnedPath(stagedProject, file.path);
     if (!existsSync(target)) continue;
     if (!lstatSync(target).isFile() || sha256File(target) !== file.sha256) {
-      throw new Error(`cannot prune ${key}: owned path changed since composition: ${file.path}`);
+      throw new Error(
+        `cannot prune ${key}: owned path changed since composition: ${file.path}`,
+      );
     }
   }
   pruneContributions(stagedProject, harnessDir, key);
@@ -1121,7 +1366,9 @@ function replaceOwnedPluginPrimitives(
     ownedPaths.add(file.path);
     if (!existsSync(target)) continue;
     if (!lstatSync(target).isFile() || sha256File(target) !== file.sha256) {
-      throw new Error(`cannot sync ${key}: owned path changed since composition: ${file.path}`);
+      throw new Error(
+        `cannot sync ${key}: owned path changed since composition: ${file.path}`,
+      );
     }
   }
   pruneContributions(stagedProject, harnessDir, key);
@@ -1138,16 +1385,20 @@ function runStagedTool(
   args: string[],
 ): void {
   const executable = compiledExecutable();
-  const env = { ...process.env, AIDLC_PROJECT_DIR: stagedProject, AIDLC_HARNESS_DIR: harnessDir };
+  const env = {
+    ...process.env,
+    AIDLC_PROJECT_DIR: stagedProject,
+    AIDLC_HARNESS_DIR: harnessDir,
+  };
   const command = executable ?? process.execPath;
   const commandArgs = executable
     ? tool === "graph"
       ? ["engine", "graph", ...args]
       : args[0] === "write"
-      ? ["engine", "gen", "runners", ...args.slice(1)]
-      : args[0] === "scopes"
-      ? ["engine", "gen", "runner-scopes", ...args.slice(1)]
-      : ["engine", "gen", ...args]
+        ? ["engine", "gen", "runners", ...args.slice(1)]
+        : args[0] === "scopes"
+          ? ["engine", "gen", "runner-scopes", ...args.slice(1)]
+          : ["engine", "gen", ...args]
     : [join(stagedProject, harnessDir, "tools", `aidlc-${tool}.ts`), ...args];
   const result = spawnSync(command, commandArgs, {
     cwd: stagedProject,
@@ -1156,18 +1407,21 @@ function runStagedTool(
   });
   if (result.status !== 0) {
     throw new Error(
-      `staged ${tool} ${args.join(" ")} failed: ${
-        (result.stderr || result.stdout || `exit ${result.status ?? 1}`).trim()
-      }`,
+      `staged ${tool} ${args.join(" ")} failed: ${(
+        result.stderr ||
+        result.stdout ||
+        `exit ${result.status ?? 1}`
+      ).trim()}`,
     );
   }
 }
 
 function regenerateAfterPrune(stagedProject: string, harnessDir: string): void {
   runStagedTool(stagedProject, harnessDir, "graph", ["compile"]);
-  const skills = harnessDir === ".codex"
-    ? join(stagedProject, ".agents", "skills")
-    : join(stagedProject, harnessDir, "skills");
+  const skills =
+    harnessDir === ".codex"
+      ? join(stagedProject, ".agents", "skills")
+      : join(stagedProject, harnessDir, "skills");
   if (existsSync(skills)) {
     runStagedTool(stagedProject, harnessDir, "runner-gen", ["write"]);
     runStagedTool(stagedProject, harnessDir, "runner-gen", ["scopes"]);
@@ -1198,14 +1452,17 @@ function refreshGeneratedTable(
   });
   if (result.status !== 0) {
     throw new Error(
-      `staged ${verb} failed: ${
-        (result.stderr || result.stdout || `exit ${result.status ?? 1}`).trim()
-      }`,
+      `staged ${verb} failed: ${(
+        result.stderr ||
+        result.stdout ||
+        `exit ${result.status ?? 1}`
+      ).trim()}`,
     );
   }
-  const skillPath = harnessDir === ".codex"
-    ? join(stagedProject, ".agents", "skills", "aidlc", "SKILL.md")
-    : join(stagedProject, harnessDir, "skills", "aidlc", "SKILL.md");
+  const skillPath =
+    harnessDir === ".codex"
+      ? join(stagedProject, ".agents", "skills", "aidlc", "SKILL.md")
+      : join(stagedProject, harnessDir, "skills", "aidlc", "SKILL.md");
   if (!existsSync(skillPath)) return;
   const before = readFileSync(skillPath, "utf-8");
   const region = new RegExp(
@@ -1218,9 +1475,18 @@ function refreshGeneratedTable(
   writeFileSync(skillPath, before.replace(region, rendered));
 }
 
-function allSurfaceFiles(projectDir: string, harnessDir: string): Map<string, string> {
+function allSurfaceFiles(
+  projectDir: string,
+  harnessDir: string,
+): Map<string, string> {
   const files = new Map<string, string>();
-  for (const entry of [harnessDir, ".agents", ".github", ".opencode", "aidlc"]) {
+  for (const entry of [
+    harnessDir,
+    ".agents",
+    ".github",
+    ".opencode",
+    "aidlc",
+  ]) {
     const root = join(projectDir, entry);
     for (const path of surfaceFiles(root)) {
       files.set(relative(projectDir, path).split(sep).join("/"), path);
@@ -1242,18 +1508,29 @@ export function projectDiffPlan(
     const current = before.get(path);
     const staged = after.get(path);
     if (!staged) {
-      if (current) operations.push({ kind: "remove", path, expected: transactionState(current) });
+      if (current)
+        operations.push({
+          kind: "remove",
+          path,
+          expected: transactionState(current),
+        });
       continue;
     }
     const stagedBytes = readFileSync(staged);
-    if (current && readFileSync(current).equals(stagedBytes) &&
-      (lstatSync(current).mode & 0o777) === (lstatSync(staged).mode & 0o777)) continue;
-    operations.push(writeOperation(
-      path,
-      stagedBytes,
-      current ? transactionState(current) : "absent",
-      lstatSync(staged).mode & 0o777,
-    ));
+    if (
+      current &&
+      readFileSync(current).equals(stagedBytes) &&
+      (lstatSync(current).mode & 0o777) === (lstatSync(staged).mode & 0o777)
+    )
+      continue;
+    operations.push(
+      writeOperation(
+        path,
+        stagedBytes,
+        current ? transactionState(current) : "absent",
+        lstatSync(staged).mode & 0o777,
+      ),
+    );
   }
   return { schemaVersion: 1, root: projectDir, operations };
 }
@@ -1268,14 +1545,17 @@ function compositionIsCurrent(
     !stamp ||
     stamp.version !== plugin.version ||
     stamp.sourceHash !== plugin.sourceHash
-  ) return false;
+  )
+    return false;
   const ownership = evidence.ownership.get(plugin.key);
   if (!ownership) return false;
   return ownership.files.every((file) => {
     const target = assertOwnedPath(projectDir, file.path);
-    return existsSync(target) &&
+    return (
+      existsSync(target) &&
       lstatSync(target).isFile() &&
-      sha256File(target) === file.sha256;
+      sha256File(target) === file.sha256
+    );
   });
 }
 
@@ -1287,7 +1567,9 @@ export async function confirmPrune(
 ): Promise<void> {
   if (keys.length === 0 || argv.includes("--yes")) return;
   if (!input.isTTY) {
-    throw new Error("plugin sync --prune-missing requires --yes in non-interactive mode");
+    throw new Error(
+      "plugin sync --prune-missing requires --yes in non-interactive mode",
+    );
   }
   const lines = createInterface({ input, output });
   let response: string;
@@ -1299,7 +1581,8 @@ export async function confirmPrune(
     lines.close();
   }
   response = response.trim().toLowerCase();
-  if (response !== "y" && response !== "yes") throw new Error("plugin prune cancelled");
+  if (response !== "y" && response !== "yes")
+    throw new Error("plugin prune cancelled");
 }
 
 export async function syncPlugins(
@@ -1309,9 +1592,10 @@ export async function syncPlugins(
   lockRetry = 0,
 ): Promise<{ synced: string[]; pruned: string[]; operations: number }> {
   const harness = harnessKind(harnessDir);
-  const inventory = currentRoots().length > 0
-    ? currentRootInventory(harness)
-    : discoverPluginInventory(harnessDir);
+  const inventory =
+    currentRoots().length > 0
+      ? currentRootInventory(harness)
+      : discoverPluginInventory(harnessDir);
   const evidence = projectEvidence(projectDir, harnessDir);
   const selection = selectedPlugins(projectDir, harnessDir);
   const prune = argv.includes("--prune-missing");
@@ -1323,18 +1607,25 @@ export async function syncPlugins(
         `plugin sync refused: ${inventory.invalid.map((item) => `${item.message}: ${item.paths.join(", ")}`).join("; ")}`,
       );
     }
-    plugins = inventory.installed.filter((plugin) =>
-      plugin.enabled && (selection === null || selection.has(plugin.key))
+    plugins = inventory.installed.filter(
+      (plugin) =>
+        plugin.enabled && (selection === null || selection.has(plugin.key)),
     );
     const installed = new Set(inventory.installed.map((plugin) => plugin.key));
-    missing = [...new Set([
-      ...evidence.stamps.keys(),
-      ...evidence.ownership.keys(),
-      ...evidence.legacy,
-    ])].filter((key) => !installed.has(key)).sort();
+    missing = [
+      ...new Set([
+        ...evidence.stamps.keys(),
+        ...evidence.ownership.keys(),
+        ...evidence.legacy,
+      ]),
+    ]
+      .filter((key) => !installed.has(key))
+      .sort();
   } else {
     if (prune) {
-      throw new Error("plugin sync --prune-missing requires a proved full host inventory");
+      throw new Error(
+        "plugin sync --prune-missing requires a proved full host inventory",
+      );
     }
     if (inventory.invalid.length > 0) {
       throw new Error(
@@ -1343,14 +1634,18 @@ export async function syncPlugins(
     }
     plugins = inventory.installed;
     if (plugins.length === 0) {
-      throw new Error("host inventory unavailable; run sync through an installed plugin's host hook");
+      throw new Error(
+        "host inventory unavailable; run sync through an installed plugin's host hook",
+      );
     }
   }
   const pruned = prune ? missing : [];
   await confirmPrune(argv, pruned);
   if (
     pruned.length === 0 &&
-    plugins.every((plugin) => compositionIsCurrent(plugin, evidence, projectDir))
+    plugins.every((plugin) =>
+      compositionIsCurrent(plugin, evidence, projectDir),
+    )
   ) {
     return {
       synced: plugins.map((plugin) => plugin.key).sort(),
@@ -1376,7 +1671,12 @@ export async function syncPlugins(
       await runComposer(plugin, stagedProject, harnessDir);
     }
     for (const key of pruned) {
-      pruneOwnedPlugin(stagedProject, harnessDir, key, evidence.ownership.get(key));
+      pruneOwnedPlugin(
+        stagedProject,
+        harnessDir,
+        key,
+        evidence.ownership.get(key),
+      );
     }
     const claimedPaths = new Set<string>();
     for (const plugin of plugins) {
@@ -1394,7 +1694,8 @@ export async function syncPlugins(
     const failAfter = Number(process.env.AIDLC_PLUGIN_SYNC_FAIL_AFTER ?? "0");
     try {
       executePlan(plan, {
-        failAfter: Number.isInteger(failAfter) && failAfter > 0 ? failAfter : undefined,
+        failAfter:
+          Number.isInteger(failAfter) && failAfter > 0 ? failAfter : undefined,
       });
     } catch (error) {
       if (
@@ -1412,7 +1713,7 @@ export async function syncPlugins(
       if (
         pruned.length === 0 &&
         plugins.every((plugin) =>
-          compositionIsCurrent(plugin, refreshedEvidence, projectDir)
+          compositionIsCurrent(plugin, refreshedEvidence, projectDir),
         )
       ) {
         return {
@@ -1433,11 +1734,7 @@ export async function syncPlugins(
   }
 }
 
-function jsonEnvelope(
-  code: number,
-  message: string,
-  data: unknown,
-): string {
+function jsonEnvelope(code: number, message: string, data: unknown): string {
   return `${JSON.stringify({
     schemaVersion: 1,
     ok: code === 0,
@@ -1456,24 +1753,33 @@ export async function main(argv: string[]): Promise<void> {
     if (command === "list") {
       const result = collectPluginStatus(projectDir);
       if (flags.json === "true") {
-        process.stdout.write(jsonEnvelope(0, `${result.statuses.length} plugin state(s)`, result));
+        process.stdout.write(
+          jsonEnvelope(0, `${result.statuses.length} plugin state(s)`, result),
+        );
       } else if (flags.quiet !== "true") {
-        process.stdout.write(renderPluginStatuses(result.statuses, flags.verbose === "true"));
+        process.stdout.write(
+          renderPluginStatuses(result.statuses, flags.verbose === "true"),
+        );
       }
       return;
     }
     if (command === "sync") {
       const result = await syncPlugins(projectDir, argv);
-      const message = `plugin sync complete: ${result.synced.length} plugin(s)` +
-        (result.pruned.length > 0 ? `; pruned ${result.pruned.length} missing plugin(s)` : "");
-      if (flags.json === "true") process.stdout.write(jsonEnvelope(0, message, result));
+      const message =
+        `plugin sync complete: ${result.synced.length} plugin(s)` +
+        (result.pruned.length > 0
+          ? `; pruned ${result.pruned.length} missing plugin(s)`
+          : "");
+      if (flags.json === "true")
+        process.stdout.write(jsonEnvelope(0, message, result));
       else if (flags.quiet !== "true") process.stdout.write(`${message}\n`);
       return;
     }
     throw new Error("usage: aidlc engine plugin <list|sync [--prune-missing]>");
   } catch (error) {
     const message = errorMessage(error);
-    if (flags.json === "true") process.stdout.write(jsonEnvelope(1, message, null));
+    if (flags.json === "true")
+      process.stdout.write(jsonEnvelope(1, message, null));
     else process.stderr.write(`aidlc engine plugin: ${message}\n`);
     process.exitCode = 1;
   }

@@ -69,6 +69,7 @@ Never invent an environment inventory or deployment path.
 ### Step 2: Pre-Deployment Checks
 
 Create questions file covering:
+
 - Are all pre-deployment checks passing?
 - Are database migrations required and tested?
 - Are dependent services available and healthy?

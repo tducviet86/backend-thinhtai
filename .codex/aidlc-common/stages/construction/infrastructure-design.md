@@ -89,6 +89,7 @@ Execute all steps sequentially as written.
 ### Step 1: Read Prior Artifacts
 
 Read all prior design artifacts for context:
+
 - NFR design from `<record>/construction/{unit-name}/nfr-design/` (if exists)
 - Functional design from `<record>/construction/{unit-name}/functional-design/` (if exists)
 - Domain design (component catalogue) from `<record>/inception/domain-design/components.md` (if exists)
@@ -102,6 +103,7 @@ Incremental scopes (infra) skip the domain-design and functional-design chain by
 Create a questions file at `<record>/construction/{unit-name}/infrastructure-design/infrastructure-design-questions.md` with context-appropriate questions using [Answer]: tags.
 
 Focus areas:
+
 - Deployment strategy (containerized, serverless, hybrid, multi-region)
 - Compute/storage/networking (sizing, topology, latency requirements)
 - Monitoring approach (metrics, logging, tracing, alerting thresholds)
@@ -112,6 +114,7 @@ Focus areas:
 ### Step 3: Collect and Analyze Answers
 
 Collect answers following stage-protocol.md §3 question flow (offer interaction mode choice, collect answers, write back to file). After collecting answers, perform MANDATORY ambiguity analysis:
+
 - Identify vague answers ("cloud-based", "auto-scale", "standard monitoring")
 - Check for contradictions between answers
 - Flag missing details needed for artifact generation

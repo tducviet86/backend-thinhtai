@@ -197,9 +197,21 @@ export function newRedactionContext(projectDir: string): RedactionContext {
 // hex/base64 runs. A false positive redacts a harmless string (acceptable); a
 // miss leaks a secret (not). Applied to every emitted string.
 const SECRET_PATTERNS: Array<{ rule: string; re: RegExp; replace: string }> = [
-  { rule: "aws-access-key", re: /\b(AKIA|ASIA)[A-Z0-9]{16}\b/g, replace: "<redacted-aws-key>" },
-  { rule: "bearer-token", re: /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/g, replace: "Bearer <redacted-token>" },
-  { rule: "jwt", re: /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, replace: "<redacted-jwt>" },
+  {
+    rule: "aws-access-key",
+    re: /\b(AKIA|ASIA)[A-Z0-9]{16}\b/g,
+    replace: "<redacted-aws-key>",
+  },
+  {
+    rule: "bearer-token",
+    re: /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/g,
+    replace: "Bearer <redacted-token>",
+  },
+  {
+    rule: "jwt",
+    re: /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,
+    replace: "<redacted-jwt>",
+  },
   {
     // Matches `password=hunter2`, JSON-shaped `"password": "hunter2"`, AND the
     // JSON-ESCAPED form `{\"password\":\"hunter2\"}` that arises when a secret
@@ -219,7 +231,11 @@ const SECRET_PATTERNS: Array<{ rule: string; re: RegExp; replace: string }> = [
     re: /\b(api[_-]?key|secret|token|password|passwd|pwd)\b\\?['"]?\s*[:=]\s*\\?['"]?[A-Za-z0-9!@#$%^&*._~+/=-]{6,}/gi,
     replace: "$1=<redacted>",
   },
-  { rule: "long-hex-or-b64", re: /\b[A-Fa-f0-9]{40,}\b/g, replace: "<redacted-hex>" },
+  {
+    rule: "long-hex-or-b64",
+    re: /\b[A-Fa-f0-9]{40,}\b/g,
+    replace: "<redacted-hex>",
+  },
 ];
 
 export function redactSecretPatterns(value: string): string {
@@ -274,7 +290,6 @@ export function redactString(value: string, ctx: RedactionContext): string {
   return out;
 }
 
-
 // Deep-redact a JSON-able value: strings pass through redactString, arrays and
 // plain objects recurse. Object KEYS are left intact (they are allowlisted
 // field names, not user data); only values are scrubbed.
@@ -319,11 +334,21 @@ export function parseAuditEvents(audit: string): AuditEvent[] {
     if (!event) continue;
     const tsRaw = auditBlockField(block, "Timestamp") ?? "";
     const ms = tsRaw ? Date.parse(tsRaw) : NaN;
-    events.push({ event, timestampMs: ms, timestampRaw: tsRaw, block, pos: pos++ });
+    events.push({
+      event,
+      timestampMs: ms,
+      timestampRaw: tsRaw,
+      block,
+      pos: pos++,
+    });
   }
   events.sort((a, b) => {
-    const am = Number.isFinite(a.timestampMs) ? a.timestampMs : Number.POSITIVE_INFINITY;
-    const bm = Number.isFinite(b.timestampMs) ? b.timestampMs : Number.POSITIVE_INFINITY;
+    const am = Number.isFinite(a.timestampMs)
+      ? a.timestampMs
+      : Number.POSITIVE_INFINITY;
+    const bm = Number.isFinite(b.timestampMs)
+      ? b.timestampMs
+      : Number.POSITIVE_INFINITY;
     if (am !== bm) return am - bm;
     return a.pos - b.pos; // ledger-position tie-break (stable within a timestamp)
   });
@@ -360,7 +385,10 @@ export interface Timeline {
 // Every field that was not recorded is `unknown`/null — the report must not
 // invent transitions. `stateContent` supplies the current status and the
 // checkbox for a stage whose STAGE_COMPLETED never landed (incomplete).
-export function reconstructTimeline(audit: string, stateContent: string): Timeline {
+export function reconstructTimeline(
+  audit: string,
+  stateContent: string,
+): Timeline {
   const allEvents = parseAuditEvents(audit);
   const notes: string[] = [];
 
@@ -376,10 +404,14 @@ export function reconstructTimeline(audit: string, stateContent: string): Timeli
       break;
     }
   }
-  const priorRuns = allEvents.slice(0, Math.max(0, startIdx)).filter((e) => e.event === "WORKFLOW_STARTED").length;
+  const priorRuns = allEvents
+    .slice(0, Math.max(0, startIdx))
+    .filter((e) => e.event === "WORKFLOW_STARTED").length;
   const events = startIdx >= 0 ? allEvents.slice(startIdx) : allEvents;
   if (priorRuns > 0) {
-    notes.push(`Scoped to the latest of ${priorRuns + 1} recorded workflow runs; earlier runs are omitted.`);
+    notes.push(
+      `Scoped to the latest of ${priorRuns + 1} recorded workflow runs; earlier runs are omitted.`,
+    );
   }
 
   const workflowStarted = events.find((e) => e.event === "WORKFLOW_STARTED");
@@ -390,7 +422,8 @@ export function reconstructTimeline(audit: string, stateContent: string): Timeli
   const byStage = new Map<string, AuditEvent[]>();
   const stageOrder: string[] = [];
   for (const e of events) {
-    const slug = auditBlockField(e.block, "Stage") ?? auditBlockField(e.block, "Slug");
+    const slug =
+      auditBlockField(e.block, "Stage") ?? auditBlockField(e.block, "Slug");
     if (!slug) continue;
     if (!byStage.has(slug)) {
       byStage.set(slug, []);
@@ -453,13 +486,17 @@ export function reconstructTimeline(audit: string, stateContent: string): Timeli
     // Revision count: STAGE_REVISING occurrences, or the state field when the
     // stage is the current one. Null when neither is available.
     const revisions = evs.filter((e) => e.event === "STAGE_REVISING").length;
-    const revisionCount = revisions > 0 ? revisions : completed || started ? 0 : null;
+    const revisionCount =
+      revisions > 0 ? revisions : completed || started ? 0 : null;
 
     const gapFromPrevMs =
-      prevEndMs !== null && Number.isFinite(startedMs) ? startedMs - prevEndMs : null;
+      prevEndMs !== null && Number.isFinite(startedMs)
+        ? startedMs - prevEndMs
+        : null;
 
     const abnormal: string[] = [];
-    if (durationMs !== null && durationMs > LONG_STAGE_MS) abnormal.push("long-duration");
+    if (durationMs !== null && durationMs > LONG_STAGE_MS)
+      abnormal.push("long-duration");
     if (started && !completed) abnormal.push("incomplete");
 
     stages.push({
@@ -476,8 +513,10 @@ export function reconstructTimeline(audit: string, stateContent: string): Timeli
     if (Number.isFinite(completedMs)) prevEndMs = completedMs;
   }
 
-  if (events.length === 0) notes.push("No audit events found — timeline is empty.");
-  if (stateContent === "") notes.push("No state file — status and checkbox cross-checks skipped.");
+  if (events.length === 0)
+    notes.push("No audit events found — timeline is empty.");
+  if (stateContent === "")
+    notes.push("No state file — status and checkbox cross-checks skipped.");
 
   return {
     stages,
@@ -489,7 +528,8 @@ export function reconstructTimeline(audit: string, stateContent: string): Timeli
 }
 
 function lastEvent(evs: AuditEvent[], name: string): AuditEvent | undefined {
-  for (let i = evs.length - 1; i >= 0; i--) if (evs[i].event === name) return evs[i];
+  for (let i = evs.length - 1; i >= 0; i--)
+    if (evs[i].event === name) return evs[i];
   return undefined;
 }
 function lastEventIndex(evs: AuditEvent[], name: string): number {
@@ -520,7 +560,8 @@ function gateOutcome(
   }
   if (latest === "approved") return "approved";
   if (latest === "rejected") return "rejected";
-  if (latest === "awaiting" || checkboxState === "awaiting-approval") return "unresolved";
+  if (latest === "awaiting" || checkboxState === "awaiting-approval")
+    return "unresolved";
   return "none";
 }
 
@@ -559,7 +600,11 @@ export interface GraphStageLite {
 
 export interface HookHealthSnapshot {
   dirExists: boolean;
-  heartbeats: Array<{ hook: string; timestampRaw: string; ageMs: number | null }>;
+  heartbeats: Array<{
+    hook: string;
+    timestampRaw: string;
+    ageMs: number | null;
+  }>;
   degradedDrops: Array<{ hook: string; count: number }>;
 }
 
@@ -634,7 +679,12 @@ export function runDiagnosis(input: DiagnosisInput): DoctorFinding[] {
       // has a checkbox) — a not-yet-run ensemble stage is not a fault.
       const tl = timeline.stages.find((t) => t.slug === stage.slug);
       if (!tl) continue;
-      const contribDir = join(recordAbsDir, stage.phase, stage.slug, "contributions");
+      const contribDir = join(
+        recordAbsDir,
+        stage.phase,
+        stage.slug,
+        "contributions",
+      );
       // Mechanism not in use on this project — no contributions/ dir was ever
       // written for this stage, so there is no evidence contract to enforce.
       if (!existsSync(contribDir)) continue;
@@ -643,7 +693,11 @@ export function runDiagnosis(input: DiagnosisInput): DoctorFinding[] {
         const file = join(contribDir, `${agent}.md`);
         const st = safeLstat(file);
         if (!st?.isFile()) {
-          problems.push({ collaborator: agent, exists: false, markerMatches: false });
+          problems.push({
+            collaborator: agent,
+            exists: false,
+            markerMatches: false,
+          });
           continue;
         }
         const markerMatches = firstLineIsMarker(file, agent);
@@ -662,7 +716,11 @@ export function runDiagnosis(input: DiagnosisInput): DoctorFinding[] {
           id: "ensemble-evidence-missing",
           severity: "error",
           summary: `Ensemble stage "${hashSlugForDisplay(stage.slug)}" is missing or has malformed collaborator evidence.`,
-          evidence: { stage: hashSlugForDisplay(stage.slug), mode: stage.mode, collaborators: problems },
+          evidence: {
+            stage: hashSlugForDisplay(stage.slug),
+            mode: stage.mode,
+            collaborators: problems,
+          },
           remedy:
             "Each declared collaborator must write its contribution file with the " +
             "identity-marker first line before approval. Dispatch the missing " +
@@ -710,12 +768,14 @@ export function runDiagnosis(input: DiagnosisInput): DoctorFinding[] {
       summary: "runtime-graph.json is older than its authored stage inputs.",
       evidence: {
         runtimeGraphMtime: new Date(runtimeGraphMtimeMs).toISOString(),
-        authoredInputsNewestMtime: new Date(authoredInputsNewestMtimeMs).toISOString(),
+        authoredInputsNewestMtime: new Date(
+          authoredInputsNewestMtimeMs,
+        ).toISOString(),
       },
       remedy:
-        `The compiled runtime graph is out of date. Re-run \`${
-          aidlcToolInvocation("graph")
-        } compile\`; if this recurs, the ` +
+        `The compiled runtime graph is out of date. Re-run \`${aidlcToolInvocation(
+          "graph",
+        )} compile\`; if this recurs, the ` +
         "rebuild-stage-graph hook may not be firing on this harness (check hook heartbeats).",
       safeToAutomate: true,
     });
@@ -746,9 +806,11 @@ export function runDiagnosis(input: DiagnosisInput): DoctorFinding[] {
     findings.push({
       id: "hooks-never-fired",
       severity: "info",
-      summary: "No hook heartbeats yet (fresh install or hooks not registered).",
+      summary:
+        "No hook heartbeats yet (fresh install or hooks not registered).",
       evidence: { healthDirExists: false },
-      remedy: "If a workflow has run, verify hooks are registered in the harness wiring config.",
+      remedy:
+        "If a workflow has run, verify hooks are registered in the harness wiring config.",
       safeToAutomate: true,
     });
   } else {
@@ -758,7 +820,11 @@ export function runDiagnosis(input: DiagnosisInput): DoctorFinding[] {
           id: "hook-heartbeat-frozen",
           severity: "warning",
           summary: `Hook "${hb.hook}" has not fired in over ${Math.floor(hb.ageMs / (60 * 60 * 1000))}h.`,
-          evidence: { hook: hb.hook, lastFired: hb.timestampRaw, ageMs: hb.ageMs },
+          evidence: {
+            hook: hb.hook,
+            lastFired: hb.timestampRaw,
+            ageMs: hb.ageMs,
+          },
           remedy:
             "A cold hook silently skips its side effects (audit, sensors, runtime " +
             "compile). Verify the hook is wired and firing on this harness.",
@@ -934,15 +1000,23 @@ export interface NormalizedEvidence {
   auditEvents: Array<Record<string, string>>;
   graph: { stageCount: number; stages: GraphStageLite[] } | null;
   hooks: HookHealthSnapshot;
-  markers: MarkerSnapshot & { turnCounter: string | null; readonlyLatch: boolean };
+  markers: MarkerSnapshot & {
+    turnCounter: string | null;
+    readonlyLatch: boolean;
+  };
   timeline: Timeline;
 }
 
 // Extract state fields on the allowlist. Values are redacted by the caller.
-export function extractStateFields(stateContent: string): Record<string, string> {
+export function extractStateFields(
+  stateContent: string,
+): Record<string, string> {
   const out: Record<string, string> = {};
   for (const field of STATE_ALLOWLIST) {
-    const re = new RegExp(`^- \\*\\*${field.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\*\\*:\\s*(.*)$`, "m");
+    const re = new RegExp(
+      `^- \\*\\*${field.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\*\\*:\\s*(.*)$`,
+      "m",
+    );
     const m = stateContent.match(re);
     if (m) out[field] = m[1].trim();
   }
@@ -950,7 +1024,9 @@ export function extractStateFields(stateContent: string): Record<string, string>
 }
 
 // Extract allowlisted audit events with allowlisted fields only.
-export function extractAuditEvents(audit: string): Array<Record<string, string>> {
+export function extractAuditEvents(
+  audit: string,
+): Array<Record<string, string>> {
   const out: Array<Record<string, string>> = [];
   for (const e of parseAuditEvents(audit)) {
     if (!AUDIT_EVENT_ALLOWLIST.has(e.event)) continue;
@@ -1077,7 +1153,8 @@ export function runDoctorAnalysis(projectDir: string): DoctorAnalysis {
     coreAgents.add(s.lead_agent);
     for (const a of s.support_agents) coreAgents.add(a);
   }
-  const stagesForDiagnosis = graphStages.length > 0 ? graphStages : shippedStages;
+  const stagesForDiagnosis =
+    graphStages.length > 0 ? graphStages : shippedStages;
   setCoreSlugs(coreSlugs);
 
   const authoredNewest = newestStageSourceMtime(projectDir);
@@ -1090,7 +1167,14 @@ export function runDoctorAnalysis(projectDir: string): DoctorAnalysis {
     ctx.idHashes.set(intentSlug, intentHash);
     ctx.rulesApplied.add("intent-id");
   }
-  seedCustomIdentifiers(ctx, projectDir, coreSlugs, coreAgents, stagesForDiagnosis, timeline);
+  seedCustomIdentifiers(
+    ctx,
+    projectDir,
+    coreSlugs,
+    coreAgents,
+    stagesForDiagnosis,
+    timeline,
+  );
 
   const findings = runDiagnosis({
     projectDir,
@@ -1109,7 +1193,9 @@ export function runDoctorAnalysis(projectDir: string): DoctorAnalysis {
   const evidence: NormalizedEvidence = {
     state: extractStateFields(stateContent),
     auditEvents: extractAuditEvents(audit),
-    graph: runtimeGraphExists ? { stageCount: graphStages.length, stages: graphStages } : null,
+    graph: runtimeGraphExists
+      ? { stageCount: graphStages.length, stages: graphStages }
+      : null,
     hooks: hooksHealth,
     markers,
     timeline,
@@ -1134,11 +1220,19 @@ export function buildBundle(
   // structured `timeline`/`graph` JSON is scrubbed here too — not only the
   // Markdown render.
   const staged: StagedFile[] = [];
-  staged.push(stage("report.md", renderReportMd(timeline, findings, intentHash), ctx));
+  staged.push(
+    stage("report.md", renderReportMd(timeline, findings, intentHash), ctx),
+  );
   // JSON files redact-then-serialize (stageJson) so a secret-scan replacement
   // can never corrupt JSON syntax; report.md stays serialize-then-redact (prose,
   // no structural contract).
-  staged.push(stageJson("report.json", { schemaVersion: BUNDLE_SCHEMA_VERSION, timeline, findings }, ctx));
+  staged.push(
+    stageJson(
+      "report.json",
+      { schemaVersion: BUNDLE_SCHEMA_VERSION, timeline, findings },
+      ctx,
+    ),
+  );
   staged.push(stageJson(join("evidence", "normalized.json"), evidence, ctx));
 
   // Enforce the total-size budget across staged content, recording truncation.
@@ -1150,14 +1244,26 @@ export function buildBundle(
   // would otherwise mangle as "long hex"). Redaction already ran on every file
   // the manifest describes.
   const manifest = buildManifest(staged, ctx, intentHash);
-  staged.push({ relPath: "manifest.json", content: JSON.stringify(manifest, null, 2), truncated: false });
+  staged.push({
+    relPath: "manifest.json",
+    content: JSON.stringify(manifest, null, 2),
+    truncated: false,
+  });
 
   // Write the canonical directory (owner-only).
-  const bundleDir = join(outParentDir, `aidlc-diagnostic-report-${tsToken}-${intentHash}`);
+  const bundleDir = join(
+    outParentDir,
+    `aidlc-diagnostic-report-${tsToken}-${intentHash}`,
+  );
   writeBundleDir(bundleDir, staged);
 
   // Best-effort archive.
-  const { archivePath, manualShareNote } = tryArchive(bundleDir, outParentDir, tsToken, intentHash);
+  const { archivePath, manualShareNote } = tryArchive(
+    bundleDir,
+    outParentDir,
+    tsToken,
+    intentHash,
+  );
 
   return { bundleDir, archivePath, findings, manualShareNote };
 }
@@ -1170,14 +1276,22 @@ export function buildBundle(
 // useless to a maintainer's tooling); a `.md`/other file gets a prose notice.
 // The manifest independently records the truncation (buildManifest reads
 // `truncated`), so the placeholder is the whole surviving content.
-function truncatePlaceholder(relPath: string, originalBytes: number, reason: string): string {
+function truncatePlaceholder(
+  relPath: string,
+  originalBytes: number,
+  reason: string,
+): string {
   if (relPath.endsWith(".json")) {
     return JSON.stringify({ truncated: true, reason, originalBytes }, null, 2);
   }
   return `[TRUNCATED: ${reason} — original ${originalBytes} bytes]\n`;
 }
 
-function stage(relPath: string, rawContent: string, ctx: RedactionContext): StagedFile {
+function stage(
+  relPath: string,
+  rawContent: string,
+  ctx: RedactionContext,
+): StagedFile {
   return stageContent(relPath, redactString(rawContent, ctx));
 }
 
@@ -1187,8 +1301,15 @@ function stage(relPath: string, rawContent: string, ctx: RedactionContext): Stag
 // impossible — a secret-scan replacement can never eat a string's closing quote
 // because it never sees the quotes (Arden r4 #2). The serialized result is
 // already fully redacted, so it is NOT re-run through redactString.
-function stageJson(relPath: string, value: unknown, ctx: RedactionContext): StagedFile {
-  return stageContent(relPath, JSON.stringify(redactValue(value, ctx), null, 2));
+function stageJson(
+  relPath: string,
+  value: unknown,
+  ctx: RedactionContext,
+): StagedFile {
+  return stageContent(
+    relPath,
+    JSON.stringify(redactValue(value, ctx), null, 2),
+  );
 }
 
 // Shared tail: apply the per-file size cap (format-preserving placeholder) to
@@ -1197,7 +1318,11 @@ function stageContent(relPath: string, content: string): StagedFile {
   let truncated = false;
   const bytes = Buffer.byteLength(content, "utf-8");
   if (bytes > MAX_EVIDENCE_FILE_BYTES) {
-    content = truncatePlaceholder(relPath, bytes, `file exceeded ${MAX_EVIDENCE_FILE_BYTES} bytes`);
+    content = truncatePlaceholder(
+      relPath,
+      bytes,
+      `file exceeded ${MAX_EVIDENCE_FILE_BYTES} bytes`,
+    );
     truncated = true;
   }
   return { relPath, content, truncated };
@@ -1209,16 +1334,23 @@ function stageContent(relPath: string, content: string): StagedFile {
 // is replaced by a format-preserving placeholder (valid JSON for .json), never
 // a byte slice, so the machine-readable artifacts always parse.
 function enforceTotalBudget(staged: StagedFile[]): void {
-  const total = () => staged.reduce((n, f) => n + Buffer.byteLength(f.content, "utf-8"), 0);
+  const total = () =>
+    staged.reduce((n, f) => n + Buffer.byteLength(f.content, "utf-8"), 0);
   if (total() <= MAX_BUNDLE_BYTES) return;
   const bySize = [...staged].sort(
-    (a, b) => Buffer.byteLength(b.content, "utf-8") - Buffer.byteLength(a.content, "utf-8"),
+    (a, b) =>
+      Buffer.byteLength(b.content, "utf-8") -
+      Buffer.byteLength(a.content, "utf-8"),
   );
   for (const f of bySize) {
     if (total() <= MAX_BUNDLE_BYTES) break;
     if (f.relPath === "report.md") continue;
     const bytes = Buffer.byteLength(f.content, "utf-8");
-    f.content = truncatePlaceholder(f.relPath, bytes, "total-bundle budget exceeded");
+    f.content = truncatePlaceholder(
+      f.relPath,
+      bytes,
+      "total-bundle budget exceeded",
+    );
     f.truncated = true;
   }
 }
@@ -1231,13 +1363,22 @@ interface Manifest {
   harness: string;
   createdAt: string;
   intentIdHash: string;
-  files: Array<{ path: string; sha256: string; bytes: number; truncated: boolean }>;
+  files: Array<{
+    path: string;
+    sha256: string;
+    bytes: number;
+    truncated: boolean;
+  }>;
   redactionsApplied: string[];
   truncationNotices: string[];
   excluded: string[];
 }
 
-function buildManifest(staged: StagedFile[], ctx: RedactionContext, intentHash: string): Manifest {
+function buildManifest(
+  staged: StagedFile[],
+  ctx: RedactionContext,
+  intentHash: string,
+): Manifest {
   return {
     bundleSchemaVersion: BUNDLE_SCHEMA_VERSION,
     aidlcVersion: AIDLC_VERSION,
@@ -1251,7 +1392,9 @@ function buildManifest(staged: StagedFile[], ctx: RedactionContext, intentHash: 
       truncated: f.truncated,
     })),
     redactionsApplied: [...ctx.rulesApplied].sort(),
-    truncationNotices: staged.filter((f) => f.truncated).map((f) => `${f.relPath} was truncated`),
+    truncationNotices: staged
+      .filter((f) => f.truncated)
+      .map((f) => `${f.relPath} was truncated`),
     excluded: [
       "aidlc-state.md (raw)",
       "audit shards (raw)",
@@ -1269,7 +1412,8 @@ function buildManifest(staged: StagedFile[], ctx: RedactionContext, intentHash: 
 // --- filesystem write (owner-only) -----------------------------------------
 
 function writeBundleDir(bundleDir: string, staged: StagedFile[]): void {
-  if (existsSync(bundleDir)) rmSync(bundleDir, { recursive: true, force: true });
+  if (existsSync(bundleDir))
+    rmSync(bundleDir, { recursive: true, force: true });
   mkdirSync(bundleDir, { recursive: true });
   tryChmod(bundleDir, 0o700);
   for (const f of staged) {
@@ -1296,10 +1440,13 @@ function tryArchive(
   const archivePath = join(outParentDir, archiveName);
   try {
     const dirName = basename(bundleDir);
-    const res = Bun.spawnSync(["tar", "-czf", archivePath, "-C", outParentDir, dirName], {
-      stdout: "ignore",
-      stderr: "pipe",
-    });
+    const res = Bun.spawnSync(
+      ["tar", "-czf", archivePath, "-C", outParentDir, dirName],
+      {
+        stdout: "ignore",
+        stderr: "pipe",
+      },
+    );
     if (res.exitCode === 0 && existsSync(archivePath)) {
       tryChmod(archivePath, 0o600);
       return { archivePath, manualShareNote: null };
@@ -1317,7 +1464,11 @@ function tryArchive(
 
 // --- report.md --------------------------------------------------------------
 
-function renderReportMd(timeline: Timeline, findings: DoctorFinding[], intentHash: string): string {
+function renderReportMd(
+  timeline: Timeline,
+  findings: DoctorFinding[],
+  intentHash: string,
+): string {
   const L: string[] = [];
   L.push(`# AI-DLC Diagnostic Report`);
   L.push("");
@@ -1328,7 +1479,9 @@ function renderReportMd(timeline: Timeline, findings: DoctorFinding[], intentHas
   L.push(`- Workflow status: ${timeline.workflowStatus}`);
   L.push(`- Workflow started: ${timeline.workflowStartedRaw}`);
   L.push("");
-  L.push(`No source files or artifact bodies are included. Identifiers are hashed and paths are redacted.`);
+  L.push(
+    `No source files or artifact bodies are included. Identifiers are hashed and paths are redacted.`,
+  );
   L.push("");
 
   L.push(`## Findings`);
@@ -1345,7 +1498,10 @@ function renderReportMd(timeline: Timeline, findings: DoctorFinding[], intentHas
       L.push("");
       if (f.remedy) {
         L.push(`Remedy: ${f.remedy}`);
-        if (!f.safeToAutomate) L.push(`(Not safe to automate — run this yourself after confirming.)`);
+        if (!f.safeToAutomate)
+          L.push(
+            `(Not safe to automate — run this yourself after confirming.)`,
+          );
         L.push("");
       }
     }
@@ -1356,7 +1512,9 @@ function renderReportMd(timeline: Timeline, findings: DoctorFinding[], intentHas
   if (timeline.stages.length === 0) {
     L.push(`No stages recorded.`);
   } else {
-    L.push(`| Stage | Started | Completed | Duration | Gate | Rev | Gap | Flags |`);
+    L.push(
+      `| Stage | Started | Completed | Duration | Gate | Rev | Gap | Flags |`,
+    );
     L.push(`|---|---|---|---|---|---|---|---|`);
     for (const s of timeline.stages) {
       L.push(
@@ -1386,7 +1544,10 @@ function fmtMs(ms: number | null): string {
 
 // Merge live-doctor findings with bundle diagnosis, dedup by id+summary, sort
 // errors → warnings → info (stable within a bucket).
-export function mergeFindings(live: DoctorFinding[], diagnosis: DoctorFinding[]): DoctorFinding[] {
+export function mergeFindings(
+  live: DoctorFinding[],
+  diagnosis: DoctorFinding[],
+): DoctorFinding[] {
   const seen = new Set<string>();
   const merged: DoctorFinding[] = [];
   for (const f of [...diagnosis, ...live]) {
@@ -1415,18 +1576,22 @@ function readGraphStages(rgPath: string): GraphStageLite[] {
     const parsed = JSON.parse(safeRead(rgPath)) as unknown;
     const stages = Array.isArray(parsed)
       ? parsed
-      : parsed && typeof parsed === "object" && Array.isArray((parsed as { stages?: unknown }).stages)
+      : parsed &&
+          typeof parsed === "object" &&
+          Array.isArray((parsed as { stages?: unknown }).stages)
         ? (parsed as { stages: unknown[] }).stages
         : [];
-    return (stages as Array<Record<string, unknown>>).map((s) => ({
-      slug: typeof s.slug === "string" ? s.slug : "",
-      phase: typeof s.phase === "string" ? s.phase : "",
-      mode: typeof s.mode === "string" ? s.mode : "inline",
-      lead_agent: typeof s.lead_agent === "string" ? s.lead_agent : "",
-      support_agents: Array.isArray(s.support_agents)
-        ? s.support_agents.filter((a): a is string => typeof a === "string")
-        : [],
-    })).filter((s) => s.slug !== "");
+    return (stages as Array<Record<string, unknown>>)
+      .map((s) => ({
+        slug: typeof s.slug === "string" ? s.slug : "",
+        phase: typeof s.phase === "string" ? s.phase : "",
+        mode: typeof s.mode === "string" ? s.mode : "inline",
+        lead_agent: typeof s.lead_agent === "string" ? s.lead_agent : "",
+        support_agents: Array.isArray(s.support_agents)
+          ? s.support_agents.filter((a): a is string => typeof a === "string")
+          : [],
+      }))
+      .filter((s) => s.slug !== "");
   } catch {
     return [];
   }
@@ -1449,7 +1614,8 @@ function newestStageSourceMtime(projectDir: string): number | null {
       const st = safeLstat(abs);
       if (!st) continue;
       if (st.isDirectory()) walk(abs);
-      else if (e.endsWith(".md") && (newest === null || st.mtimeMs > newest)) newest = st.mtimeMs;
+      else if (e.endsWith(".md") && (newest === null || st.mtimeMs > newest))
+        newest = st.mtimeMs;
     }
   };
   walk(root);
@@ -1475,12 +1641,24 @@ function readHookHealth(projectDir: string, audit: string): HookHealthSnapshot {
       const tsRaw = safeRead(join(dir, f)).trim();
       const ms = tsRaw ? Date.parse(tsRaw) : NaN;
       const ageMs =
-        Number.isFinite(ms) && latestAudit !== null ? Math.max(0, latestAudit - ms) : null;
-      heartbeats.push({ hook: f.replace(/\.last$/, ""), timestampRaw: tsRaw || UNKNOWN, ageMs });
+        Number.isFinite(ms) && latestAudit !== null
+          ? Math.max(0, latestAudit - ms)
+          : null;
+      heartbeats.push({
+        hook: f.replace(/\.last$/, ""),
+        timestampRaw: tsRaw || UNKNOWN,
+        ageMs,
+      });
     }
     for (const f of files.filter((x) => x.endsWith(".drops"))) {
-      const lines = safeRead(join(dir, f)).split("\n").filter((l) => l.includes("[degraded]"));
-      if (lines.length > 0) degradedDrops.push({ hook: f.replace(/\.drops$/, ""), count: lines.length });
+      const lines = safeRead(join(dir, f))
+        .split("\n")
+        .filter((l) => l.includes("[degraded]"));
+      if (lines.length > 0)
+        degradedDrops.push({
+          hook: f.replace(/\.drops$/, ""),
+          count: lines.length,
+        });
     }
   }
   return { dirExists, heartbeats, degradedDrops };
@@ -1506,7 +1684,9 @@ function readMarkers(projectDir: string): NormalizedEvidence["markers"] {
     planParseable,
     recoveryExists: existsSync(recoveryFilePath(projectDir)),
     stopHookDirExists: existsSync(stopDir),
-    turnCounter: existsSync(turnCounterPath) ? safeRead(turnCounterPath).trim() : null,
+    turnCounter: existsSync(turnCounterPath)
+      ? safeRead(turnCounterPath).trim()
+      : null,
     readonlyLatch: existsSync(latchPath),
   };
 }
@@ -1514,7 +1694,10 @@ function readMarkers(projectDir: string): NormalizedEvidence["markers"] {
 function newestAuditMs(audit: string): number | null {
   let newest: number | null = null;
   for (const e of parseAuditEvents(audit)) {
-    if (Number.isFinite(e.timestampMs) && (newest === null || e.timestampMs > newest)) {
+    if (
+      Number.isFinite(e.timestampMs) &&
+      (newest === null || e.timestampMs > newest)
+    ) {
       newest = e.timestampMs;
     }
   }
@@ -1547,7 +1730,9 @@ function withinProjectRoot(path: string): boolean {
     // backslash-separated paths on Windows, so a "/" boundary would fail every
     // nested input there and silently empty the analysis. sep is "/" on POSIX
     // (byte-identical to the prior behaviour) and "\\" on Windows.
-    return real === bundleRealRoot || real.startsWith(`${bundleRealRoot}${sep}`);
+    return (
+      real === bundleRealRoot || real.startsWith(`${bundleRealRoot}${sep}`)
+    );
   } catch {
     return false;
   }
@@ -1565,7 +1750,10 @@ function safeRead(path: string): string {
     if (lstatSync(path).isSymbolicLink()) return "";
     const real = realpathSync(path);
     if (!withinProjectRoot(real)) return "";
-    const content = readRegularFileNoFollowOrThrow(real, "doctor input").toString("utf-8");
+    const content = readRegularFileNoFollowOrThrow(
+      real,
+      "doctor input",
+    ).toString("utf-8");
     if (!withinProjectRoot(real)) return "";
     return content;
   } catch {

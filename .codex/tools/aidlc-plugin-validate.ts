@@ -12,13 +12,7 @@ import {
   readdirSync,
   statSync,
 } from "node:fs";
-import {
-  basename,
-  join,
-  relative,
-  resolve,
-  sep,
-} from "node:path";
+import { basename, join, relative, resolve, sep } from "node:path";
 import {
   frontmatterBlock,
   listField,
@@ -151,11 +145,7 @@ type PluginAuthoringContext = {
 };
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value)
-  );
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function posixRelative(root: string, file: string): string {
@@ -234,8 +224,7 @@ function contributionPathIssues(
     if (canonical && value !== canonical) {
       issues.push({
         key,
-        message:
-          `aidlc.contributes.${key} must be "${canonical}" until configurable contribution paths are supported`,
+        message: `aidlc.contributes.${key} must be "${canonical}" until configurable contribution paths are supported`,
         fix: `Move the content to "${canonical}" and set aidlc.contributes.${key} to that exact path.`,
       });
     }
@@ -336,14 +325,12 @@ export function scanPluginFiles(dir: string): PluginFileScan {
 
 export function pluginContentSymlinks(pluginRoot: string): string[] {
   const root = resolve(pluginRoot);
-  return PLUGIN_SYMLINK_SCAN_DIRS.flatMap((dir) =>
-    scanPluginFiles(join(root, dir)).symlinks
+  return PLUGIN_SYMLINK_SCAN_DIRS.flatMap(
+    (dir) => scanPluginFiles(join(root, dir)).symlinks,
   ).sort((left, right) => left.localeCompare(right));
 }
 
-export function assertPluginContentHasNoSymlinks(
-  pluginRoot: string,
-): void {
+export function assertPluginContentHasNoSymlinks(pluginRoot: string): void {
   const root = resolve(pluginRoot);
   const symlinks = pluginContentSymlinks(root);
   if (symlinks.length === 0) return;
@@ -380,12 +367,7 @@ function validatePluginContentSymlinks(
 
 export function bundledPluginComposeTemplatePath(): string {
   const candidates = [
-    join(
-      import.meta.dir,
-      "data",
-      "plugin-hooks-template",
-      "compose.ts",
-    ),
+    join(import.meta.dir, "data", "plugin-hooks-template", "compose.ts"),
     join(
       import.meta.dir,
       "..",
@@ -436,8 +418,8 @@ function pluginAuthoringContext(): PluginAuthoringContext {
 }
 
 function pluginAgentRoster(root: string): string[] {
-  const pluginAgents = scanPluginFiles(join(root, "agents")).files
-    .filter((file) => file.endsWith("-agent.md"))
+  const pluginAgents = scanPluginFiles(join(root, "agents"))
+    .files.filter((file) => file.endsWith("-agent.md"))
     .map((file) => basename(file, ".md"));
   return [
     ...new Set([
@@ -618,13 +600,7 @@ function validateManifest(
   }
 
   for (const issue of contributionPathIssues(manifest.aidlc.contributes)) {
-    addError(
-      findings,
-      displayFile,
-      "manifest-shape",
-      issue.message,
-      issue.fix,
-    );
+    addError(findings, displayFile, "manifest-shape", issue.message, issue.fix);
   }
 
   return { pluginName: declaredName };
@@ -640,8 +616,8 @@ function validateStages(
     string,
     Array<{ file: string; slug: string }>
   >();
-  for (const file of scanPluginFiles(join(root, "stages")).files.filter((path) =>
-    path.endsWith(".md"),
+  for (const file of scanPluginFiles(join(root, "stages")).files.filter(
+    (path) => path.endsWith(".md"),
   )) {
     const displayFile = posixRelative(root, file);
     let parsed: Record<string, unknown>;
@@ -754,9 +730,7 @@ function validateContributions(
   findings: MutableFindings,
   coreStageSlugs?: Iterable<string>,
 ): void {
-  const coreStages = new Set(
-    coreStageSlugs ?? pluginAuthoringContext().stages,
-  );
+  const coreStages = new Set(coreStageSlugs ?? pluginAuthoringContext().stages);
   for (const file of scanPluginFiles(join(root, "contributions")).files.filter(
     (path) => path.endsWith(".md"),
   )) {
@@ -800,8 +774,8 @@ function validateScopes(
   findings: MutableFindings,
 ): void {
   const prefix = `${pluginName}-`;
-  for (const file of scanPluginFiles(join(root, "scopes")).files.filter((path) =>
-    path.endsWith(".md"),
+  for (const file of scanPluginFiles(join(root, "scopes")).files.filter(
+    (path) => path.endsWith(".md"),
   )) {
     const displayFile = posixRelative(root, file);
     const raw = readFileSync(file, "utf-8");
@@ -880,11 +854,9 @@ function validateAgents(
   findings: MutableFindings,
 ): void {
   const escaped = pluginName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const filenameRe = new RegExp(
-    `^${escaped}-[a-z][a-z0-9-]*-agent$`,
-  );
-  for (const file of scanPluginFiles(join(root, "agents")).files.filter((path) =>
-    path.endsWith(".md"),
+  const filenameRe = new RegExp(`^${escaped}-[a-z][a-z0-9-]*-agent$`);
+  for (const file of scanPluginFiles(join(root, "agents")).files.filter(
+    (path) => path.endsWith(".md"),
   )) {
     const displayFile = posixRelative(root, file);
     const frontmatter = frontmatterBlock(readFileSync(file, "utf-8"));
@@ -931,10 +903,7 @@ function validateAgents(
   }
 }
 
-function validateTools(
-  root: string,
-  findings: MutableFindings,
-): void {
+function validateTools(root: string, findings: MutableFindings): void {
   const toolsRoot = join(root, "tools");
   for (const file of scanPluginFiles(toolsRoot).files) {
     const rel = posixRelative(toolsRoot, file);
@@ -1066,9 +1035,7 @@ export function validatePluginRoot(
   };
 }
 
-export function pluginValidationJson(
-  result: PluginValidationResult,
-): {
+export function pluginValidationJson(result: PluginValidationResult): {
   valid: boolean;
   errors: PluginValidationFinding[];
   warnings: PluginValidationFinding[];

@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import { homedir, platform } from "node:os";
 import {
   basename,
@@ -12,7 +18,11 @@ import {
   sep,
 } from "node:path";
 import { requireVersion, VERSION_ID } from "./aidlc-channel.ts";
-import { projectionFiles, sha256File, walkFiles } from "./aidlc-distribution.ts";
+import {
+  projectionFiles,
+  sha256File,
+  walkFiles,
+} from "./aidlc-distribution.ts";
 
 // Machine roots are canonical paths. Every derived path (launcher body, the
 // active-executable pointer, pin targets, registry keys) is rendered from them,
@@ -21,11 +31,18 @@ import { projectionFiles, sha256File, walkFiles } from "./aidlc-distribution.ts"
 // install instead of rejecting each other's launcher as tampered.
 function lexicalInstallRoot(): string {
   const explicit = process.env.AIDLC_INSTALL_ROOT?.trim();
-  if (explicit) return isAbsolute(explicit) ? explicit : resolve(process.cwd(), explicit);
+  if (explicit)
+    return isAbsolute(explicit) ? explicit : resolve(process.cwd(), explicit);
   if (platform() === "win32") {
-    return join(process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local"), "aidlc");
+    return join(
+      process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local"),
+      "aidlc",
+    );
   }
-  return join(process.env.XDG_DATA_HOME || join(homedir(), ".local", "share"), "aidlc");
+  return join(
+    process.env.XDG_DATA_HOME || join(homedir(), ".local", "share"),
+    "aidlc",
+  );
 }
 
 export function installRoot(): string {
@@ -42,7 +59,8 @@ export function versionRoot(version: string): string {
 
 function lexicalBinRoot(): string {
   const explicit = process.env.AIDLC_BIN_DIR?.trim();
-  if (explicit) return isAbsolute(explicit) ? explicit : resolve(process.cwd(), explicit);
+  if (explicit)
+    return isAbsolute(explicit) ? explicit : resolve(process.cwd(), explicit);
   return platform() === "win32"
     ? join(lexicalInstallRoot(), "bin")
     : join(homedir(), ".local", "bin");
@@ -68,18 +86,24 @@ export function canonicalPolicyPath(path: string): string {
 
 export function policyPathWithin(path: string, root: string): boolean {
   const rel = relative(canonicalPolicyPath(root), canonicalPolicyPath(path));
-  return rel === "" ||
-    (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`));
+  return (
+    rel === "" ||
+    (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`))
+  );
 }
 
 function resolvedPathWithin(path: string, root: string): boolean {
   const rel = relative(resolve(root), resolve(path));
-  return rel === "" ||
-    (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`));
+  return (
+    rel === "" ||
+    (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`))
+  );
 }
 
 export function isMachineOwnedPath(path: string): boolean {
-  return [installRoot(), binRoot()].some((root) => policyPathWithin(path, root));
+  return [installRoot(), binRoot()].some((root) =>
+    policyPathWithin(path, root),
+  );
 }
 
 // A project overlaps the machine roots when either contains the other. The
@@ -91,12 +115,13 @@ export function projectPathOverlapsMachineRoots(projectDir: string): boolean {
   const lexical = [lexicalInstallRoot(), lexicalBinRoot()];
   const roots = new Set([...lexical, ...lexical.map(canonicalPolicyPath)]);
   const workspace = join(projectDir, "aidlc");
-  return [...roots].some((root) =>
-    policyPathWithin(projectDir, root) ||
-    policyPathWithin(root, projectDir) ||
-    resolvedPathWithin(projectDir, root) ||
-    resolvedPathWithin(root, projectDir) ||
-    policyPathWithin(workspace, root)
+  return [...roots].some(
+    (root) =>
+      policyPathWithin(projectDir, root) ||
+      policyPathWithin(root, projectDir) ||
+      resolvedPathWithin(projectDir, root) ||
+      resolvedPathWithin(root, projectDir) ||
+      policyPathWithin(workspace, root),
   );
 }
 
@@ -104,19 +129,27 @@ export function machineTransactionRoot(): string {
   const paths = [installRoot(), binRoot()].map((path) => resolve(path));
   const filesystemRoot = parse(paths[0]).root;
   if (paths.some((path) => parse(path).root !== filesystemRoot)) {
-    throw new Error("machine install and command directories must be on one filesystem root");
+    throw new Error(
+      "machine install and command directories must be on one filesystem root",
+    );
   }
   const parts = paths.map((path) =>
-    path.slice(filesystemRoot.length).split(/[\\/]/).filter(Boolean)
+    path.slice(filesystemRoot.length).split(/[\\/]/).filter(Boolean),
   );
   const shared: string[] = [];
-  for (let index = 0; index < Math.min(...parts.map((value) => value.length)); index++) {
+  for (
+    let index = 0;
+    index < Math.min(...parts.map((value) => value.length));
+    index++
+  ) {
     if (parts.some((value) => value[index] !== parts[0][index])) break;
     shared.push(parts[0][index]);
   }
   const common = join(filesystemRoot, ...shared);
   if (common === filesystemRoot) {
-    throw new Error("machine install and command directories need a writable shared parent");
+    throw new Error(
+      "machine install and command directories need a writable shared parent",
+    );
   }
   return common;
 }
@@ -142,7 +175,10 @@ export function packageManagerForExecutable(
   ) {
     return { name: "Homebrew", remediation: "brew upgrade aidlc" };
   }
-  if (normalized.startsWith("/nix/store/") || normalized.includes("/.nix-profile/")) {
+  if (
+    normalized.startsWith("/nix/store/") ||
+    normalized.includes("/.nix-profile/")
+  ) {
     return { name: "Nix", remediation: "upgrade aidlc through Nix" };
   }
   return null;
@@ -190,7 +226,10 @@ export function activeVersion(): string | null {
       const executable = realpathSync(candidatePath);
       const parent = dirname(executable);
       const candidate = basename(parent);
-      if (dirname(parent) === realpathOrResolved(versionsRoot()) && VERSION_ID.test(candidate)) {
+      if (
+        dirname(parent) === realpathOrResolved(versionsRoot()) &&
+        VERSION_ID.test(candidate)
+      ) {
         return candidate;
       }
     } catch {
@@ -210,8 +249,8 @@ export function readActiveExecutable(): string | null {
   const executable = raw.endsWith("\r\n")
     ? raw.slice(0, -2)
     : raw.endsWith("\n")
-    ? raw.slice(0, -1)
-    : raw;
+      ? raw.slice(0, -1)
+      : raw;
   if (!isAbsolute(executable)) {
     throw new Error(`${path} must contain an absolute executable path`);
   }
@@ -235,12 +274,20 @@ export function inspectProjectPinTarget(
 ): { valid: boolean; target: string; reason?: string } {
   const path = projectPinTargetPath(projectDir);
   if (!existsSync(path)) {
-    return { valid: false, target: path, reason: "resolved target marker is missing" };
+    return {
+      valid: false,
+      target: path,
+      reason: "resolved target marker is missing",
+    };
   }
   let raw: string;
   try {
     if (!statSync(path).isFile()) {
-      return { valid: false, target: path, reason: "resolved target marker is not a regular file" };
+      return {
+        valid: false,
+        target: path,
+        reason: "resolved target marker is not a regular file",
+      };
     }
     raw = readFileSync(path, "utf-8");
   } catch (error) {
@@ -253,7 +300,11 @@ export function inspectProjectPinTarget(
     };
   }
   if (!/^[^\r\n]+\r?\n?$/.test(raw)) {
-    return { valid: false, target: path, reason: "resolved target marker must contain one path" };
+    return {
+      valid: false,
+      target: path,
+      reason: "resolved target marker must contain one path",
+    };
   }
   const target = canonicalPolicyPath(raw.replace(/\r?\n$/, ""));
   const expected = canonicalPolicyPath(installedExecutablePath(version));
@@ -267,10 +318,18 @@ export function inspectProjectPinTarget(
   try {
     const stat = statSync(target);
     if (!stat.isFile()) {
-      return { valid: false, target, reason: "resolved target is not a regular file" };
+      return {
+        valid: false,
+        target,
+        reason: "resolved target is not a regular file",
+      };
     }
     if (platform() !== "win32" && (stat.mode & 0o111) === 0) {
-      return { valid: false, target, reason: "resolved target is not executable" };
+      return {
+        valid: false,
+        target,
+        reason: "resolved target is not executable",
+      };
     }
   } catch {
     return { valid: false, target, reason: "resolved target is missing" };
@@ -291,7 +350,10 @@ export function runtimeRoot(version: string): string {
 }
 
 export function installedExecutablePath(version: string): string {
-  return join(versionRoot(version), platform() === "win32" ? "aidlc.exe" : "aidlc");
+  return join(
+    versionRoot(version),
+    platform() === "win32" ? "aidlc.exe" : "aidlc",
+  );
 }
 
 export type InstalledRuntimeIntegrity = {
@@ -348,10 +410,18 @@ export function inspectInstalledVersion(
   const executable = installedExecutablePath(version);
   const manifestPath = join(versionRoot(version), "version.json");
   if (!existsSync(executable) || !statSync(executable).isFile()) {
-    return { complete: false, distributions: [], reason: "executable is missing" };
+    return {
+      complete: false,
+      distributions: [],
+      reason: "executable is missing",
+    };
   }
   if (platform() !== "win32" && (statSync(executable).mode & 0o111) === 0) {
-    return { complete: false, distributions: [], reason: "executable mode is invalid" };
+    return {
+      complete: false,
+      distributions: [],
+      reason: "executable mode is invalid",
+    };
   }
   let manifest: {
     schemaVersion?: unknown;
@@ -361,41 +431,70 @@ export function inspectInstalledVersion(
     installedRuntime?: unknown;
   };
   try {
-    manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as typeof manifest;
+    manifest = JSON.parse(
+      readFileSync(manifestPath, "utf-8"),
+    ) as typeof manifest;
   } catch {
-    return { complete: false, distributions: [], reason: "version.json is missing or malformed" };
+    return {
+      complete: false,
+      distributions: [],
+      reason: "version.json is missing or malformed",
+    };
   }
-  if (manifest.schemaVersion !== 1 || manifest.version !== version || !Array.isArray(manifest.assets)) {
-    return { complete: false, distributions: [], reason: "version.json identity is invalid" };
+  if (
+    manifest.schemaVersion !== 1 ||
+    manifest.version !== version ||
+    !Array.isArray(manifest.assets)
+  ) {
+    return {
+      complete: false,
+      distributions: [],
+      reason: "version.json identity is invalid",
+    };
   }
   const binaryName = `aidlc-${targetTriple()}${platform() === "win32" ? ".exe" : ""}`;
-  const binary = manifest.assets.find((asset): asset is { name: string; sha256: string } =>
-    Boolean(asset) &&
-    typeof asset === "object" &&
-    (asset as { name?: unknown }).name === binaryName &&
-    /^[a-f0-9]{64}$/.test(String((asset as { sha256?: unknown }).sha256 ?? ""))
+  const binary = manifest.assets.find(
+    (asset): asset is { name: string; sha256: string } =>
+      Boolean(asset) &&
+      typeof asset === "object" &&
+      (asset as { name?: unknown }).name === binaryName &&
+      /^[a-f0-9]{64}$/.test(
+        String((asset as { sha256?: unknown }).sha256 ?? ""),
+      ),
   );
   if (
     !binary ||
-    createHash("sha256").update(readFileSync(executable)).digest("hex") !== binary.sha256
+    createHash("sha256").update(readFileSync(executable)).digest("hex") !==
+      binary.sha256
   ) {
-    return { complete: false, distributions: [], reason: "executable does not match version.json" };
+    return {
+      complete: false,
+      distributions: [],
+      reason: "executable does not match version.json",
+    };
   }
   const runtime = runtimeRoot(version);
   if (!existsSync(runtime)) {
-    return { complete: false, distributions: [], reason: "runtime directory is missing" };
+    return {
+      complete: false,
+      distributions: [],
+      reason: "runtime directory is missing",
+    };
   }
-  const runtimeAssetDeclared = manifest.assets.some((asset) =>
-    Boolean(asset) &&
-    typeof asset === "object" &&
-    (asset as { name?: unknown }).name === `aidlc-runtime-${version}.tar.gz`
+  const runtimeAssetDeclared = manifest.assets.some(
+    (asset) =>
+      Boolean(asset) &&
+      typeof asset === "object" &&
+      (asset as { name?: unknown }).name === `aidlc-runtime-${version}.tar.gz`,
   );
   if (runtimeAssetDeclared || manifest.installedRuntime !== undefined) {
-    const installedRuntime = manifest.installedRuntime as {
-      schemaVersion?: unknown;
-      baseline?: unknown;
-      sha256?: unknown;
-    } | undefined;
+    const installedRuntime = manifest.installedRuntime as
+      | {
+          schemaVersion?: unknown;
+          baseline?: unknown;
+          sha256?: unknown;
+        }
+      | undefined;
     if (
       installedRuntime?.schemaVersion !== 1 ||
       installedRuntime.baseline !== "runtime-integrity.json" ||
@@ -425,7 +524,9 @@ export function inspectInstalledVersion(
           reason: "runtime integrity baseline does not match version.json",
         };
       }
-      baseline = JSON.parse(readFileSync(baselinePath, "utf-8")) as InstalledRuntimeIntegrity;
+      baseline = JSON.parse(
+        readFileSync(baselinePath, "utf-8"),
+      ) as InstalledRuntimeIntegrity;
     } catch {
       return {
         complete: false,
@@ -481,10 +582,14 @@ export function inspectInstalledVersion(
         return {
           complete: false,
           distributions: [],
-          reason: "runtime file inventory does not match the installed baseline",
+          reason:
+            "runtime file inventory does not match the installed baseline",
         };
       }
-      if (expected.mode !== current.mode || expected.sha256 !== current.sha256) {
+      if (
+        expected.mode !== current.mode ||
+        expected.sha256 !== current.sha256
+      ) {
         return {
           complete: false,
           distributions: [],
@@ -496,9 +601,11 @@ export function inspectInstalledVersion(
   const declared = new Set(
     Array.isArray(manifest.distributions)
       ? manifest.distributions.flatMap((entry) =>
-          entry && typeof entry === "object" && typeof (entry as { name?: unknown }).name === "string"
+          entry &&
+          typeof entry === "object" &&
+          typeof (entry as { name?: unknown }).name === "string"
             ? [(entry as { name: string }).name]
-            : []
+            : [],
         )
       : [],
   );
@@ -507,11 +614,22 @@ export function inspectInstalledVersion(
     for (const distribution of readdirSync(runtime).sort()) {
       const root = join(runtime, distribution);
       if (!statSync(root).isDirectory() || !declared.has(distribution)) {
-        return { complete: false, distributions, reason: `runtime ${distribution} is not declared` };
+        return {
+          complete: false,
+          distributions,
+          reason: `runtime ${distribution} is not declared`,
+        };
       }
       const { stamp } = projectionFiles(root);
-      if (stamp.frameworkVersion !== version || stamp.distribution !== distribution) {
-        return { complete: false, distributions, reason: `runtime ${distribution} stamp is invalid` };
+      if (
+        stamp.frameworkVersion !== version ||
+        stamp.distribution !== distribution
+      ) {
+        return {
+          complete: false,
+          distributions,
+          reason: `runtime ${distribution} stamp is invalid`,
+        };
       }
       distributions.push(distribution);
     }
@@ -522,9 +640,9 @@ export function inspectInstalledVersion(
       reason: error instanceof Error ? error.message : String(error),
     };
   }
-  const missing = [...declared].filter((distribution) =>
-    !distributions.includes(distribution)
-  ).sort();
+  const missing = [...declared]
+    .filter((distribution) => !distributions.includes(distribution))
+    .sort();
   if (missing.length > 0) {
     return {
       complete: false,
@@ -543,19 +661,35 @@ export function inspectInstalledVersion(
 }
 
 export function targetTriple(): string {
-  const os = platform() === "darwin" ? "darwin" : platform() === "win32" ? "windows" : "linux";
+  const os =
+    platform() === "darwin"
+      ? "darwin"
+      : platform() === "win32"
+        ? "windows"
+        : "linux";
   const arch = process.arch === "arm64" ? "arm64" : "x64";
-  const report = process.report?.getReport?.() as { header?: { glibcVersionRuntime?: string } } | undefined;
-  const muslArch = process.arch === "arm64" ? "aarch64" : process.arch === "x64" ? "x86_64" : process.arch;
-  const muslLoader = os === "linux" && [
-    "/lib/ld-musl-" + muslArch + ".so.1",
-    "/usr/lib/ld-musl-" + muslArch + ".so.1",
-    "/lib/libc.musl-" + muslArch + ".so.1",
-    "/usr/lib/libc.musl-" + muslArch + ".so.1",
-  ].some(existsSync);
+  const report = process.report?.getReport?.() as
+    { header?: { glibcVersionRuntime?: string } } | undefined;
+  const muslArch =
+    process.arch === "arm64"
+      ? "aarch64"
+      : process.arch === "x64"
+        ? "x86_64"
+        : process.arch;
+  const muslLoader =
+    os === "linux" &&
+    [
+      "/lib/ld-musl-" + muslArch + ".so.1",
+      "/usr/lib/ld-musl-" + muslArch + ".so.1",
+      "/lib/libc.musl-" + muslArch + ".so.1",
+      "/usr/lib/libc.musl-" + muslArch + ".so.1",
+    ].some(existsSync);
   // Bun-compiled binaries may not expose process.report; absence alone does not mean musl.
-  const libc = process.env.AIDLC_LIBC?.trim().toLowerCase() ||
-    (os === "linux" && !report?.header?.glibcVersionRuntime && muslLoader ? "musl" : "glibc");
+  const libc =
+    process.env.AIDLC_LIBC?.trim().toLowerCase() ||
+    (os === "linux" && !report?.header?.glibcVersionRuntime && muslLoader
+      ? "musl"
+      : "glibc");
   return os + "-" + arch + (os === "linux" && libc === "musl" ? "-musl" : "");
 }
 
@@ -566,7 +700,14 @@ export function projectDirFrom(argv: readonly string[]): string {
   const options = delimiter < 0 ? argv : argv.slice(0, delimiter);
   const index = options.indexOf("--project-dir");
   const explicit = index >= 0 ? options[index + 1] : undefined;
-  const value = explicit || process.env.AIDLC_PROJECT_DIR ||
-    process.env.CLAUDE_PROJECT_DIR || process.env.KIRO_PROJECT_DIR;
-  return value ? (isAbsolute(value) ? value : resolve(process.cwd(), value)) : process.cwd();
+  const value =
+    explicit ||
+    process.env.AIDLC_PROJECT_DIR ||
+    process.env.CLAUDE_PROJECT_DIR ||
+    process.env.KIRO_PROJECT_DIR;
+  return value
+    ? isAbsolute(value)
+      ? value
+      : resolve(process.cwd(), value)
+    : process.cwd();
 }

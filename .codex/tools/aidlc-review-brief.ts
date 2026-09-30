@@ -33,10 +33,13 @@ import {
   toPosix,
 } from "./aidlc-lib.js";
 
-export { reviewFindingFingerprint, type ReviewFinding, type ReviewFindingStatus };
+export {
+  reviewFindingFingerprint,
+  type ReviewFinding,
+  type ReviewFindingStatus,
+};
 
-export const REVIEW_FINDING_DISPOSITIONS_FIELD =
-  "Review Finding Dispositions";
+export const REVIEW_FINDING_DISPOSITIONS_FIELD = "Review Finding Dispositions";
 
 export interface ReviewArtifactContext {
   artifact: string;
@@ -116,10 +119,7 @@ export function readReviewArtifactContexts(
     const scopeUnit = unit ?? entryUnit(entry.logicalPath, stage.slug);
     const ref = records.get(scopeUnit ?? "");
     if (!ref) continue;
-    const record = pairedReviewRecordForCompletion(
-      projectDir,
-      ref.completion,
-    );
+    const record = pairedReviewRecordForCompletion(projectDir, ref.completion);
     if (
       record === null ||
       record.stage !== stage.slug ||
@@ -168,7 +168,7 @@ export function serializeReviewFindingDispositions(
   const envelope: ReviewFindingDispositionEnvelope = {
     version: 1,
     dispositions: [...dispositions].sort((a, b) =>
-      dispositionKey(a).localeCompare(dispositionKey(b))
+      dispositionKey(a).localeCompare(dispositionKey(b)),
     ),
   };
   return JSON.stringify(envelope);
@@ -188,19 +188,19 @@ function parseDispositionField(
   if (envelope.version !== 1 || !Array.isArray(envelope.dispositions)) {
     return [];
   }
-  return envelope.dispositions.filter((entry): entry is ReviewFindingDisposition => {
-    if (!entry || typeof entry !== "object") return false;
-    const row = entry as Partial<ReviewFindingDisposition>;
-    return (
-      typeof row.artifact === "string" &&
-      /^R-[0-9]+$/.test(row.id ?? "") &&
-      /^sha256:[0-9a-f]{64}$/.test(row.fingerprint ?? "") &&
-      (
-        row.status === "Accepted risk" ||
-        /^Rejected: \S[\s\S]*$/.test(row.status ?? "")
-      )
-    );
-  });
+  return envelope.dispositions.filter(
+    (entry): entry is ReviewFindingDisposition => {
+      if (!entry || typeof entry !== "object") return false;
+      const row = entry as Partial<ReviewFindingDisposition>;
+      return (
+        typeof row.artifact === "string" &&
+        /^R-[0-9]+$/.test(row.id ?? "") &&
+        /^sha256:[0-9a-f]{64}$/.test(row.fingerprint ?? "") &&
+        (row.status === "Accepted risk" ||
+          /^Rejected: \S[\s\S]*$/.test(row.status ?? ""))
+      );
+    },
+  );
 }
 
 export function readReviewFindingDispositions(
@@ -227,7 +227,8 @@ export function readReviewFindingDispositions(
       return unit === undefined || eventUnit === null || eventUnit === unit;
     })
     .sort((a, b) => {
-      if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+      if (a.timestamp !== b.timestamp)
+        return a.timestamp < b.timestamp ? -1 : 1;
       if (a.shard === b.shard) return a.pos - b.pos;
       return a.shardIndex - b.shardIndex;
     });
@@ -246,11 +247,9 @@ export function readReviewFindingDispositions(
       Array<{ shard: string; value: ReviewFindingDisposition }>
     >();
     for (const event of events.slice(start, end)) {
-      for (
-        const disposition of parseDispositionField(
-          auditBlockField(event.block, REVIEW_FINDING_DISPOSITIONS_FIELD),
-        )
-      ) {
+      for (const disposition of parseDispositionField(
+        auditBlockField(event.block, REVIEW_FINDING_DISPOSITIONS_FIELD),
+      )) {
         const key = dispositionKey(disposition);
         const rows = group.get(key) ?? [];
         rows.push({ shard: event.shard, value: disposition });
@@ -272,8 +271,7 @@ export function readReviewFindingDispositions(
 }
 
 type ReviewDispositionStages =
-  | ReviewFingerprintStage
-  | ReviewFingerprintStage[];
+  ReviewFingerprintStage | ReviewFingerprintStage[];
 
 function dispositionStages(
   stages: ReviewDispositionStages,
@@ -309,23 +307,26 @@ export function acceptedRiskDispositionField(
     );
     return hydrated.flatMap((context) =>
       context.findings
-        .filter((finding) =>
-          finding.status === "New" || finding.status === "Unresolved"
+        .filter(
+          (finding) =>
+            finding.status === "New" || finding.status === "Unresolved",
         )
         .map((finding): ReviewFindingDisposition => ({
           artifact: finding.artifact,
           id: finding.id,
           fingerprint: finding.fingerprint,
           status: "Accepted risk",
-        }))
+        })),
     );
   });
   return serializeReviewFindingDispositions(dispositions);
 }
 
-function parseRejectedFindingSpec(
-  spec: string,
-): { artifact: string; id: string; reason: string } {
+function parseRejectedFindingSpec(spec: string): {
+  artifact: string;
+  id: string;
+  reason: string;
+} {
   const match = /^(.*)#(R-[0-9]+)=(\S[\s\S]*)$/.exec(spec.trim());
   if (!match) {
     throw new Error(
@@ -348,9 +349,10 @@ export function rejectedFindingDispositionField(
   if (specs.length === 0) return undefined;
   const stageList = dispositionStages(stages);
   if (!stageList.some((stage) => stage.reviewer)) {
-    const subject = stageList.length === 1
-      ? `stage "${stageList[0].slug}"`
-      : `gate "${stageList.map((stage) => stage.slug).join(",")}"`;
+    const subject =
+      stageList.length === 1
+        ? `stage "${stageList[0].slug}"`
+        : `gate "${stageList.map((stage) => stage.slug).join(",")}"`;
     throw new Error(
       `Cannot reject review findings for ${subject}: ` +
         `the ${stageList.length === 1 ? "stage" : "gate"} has no reviewer.`,
@@ -374,8 +376,9 @@ export function rejectedFindingDispositionField(
       );
     }
     seen.add(key);
-    const finding = findings.find((candidate) =>
-      candidate.artifact === spec.artifact && candidate.id === spec.id
+    const finding = findings.find(
+      (candidate) =>
+        candidate.artifact === spec.artifact && candidate.id === spec.id,
     );
     if (!finding) {
       throw new Error(
@@ -481,7 +484,10 @@ function changedUnitSourcePaths(
   }
 
   const paths = new Set<string>();
-  for (const key of new Set([...before.listing.keys(), ...after.listing.keys()])) {
+  for (const key of new Set([
+    ...before.listing.keys(),
+    ...after.listing.keys(),
+  ])) {
     if (before.listing.get(key) === after.listing.get(key)) continue;
     const display = sourcePathDisplay(key);
     if (display !== null) paths.add(display);
@@ -515,7 +521,7 @@ export function reviewInvalidationDetails(
 
   const currentArtifacts = new Set(
     (reviewArtifactEntries(projectDir, stage) ?? []).map((entry) =>
-      workspaceArtifactPath(projectDir, entry)
+      workspaceArtifactPath(projectDir, entry),
     ),
   );
   const currentReviews = new Set(
@@ -543,8 +549,7 @@ export function reviewInvalidationDetails(
       if (
         !inAttempt(event) ||
         !attemptEventAfterFrontier(reviewFrontier, event) ||
-        (before !== undefined &&
-          !attemptEventDefinitelyBefore(event, before))
+        (before !== undefined && !attemptEventDefinitelyBefore(event, before))
       ) {
         continue;
       }
@@ -598,12 +603,13 @@ export function reviewInvalidationDetails(
     }
     const unit = auditBlockField(event.block, "Unit") ?? undefined;
     const staleReviewFrontier = maximalAttemptEvents(
-      events.filter((candidate) =>
-        inAttempt(candidate) &&
-        candidate.event === "REVIEW_COMPLETED" &&
-        auditBlockField(candidate.block, "Stage") === stage.slug &&
-        (auditBlockField(candidate.block, "Unit") ?? undefined) === unit &&
-        attemptEventDefinitelyBefore(candidate, event)
+      events.filter(
+        (candidate) =>
+          inAttempt(candidate) &&
+          candidate.event === "REVIEW_COMPLETED" &&
+          auditBlockField(candidate.block, "Stage") === stage.slug &&
+          (auditBlockField(candidate.block, "Unit") ?? undefined) === unit &&
+          attemptEventDefinitelyBefore(candidate, event),
       ),
     );
     if (staleReviewFrontier.length === 0) continue;
@@ -615,10 +621,7 @@ export function reviewInvalidationDetails(
         projectDir,
         stage.slug,
         unit,
-        auditBlockField(
-          staleReview.block,
-          "Unit Source Fingerprint",
-        ),
+        auditBlockField(staleReview.block, "Unit Source Fingerprint"),
         auditBlockField(event.block, "Unit Source Fingerprint"),
       );
       for (const path of sourceChanges.paths) changedUpstream.add(path);
@@ -673,9 +676,8 @@ export function reviewInvalidationDetails(
   // A backward jump is itself an attempt boundary. Remove downstream paths
   // whose own stage gate has since consumed them, while preserving the changed
   // upstream source as context for stages that still require re-check.
-  const boundary = attemptFrontier.length === 1
-    ? attemptFrontier[0]
-    : undefined;
+  const boundary =
+    attemptFrontier.length === 1 ? attemptFrontier[0] : undefined;
   if (
     boundary?.event === "STAGE_JUMPED" &&
     auditBlockField(boundary.block, "Direction") === "BACKWARD"
@@ -692,10 +694,7 @@ export function reviewInvalidationDetails(
     const consumedArtifacts = new Set<string>();
     const consumedReviews = new Set<string>();
     for (const event of events) {
-      if (
-        event.event !== "GATE_APPROVED" &&
-        event.event !== "GATE_REJECTED"
-      ) {
+      if (event.event !== "GATE_APPROVED" && event.event !== "GATE_REJECTED") {
         continue;
       }
       // Consume paths only when the gate is causally proven after the jump.
@@ -707,17 +706,18 @@ export function reviewInvalidationDetails(
         ? findStageBySlug(consumedStageSlug)
         : undefined;
       if (!consumedStage) continue;
-      for (const entry of reviewArtifactEntries(projectDir, consumedStage) ?? []) {
+      for (const entry of reviewArtifactEntries(projectDir, consumedStage) ??
+        []) {
         const path = workspaceArtifactPath(projectDir, entry);
         consumedArtifacts.add(path);
         consumedReviews.add(`${path}#Review`);
       }
     }
-    const pendingArtifacts = jumpArtifacts.filter((path) =>
-      !consumedArtifacts.has(path)
+    const pendingArtifacts = jumpArtifacts.filter(
+      (path) => !consumedArtifacts.has(path),
     );
-    const pendingReviews = jumpReviews.filter((path) =>
-      !consumedReviews.has(path)
+    const pendingReviews = jumpReviews.filter(
+      (path) => !consumedReviews.has(path),
     );
     const relevant =
       jumpChanged.some((path) => currentArtifacts.has(path)) ||
@@ -761,11 +761,16 @@ export function acceptedReviewChanges(
     }
     const changed = auditBlockField(event.block, "Changed");
     accepted.push({
-      notice: auditBlockField(event.block, "Details") ?? "Reviewed content changed after it was reviewed.",
+      notice:
+        auditBlockField(event.block, "Details") ??
+        "Reviewed content changed after it was reviewed.",
       changed:
         changed === null || changed === "(paths unavailable)"
           ? null
-          : changed.split(", ").map((path) => path.trim()).filter((path) => path.length > 0),
+          : changed
+              .split(", ")
+              .map((path) => path.trim())
+              .filter((path) => path.length > 0),
     });
   }
   return accepted;
@@ -802,16 +807,18 @@ export function renderReviewBrief(
       fingerprint: "",
     };
     finding.fingerprint = reviewFindingFingerprint(finding);
-    contexts = [{
-      artifact,
-      ...(unit ? { unit } : {}),
-      verdict: "NOT-READY",
-      findings: [finding],
-    }];
+    contexts = [
+      {
+        artifact,
+        ...(unit ? { unit } : {}),
+        verdict: "NOT-READY",
+        findings: [finding],
+      },
+    ];
   }
   const findings = contexts.flatMap((context) => context.findings);
-  const open = findings.filter((finding) =>
-    finding.status === "New" || finding.status === "Unresolved"
+  const open = findings.filter(
+    (finding) => finding.status === "New" || finding.status === "Unresolved",
   );
   const outcome =
     open.length > 0
@@ -845,11 +852,7 @@ export function renderReviewBrief(
     }
   }
   if (reason === "stale") {
-    const invalidation = reviewInvalidationDetails(
-      projectDir,
-      stage,
-      contexts,
-    );
+    const invalidation = reviewInvalidationDetails(projectDir, stage, contexts);
     if (invalidation.changedUpstream.length > 0) {
       lines.push(
         `**Changed upstream:** ${invalidation.changedUpstream.map((path) => `\`${path}\``).join(", ")}`,
@@ -857,16 +860,16 @@ export function renderReviewBrief(
     }
     if (invalidation.invalidatedArtifacts.length > 0) {
       lines.push(
-        `**Downstream artifacts requiring re-check:** ${
-          invalidation.invalidatedArtifacts.map((path) => `\`${path}\``).join(", ")
-        }`,
+        `**Downstream artifacts requiring re-check:** ${invalidation.invalidatedArtifacts
+          .map((path) => `\`${path}\``)
+          .join(", ")}`,
       );
     }
     if (invalidation.invalidatedReviews.length > 0) {
       lines.push(
-        `**Downstream reviews requiring re-check:** ${
-          invalidation.invalidatedReviews.map((path) => `\`${path}\``).join(", ")
-        }`,
+        `**Downstream reviews requiring re-check:** ${invalidation.invalidatedReviews
+          .map((path) => `\`${path}\``)
+          .join(", ")}`,
       );
     }
   }
@@ -891,10 +894,8 @@ export function renderSummaryConfirmationBrief(
   const record = recordDir(projectDir);
   if (
     record === null ||
-    (
-      absoluteQuestions !== record &&
-      !absoluteQuestions.startsWith(`${record}${sep}`)
-    ) ||
+    (absoluteQuestions !== record &&
+      !absoluteQuestions.startsWith(`${record}${sep}`)) ||
     !existsSync(absoluteQuestions)
   ) {
     throw new Error(
@@ -902,12 +903,11 @@ export function renderSummaryConfirmationBrief(
     );
   }
   const entries = reviewArtifactEntries(projectDir, stage, unit) ?? [];
-  const artifacts = entries.map((entry) =>
-    `\`${workspaceArtifactPath(projectDir, entry)}\``
+  const artifacts = entries.map(
+    (entry) => `\`${workspaceArtifactPath(projectDir, entry)}\``,
   );
-  const generated = artifacts.length > 0
-    ? artifacts.join(", ")
-    : "the stage artifacts";
+  const generated =
+    artifacts.length > 0 ? artifacts.join(", ") : "the stage artifacts";
   const questions = toPosix(relative(projectDir, absoluteQuestions));
   return [
     `**Stage:** ${stage.name}`,
@@ -946,15 +946,13 @@ export function main(argv: string[]): void {
       throw new Error("Review brief requires --why <first|revision|stale>.");
     }
     process.stdout.write(
-      `${
-        renderReviewBrief(
-          projectDir,
-          stage,
-          reason,
-          flags.unit,
-          flags["fallback-finding"],
-        )
-      }\n`,
+      `${renderReviewBrief(
+        projectDir,
+        stage,
+        reason,
+        flags.unit,
+        flags["fallback-finding"],
+      )}\n`,
     );
     return;
   }
@@ -971,14 +969,12 @@ export function main(argv: string[]): void {
       throw new Error("Summary brief requires --questions-file <path>.");
     }
     process.stdout.write(
-      `${
-        renderSummaryConfirmationBrief(
-          projectDir,
-          stage,
-          flags["questions-file"],
-          flags.unit,
-        )
-      }\n`,
+      `${renderSummaryConfirmationBrief(
+        projectDir,
+        stage,
+        flags["questions-file"],
+        flags.unit,
+      )}\n`,
     );
     return;
   }

@@ -2,14 +2,7 @@
 // Offline builder for one authored AIDLC plugin and one target harness.
 
 import { existsSync } from "node:fs";
-import {
-  dirname,
-  isAbsolute,
-  join,
-  relative,
-  resolve,
-  sep,
-} from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   buildPluginProjection,
   readPluginTargets,
@@ -106,17 +99,10 @@ function writeResult(
   result: PluginValidationResult,
 ): void {
   if (json) {
-    process.stdout.write(
-      `${JSON.stringify(pluginValidationJson(result))}\n`,
-    );
+    process.stdout.write(`${JSON.stringify(pluginValidationJson(result))}\n`);
     return;
   }
-  const output = formatBuildResult(
-    pluginRoot,
-    harness,
-    outDir,
-    result,
-  );
+  const output = formatBuildResult(pluginRoot, harness, outDir, result);
   (result.valid ? process.stdout : process.stderr).write(output);
 }
 
@@ -138,25 +124,16 @@ export function main(argv: string[]): number {
 
   const [pluginRootArg, harness, outArg] = positional;
   const pluginRoot = resolve(pluginRootArg);
-  const outDir = outArg
-    ? resolve(outArg)
-    : join(pluginRoot, "dist", harness);
+  const outDir = outArg ? resolve(outArg) : join(pluginRoot, "dist", harness);
   const relativeToPlugin = relative(pluginRoot, outDir);
   const outputInsidePlugin =
     !isAbsolute(relativeToPlugin) &&
     relativeToPlugin !== ".." &&
     !relativeToPlugin.startsWith(`..${sep}`);
-  const outputBoundary =
-    !outArg || outputInsidePlugin ? pluginRoot : outDir;
+  const outputBoundary = !outArg || outputInsidePlugin ? pluginRoot : outDir;
   let validation = validatePluginRoot(pluginRoot);
   if (!validation.valid) {
-    writeResult(
-      jsonArgs.length === 1,
-      pluginRoot,
-      harness,
-      outDir,
-      validation,
-    );
+    writeResult(jsonArgs.length === 1, pluginRoot, harness, outDir, validation);
     return 1;
   }
 
@@ -169,13 +146,7 @@ export function main(argv: string[]): number {
       `bundled plugin target table is missing at ${targetsPath}`,
       "Reinstall the AIDLC tools bundle.",
     );
-    writeResult(
-      jsonArgs.length === 1,
-      pluginRoot,
-      harness,
-      outDir,
-      validation,
-    );
+    writeResult(jsonArgs.length === 1, pluginRoot, harness, outDir, validation);
     return 1;
   }
   const targets = readPluginTargets(targetsPath);
@@ -194,10 +165,7 @@ export function main(argv: string[]): number {
       outDir,
       outputBoundary,
       templateHooksDir: dirname(
-        join(
-          bundledPluginHookTemplatesDir(),
-          "compose.ts",
-        ),
+        join(bundledPluginHookTemplatesDir(), "compose.ts"),
       ),
     });
   } catch (error) {
@@ -210,13 +178,7 @@ export function main(argv: string[]): number {
     );
   }
 
-  writeResult(
-    jsonArgs.length === 1,
-    pluginRoot,
-    harness,
-    outDir,
-    validation,
-  );
+  writeResult(jsonArgs.length === 1, pluginRoot, harness, outDir, validation);
   return validation.valid ? 0 : 1;
 }
 

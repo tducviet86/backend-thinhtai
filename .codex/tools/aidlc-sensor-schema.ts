@@ -54,7 +54,7 @@ const REQUIRED_FIELDS = [
 // body. Throws when frontmatter is missing or malformed. Strips a UTF-8 BOM
 // before matching so editors that add one don't silently drop the manifest.
 export function parseSensorManifest(raw: string): SensorManifest {
-  const cleaned = raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw;
+  const cleaned = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
   const m = cleaned.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) {
     throw new Error("Sensor manifest missing YAML frontmatter (---...---)");
@@ -167,7 +167,10 @@ export function validateSensorManifest(
   // at runtime (catches edge cases where parseSensorManifest emits empty
   // string for a field rather than the typed shape).
   // type-coverage:ignore-next-line — typed-to-record widening for runtime field iteration
-  const objAsRecord: Record<string, unknown> = obj as unknown as Record<string, unknown>;
+  const objAsRecord: Record<string, unknown> = obj as unknown as Record<
+    string,
+    unknown
+  >;
   for (const field of REQUIRED_FIELDS) {
     if (!(field in obj) || objAsRecord[field] === undefined) {
       throw new Error(`${file}: missing required field: ${field}`);
@@ -190,12 +193,7 @@ export function validateSensorManifest(
     "other kinds reserved for future releases",
   );
   requireNonEmptyString(obj, "command", file);
-  requireEnumValue(
-    obj,
-    "default_severity",
-    ["advisory", "blocking"],
-    file,
-  );
+  requireEnumValue(obj, "default_severity", ["advisory", "blocking"], file);
   requireEnumValue(obj, "fire_on", ["write", "gate"], file);
   requireNonEmptyString(obj, "description", file);
 

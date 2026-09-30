@@ -22,10 +22,7 @@ import {
   stateFilePathForSelection,
   validSessionId,
 } from "../tools/aidlc-lib.ts";
-import {
-  type GraphStage,
-  loadGraph,
-} from "../tools/aidlc-graph.ts";
+import { type GraphStage, loadGraph } from "../tools/aidlc-graph.ts";
 import {
   type RuleContent,
   resolvedRuleBundle,
@@ -65,7 +62,9 @@ function currentStage(projectDir: string): string | null {
   const path = stateFilePath(projectDir);
   if (!existsSync(path)) return null;
   try {
-    return getField(readFileSync(path, "utf-8"), "Current Stage")?.trim() || null;
+    return (
+      getField(readFileSync(path, "utf-8"), "Current Stage")?.trim() || null
+    );
   } catch {
     return null;
   }
@@ -82,7 +81,10 @@ function currentStage(projectDir: string): string | null {
 // 3. A unique slug mention in the brief - last resort for stateless contexts
 //    (single-stage runner before state exists). Ambiguous mentions bind
 //    nothing.
-function promptStage(prompt: string, fallback: string | null): GraphStage | null {
+function promptStage(
+  prompt: string,
+  fallback: string | null,
+): GraphStage | null {
   const graph = loadGraph();
   const bySlug = new Map(graph.map((node) => [node.slug, node]));
   const stagePath = prompt.match(
@@ -166,7 +168,7 @@ function promptText(input: Record<string, unknown>): string {
         "text" in item &&
         typeof item.text === "string"
           ? item.text
-          : ""
+          : "",
       )
       .join("\n");
   }
@@ -199,10 +201,7 @@ function augmentSingleDispatch(
   fallbackStage: string | null,
 ): DispatchRuleResult {
   const agent =
-    input.subagent_type ??
-    input.agent_type ??
-    input.agent ??
-    input.role;
+    input.subagent_type ?? input.agent_type ?? input.agent ?? input.role;
   if (!isAidlcAgent(agent)) return { changed: false };
   const original = promptText(input);
   if (!original) return { changed: false };
@@ -235,7 +234,10 @@ export function augmentDispatchRules(
       continue;
     }
     const entry = stage as Record<string, unknown>;
-    if (!isAidlcAgent(entry.role) || typeof entry.prompt_template !== "string") {
+    if (
+      !isAidlcAgent(entry.role) ||
+      typeof entry.prompt_template !== "string"
+    ) {
       updatedStages.push(stage);
       continue;
     }
@@ -327,11 +329,11 @@ export async function run(input: string): Promise<number> {
     return 0;
   }
   const output = `${JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        updatedInput: result.updatedInput,
-      },
-    })}\n`;
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      updatedInput: result.updatedInput,
+    },
+  })}\n`;
   const outputBytes = Buffer.byteLength(output, "utf-8");
   if (outputBytes > DISPATCH_HOOK_OUTPUT_MAX_BYTES) {
     if (process.env[PRELOAD_FALLBACK_ENV] === "1") {

@@ -175,6 +175,7 @@ file. The lead alone updates the four declared artifacts:
    before implementation with lower-level unit tests after implementation).
    Keep coverage, tooling, test-type, and scope notes as additional bullets;
    they do not replace the two structured fields.
+
 2. **discovered-rules.md** - `## Mandated` rules in `ALWAYS ...` form and
    `## Forbidden` rules in `NEVER ...` form, only for human-stated hard
    constraints.
@@ -198,7 +199,7 @@ Run the section 13 learnings ritual only when `directive.protocol_modules` lists
 
 1. Open the gate before the question:
    `aidlc engine orchestrate report --stage
-   practices-discovery --result awaiting-approval`.
+practices-discovery --result awaiting-approval`.
 2. Do not log the affirmation gate with `aidlc-log.ts decision` or
    `aidlc-log.ts answer`; the lifecycle `report` calls own its audit events.
 3. Present `team-practices.md` and `discovered-rules.md` with two options:
@@ -210,7 +211,7 @@ Run the section 13 learnings ritual only when `directive.protocol_modules` lists
 5. Carry the exact answer only into the matching `report` or promotion path
    below; never call `aidlc-log.ts answer` for this gate.
 6. On Request Changes, report `--result rejected --user-input "Request Changes"
-   --reason "<feedback>"`,
+--reason "<feedback>"`,
    revise through the lead (and re-run a support only when its evidence must be
    refreshed), then report `--result revised` before re-presenting the gate.
    A rejection invalidates any earlier promotion receipt: the engine refuses
@@ -253,7 +254,7 @@ After Step 7 prints `{"emitted":"PRACTICES_AFFIRMED",...}` and exits 0:
 1. Do not emit `PRACTICES_AFFIRMED` again.
 2. Commit the held approval:
    `aidlc engine orchestrate report --stage
-   practices-discovery --result approved --user-input "Approve"`.
+practices-discovery --result approved --user-input "Approve"`.
 
 Use the stage-protocol.md completion template:
 

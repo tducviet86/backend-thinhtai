@@ -1,12 +1,7 @@
 // Status line: Display aidlc workflow position in the terminal status area
 // Registered via statusLine setting in settings.json
 // Invoked via: aidlc engine statusline
-import {
-  existsSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-} from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,7 +81,7 @@ function listIntentDirs(projectDir: string, space: string): string[] {
   try {
     return readdirSync(intentsDir(projectDir, space))
       .filter((name) =>
-        existsSync(join(intentsDir(projectDir, space), name, "aidlc-state.md"))
+        existsSync(join(intentsDir(projectDir, space), name, "aidlc-state.md")),
       )
       .sort();
   } catch {
@@ -121,7 +116,8 @@ function activeIntent(
       value &&
       existsSync(join(root, value, "aidlc-state.md")) &&
       !intentIsArchived(projectDir, space, value)
-    ) return value;
+    )
+      return value;
   } catch {
     // Fall through to the lone-record rule.
   }
@@ -210,9 +206,10 @@ function stateFilePathForSelection(
   projectDir: string,
   selection: StatuslineSelection,
 ): string {
-  const root = selection.intent === null
-    ? intentsDir(projectDir, selection.space)
-    : join(intentsDir(projectDir, selection.space), selection.intent);
+  const root =
+    selection.intent === null
+      ? intentsDir(projectDir, selection.space)
+      : join(intentsDir(projectDir, selection.space), selection.intent);
   return join(root, "aidlc-state.md");
 }
 
@@ -232,7 +229,8 @@ function listSpaces(projectDir: string): string[] {
 
 function recordDirMatches(row: IntentRow, dirName: string): boolean {
   if (typeof row.dirName === "string") return row.dirName === dirName;
-  if (typeof row.slug !== "string" || typeof row.uuid !== "string") return false;
+  if (typeof row.slug !== "string" || typeof row.uuid !== "string")
+    return false;
   const id = row.uuid.replace(/-/g, "").slice(-16);
   return dirName === `${row.slug}-${id}`;
 }
@@ -250,7 +248,10 @@ function listIntents(
   let rows: IntentRow[] = [];
   try {
     const parsed = JSON.parse(
-      readFileSync(join(intentsDir(projectDir, space), "intents.json"), "utf-8"),
+      readFileSync(
+        join(intentsDir(projectDir, space), "intents.json"),
+        "utf-8",
+      ),
     );
     if (Array.isArray(parsed)) rows = parsed;
   } catch {
@@ -261,11 +262,12 @@ function listIntents(
     const dirName = dirs.find((dir) => recordDirMatches(row, dir)) ?? null;
     if (dirName) claimed.add(dirName);
     return {
-      slug: typeof row.slug === "string"
-        ? row.slug
-        : dirName
-        ? displaySlugFromDirName(dirName)
-        : "",
+      slug:
+        typeof row.slug === "string"
+          ? row.slug
+          : dirName
+            ? displaySlugFromDirName(dirName)
+            : "",
       dirName,
     };
   });
@@ -297,8 +299,9 @@ function agentsDir(projectDir: string): string | null {
 
 function frontmatterScalar(body: string, key: string): string {
   const frontmatter = body.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "";
-  return new RegExp(`^${key}:\\s*(.+)$`, "m").exec(frontmatter)?.[1].trim() ??
-    "";
+  return (
+    new RegExp(`^${key}:\\s*(.+)$`, "m").exec(frontmatter)?.[1].trim() ?? ""
+  );
 }
 
 function loadAgentDisplayMap(projectDir: string): Record<string, string> {
@@ -306,7 +309,9 @@ function loadAgentDisplayMap(projectDir: string): Record<string, string> {
   if (!dir) return {};
   const map: Record<string, string> = {};
   try {
-    for (const file of readdirSync(dir).filter((name) => name.endsWith(".md"))) {
+    for (const file of readdirSync(dir).filter((name) =>
+      name.endsWith(".md"),
+    )) {
       const body = readFileSync(join(dir, file), "utf-8");
       const name = frontmatterScalar(body, "name");
       const display = frontmatterScalar(body, "display_name");
@@ -412,12 +417,18 @@ function extractField(text: string, label: string): string {
   // the label (e.g. "> The Lifecycle Phase: OPERATION was added in v2.") from
   // hijacking the displayed value.
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`^-\\s*\\*\\*${escaped}\\*\\*:[^\\S\\n]*([^\\n]*)`, "m");
+  const re = new RegExp(
+    `^-\\s*\\*\\*${escaped}\\*\\*:[^\\S\\n]*([^\\n]*)`,
+    "m",
+  );
   const m = text.match(re);
   return m ? m[1].replace(/\r$/, "").trim() : "";
 }
 
-function phaseProgress(text: string, phase: string): { done: number; total: number } {
+function phaseProgress(
+  text: string,
+  phase: string,
+): { done: number; total: number } {
   if (!phase) return { done: 0, total: 0 };
   // Normalize: take the first whitespace-delimited token and uppercase it, so
   // values like "INCEPTION (finalizing)" or mixed-case headings still match.
@@ -428,7 +439,10 @@ function phaseProgress(text: string, phase: string): { done: number; total: numb
   let total = 0;
   let done = 0;
   for (const line of lines) {
-    if (line.startsWith("### ") && line.toUpperCase().includes(`${phaseToken} PHASE`)) {
+    if (
+      line.startsWith("### ") &&
+      line.toUpperCase().includes(`${phaseToken} PHASE`)
+    ) {
       inPhase = true;
       continue;
     }
@@ -494,9 +508,8 @@ export function costSegment(
     );
     if (!existsSync(ledger)) return "";
     const require = createRequire(import.meta.url);
-    const { sessionUsageAggregate } = require(
-      "../tools/aidlc-usage.ts",
-    ) as typeof import("../tools/aidlc-usage.ts");
+    const { sessionUsageAggregate } =
+      require("../tools/aidlc-usage.ts") as typeof import("../tools/aidlc-usage.ts");
     const t = sessionUsageAggregate(
       projectDir,
       transcriptPath,
@@ -567,7 +580,10 @@ function orientationPrefix(projectDir: string, sessionId?: string): string {
   return `${segments.join(" · ")} · `;
 }
 
-function printLine(left: string, right: { plain: string; formatted: string }): void {
+function printLine(
+  left: string,
+  right: { plain: string; formatted: string },
+): void {
   if (!right.formatted) {
     process.stdout.write(`${left}\n`);
     return;
@@ -599,7 +615,9 @@ async function main(stdinText: string): Promise<void> {
   );
   const sessionId = validSessionId(input.session_id) ?? undefined;
   const modelShort = abbreviateModel(input.model?.id ?? "");
-  const ctxRaw = input.model?.id ? input.context_window?.used_percentage : undefined;
+  const ctxRaw = input.model?.id
+    ? input.context_window?.used_percentage
+    : undefined;
   const ctxInt = typeof ctxRaw === "number" ? Math.round(ctxRaw) : null;
   const cost = costSegment(projectDir, input.transcript_path, sessionId);
   const right = buildRightSide(modelShort, ctxInt, cost);

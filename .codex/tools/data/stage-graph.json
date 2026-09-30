@@ -56,9 +56,7 @@
     "mode": "inline",
     "produces": [],
     "consumes": [],
-    "requires_stage": [
-      "workspace-scaffold"
-    ],
+    "requires_stage": ["workspace-scaffold"],
     "sensors": [],
     "scopes": [
       "enterprise",
@@ -103,9 +101,7 @@
     "mode": "inline",
     "produces": [],
     "consumes": [],
-    "requires_stage": [
-      "workspace-detection"
-    ],
+    "requires_stage": ["workspace-detection"],
     "sensors": [],
     "scopes": [
       "enterprise",
@@ -146,9 +142,7 @@
     "execution": "ALWAYS",
     "condition": "First stage of every workflow — establishes the initiative's foundation",
     "lead_agent": "aidlc-product-agent",
-    "support_agents": [
-      "aidlc-architect-agent"
-    ],
+    "support_agents": ["aidlc-architect-agent"],
     "mode": "inline",
     "produces": [
       "intent-statement",
@@ -157,17 +151,8 @@
     ],
     "consumes": [],
     "requires_stage": [],
-    "sensors": [
-      "claim-sources",
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "poc"
-    ],
+    "sensors": ["claim-sources", "required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "mvp", "poc"],
     "reviewer": "aidlc-product-lead-agent",
     "review_artifact": "intent-statement",
     "reviewer_max_iterations": 2,
@@ -242,17 +227,9 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "intent-capture"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature"
-    ],
+    "requires_stage": ["intent-capture"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature"],
     "summary_confirmation": "required",
     "inputs": "Intent statement from intent-capture stage",
     "outputs": "competitive-analysis.md, market-trends.md, build-vs-buy.md, market-research-questions.md (under this stage's record dir, engine-resolved)",
@@ -301,10 +278,7 @@
     "execution": "CONDITIONAL",
     "condition": "Execute when there are integration constraints, regulatory requirements, or significant technical uncertainty. Skip for trivial changes with no technical risk.",
     "lead_agent": "aidlc-architect-agent",
-    "support_agents": [
-      "aidlc-aws-platform-agent",
-      "aidlc-compliance-agent"
-    ],
+    "support_agents": ["aidlc-aws-platform-agent", "aidlc-compliance-agent"],
     "mode": "inline",
     "produces": [
       "feasibility-assessment",
@@ -330,19 +304,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "intent-capture",
-      "market-research"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp"
-    ],
+    "requires_stage": ["intent-capture", "market-research"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "mvp"],
     "summary_confirmation": "required",
     "inputs": "Intent statement from intent-capture stage, market research from market-research stage (if executed)",
     "outputs": "feasibility-assessment.md, constraint-register.md, raid-log.md, feasibility-questions.md (under this stage's record dir, engine-resolved)",
@@ -391,9 +355,7 @@
     "execution": "ALWAYS",
     "condition": "Always executes — defines the scope boundary and prioritized backlog",
     "lead_agent": "aidlc-product-agent",
-    "support_agents": [
-      "aidlc-delivery-agent"
-    ],
+    "support_agents": ["aidlc-delivery-agent"],
     "mode": "inline",
     "produces": [
       "scope-document",
@@ -414,19 +376,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "intent-capture",
-      "feasibility"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp"
-    ],
+    "requires_stage": ["intent-capture", "feasibility"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "mvp"],
     "summary_confirmation": "required",
     "inputs": "Intent statement, feasibility assessment, constraint register",
     "outputs": "scope-document.md, intent-backlog.md, scope-definition-questions.md (under this stage's record dir, engine-resolved)",
@@ -497,17 +449,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "scope-definition"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature"
-    ],
+    "requires_stage": ["scope-definition"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature"],
     "summary_confirmation": "required",
     "inputs": "Scope definition, intent backlog, feasibility assessment",
     "outputs": "team-assessment.md, skill-matrix.md, mob-composition.md, team-formation-questions.md (under this stage's record dir, engine-resolved)",
@@ -556,15 +500,9 @@
     "execution": "CONDITIONAL",
     "condition": "Execute when user-facing UI is part of the initiative; for API/backend, produce system interaction diagrams. Skip for non-UI, API-only, or infrastructure-only initiatives.",
     "lead_agent": "aidlc-design-agent",
-    "support_agents": [
-      "aidlc-product-agent"
-    ],
+    "support_agents": ["aidlc-product-agent"],
     "mode": "inline",
-    "produces": [
-      "wireframes",
-      "user-flow",
-      "rough-mockups-questions"
-    ],
+    "produces": ["wireframes", "user-flow", "rough-mockups-questions"],
     "consumes": [
       {
         "artifact": "intent-statement",
@@ -579,19 +517,9 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "scope-definition",
-      "team-formation"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp"
-    ],
+    "requires_stage": ["scope-definition", "team-formation"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "mvp"],
     "reviewer": "aidlc-product-lead-agent",
     "review_artifact": "wireframes",
     "reviewer_max_iterations": 2,
@@ -644,9 +572,7 @@
     "execution": "ALWAYS",
     "condition": "Always executes — compiles all Ideation artifacts into initiative brief for approval",
     "lead_agent": "aidlc-delivery-agent",
-    "support_agents": [
-      "aidlc-product-agent"
-    ],
+    "support_agents": ["aidlc-product-agent"],
     "mode": "inline",
     "produces": [
       "initiative-brief",
@@ -698,14 +624,8 @@
       "team-formation",
       "rough-mockups"
     ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature"
-    ],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature"],
     "summary_confirmation": "required",
     "inputs": "All Ideation phase artifacts (intent, market research, feasibility, scope, team, mockups)",
     "outputs": "initiative-brief.md, decision-log.md, approval-handoff-questions.md (under this stage's record dir, engine-resolved)",
@@ -754,9 +674,7 @@
     "execution": "CONDITIONAL",
     "condition": "Execute when project is brownfield. On rerun the Step 1 guard checks store freshness (codekb-scope-diff) - verified-CURRENT stores may be reused by human choice, anything else rescans. Skip for greenfield projects.",
     "lead_agent": "aidlc-developer-agent",
-    "support_agents": [
-      "aidlc-architect-agent"
-    ],
+    "support_agents": ["aidlc-architect-agent"],
     "mode": "pipeline",
     "produces": [
       "business-overview",
@@ -770,13 +688,8 @@
       "reverse-engineering-timestamp"
     ],
     "consumes": [],
-    "requires_stage": [
-      "state-init"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
+    "requires_stage": ["state-init"],
+    "sensors": ["required-sections", "upstream-coverage"],
     "scopes": [
       "enterprise",
       "feature",
@@ -880,22 +793,9 @@
         "conditional_on": "brownfield"
       }
     ],
-    "requires_stage": [
-      "state-init",
-      "reverse-engineering"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "infra",
-      "classic",
-      "workshop"
-    ],
+    "requires_stage": ["state-init", "reverse-engineering"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "mvp", "infra", "classic", "workshop"],
     "summary_confirmation": "required",
     "inputs": "<record>/aidlc-state.md + (brownfield) reverse-engineering evidence",
     "outputs": "team-practices.md, discovered-rules.md, evidence.md, practices-discovery-timestamp.md, plus one contribution file per support agent. On affirmation, content is promoted to aidlc/spaces/<active-space>/memory/team.md and project.md.",
@@ -946,10 +846,7 @@
     "lead_agent": "aidlc-product-agent",
     "support_agents": [],
     "mode": "inline",
-    "produces": [
-      "requirements",
-      "requirements-analysis-questions"
-    ],
+    "produces": ["requirements", "requirements-analysis-questions"],
     "consumes": [
       {
         "artifact": "intent-statement",
@@ -979,14 +876,8 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "approval-handoff",
-      "reverse-engineering"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
+    "requires_stage": ["approval-handoff", "reverse-engineering"],
+    "sensors": ["required-sections", "upstream-coverage"],
     "scopes": [
       "enterprise",
       "feature",
@@ -1084,21 +975,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "requirements-analysis"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage",
-      "traceability"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "classic",
-      "workshop"
-    ],
+    "requires_stage": ["requirements-analysis"],
+    "sensors": ["required-sections", "upstream-coverage", "traceability"],
+    "scopes": ["enterprise", "feature", "mvp", "classic", "workshop"],
     "reviewer": "aidlc-product-lead-agent",
     "review_artifact": "stories",
     "reviewer_max_iterations": 2,
@@ -1159,9 +1038,7 @@
     "execution": "CONDITIONAL",
     "condition": "Execute when user-facing UI exists and rough mockups were produced in Ideation; for APIs, refine interaction diagrams",
     "lead_agent": "aidlc-design-agent",
-    "support_agents": [
-      "aidlc-product-agent"
-    ],
+    "support_agents": ["aidlc-product-agent"],
     "mode": "inline",
     "produces": [
       "mockups",
@@ -1192,20 +1069,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "user-stories"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "classic",
-      "workshop"
-    ],
+    "requires_stage": ["user-stories"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "mvp", "classic", "workshop"],
     "reviewer": "aidlc-product-lead-agent",
     "review_artifact": "mockups",
     "reviewer_max_iterations": 2,
@@ -1258,16 +1124,9 @@
     "execution": "CONDITIONAL",
     "condition": "Execute when new components or logical building blocks are needed. Skip when changes are modifications to existing components only.",
     "lead_agent": "aidlc-architect-agent",
-    "support_agents": [
-      "aidlc-aws-platform-agent",
-      "aidlc-design-agent"
-    ],
+    "support_agents": ["aidlc-aws-platform-agent", "aidlc-design-agent"],
     "mode": "inline",
-    "produces": [
-      "components",
-      "decisions",
-      "traceability"
-    ],
+    "produces": ["components", "decisions", "traceability"],
     "consumes": [
       {
         "artifact": "requirements",
@@ -1292,22 +1151,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "requirements-analysis",
-      "refined-mockups"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage",
-      "traceability"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "classic",
-      "workshop"
-    ],
+    "requires_stage": ["requirements-analysis", "refined-mockups"],
+    "sensors": ["required-sections", "upstream-coverage", "traceability"],
+    "scopes": ["enterprise", "feature", "mvp", "classic", "workshop"],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "components",
     "reviewer_max_iterations": 2,
@@ -1368,9 +1214,7 @@
     "execution": "ALWAYS",
     "condition": "Always executes when in scope. Produces the dependency DAG that Stage 2.9 Delivery Planning consumes for Bolt sequencing. In the compiled scope grid, 2.7 (Units Generation) and 2.9 (Delivery Planning) travel together — both EXECUTE or both SKIP per scope.",
     "lead_agent": "aidlc-architect-agent",
-    "support_agents": [
-      "aidlc-delivery-agent"
-    ],
+    "support_agents": ["aidlc-delivery-agent"],
     "mode": "inline",
     "produces": [
       "unit-of-work",
@@ -1396,21 +1240,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "domain-design"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage",
-      "traceability"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "classic",
-      "workshop"
-    ],
+    "requires_stage": ["domain-design"],
+    "sensors": ["required-sections", "upstream-coverage", "traceability"],
+    "scopes": ["enterprise", "feature", "mvp", "classic", "workshop"],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "unit-of-work",
     "reviewer_max_iterations": 2,
@@ -1471,13 +1303,9 @@
     "execution": "CONDITIONAL",
     "condition": "Execute when the system has any formal contract to pin down — an inter-unit boundary (more than one unit that must integrate) OR a unit that exposes a public/external API consumed outside the system. Skip only for a single self-contained unit with no inter-unit boundaries and no externally consumed API.",
     "lead_agent": "aidlc-architect-agent",
-    "support_agents": [
-      "aidlc-aws-platform-agent"
-    ],
+    "support_agents": ["aidlc-aws-platform-agent"],
     "mode": "inline",
-    "produces": [
-      "contract-summary"
-    ],
+    "produces": ["contract-summary"],
     "consumes": [
       {
         "artifact": "unit-of-work",
@@ -1496,20 +1324,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "units-generation"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "classic",
-      "workshop"
-    ],
+    "requires_stage": ["units-generation"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "mvp", "classic", "workshop"],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "contract-summary",
     "reviewer_max_iterations": 2,
@@ -1562,9 +1379,7 @@
     "execution": "ALWAYS",
     "condition": "Always executes — capstone Inception stage, produces the detailed execution plan for Construction and Operation",
     "lead_agent": "aidlc-delivery-agent",
-    "support_agents": [
-      "aidlc-architect-agent"
-    ],
+    "support_agents": ["aidlc-architect-agent"],
     "mode": "inline",
     "produces": [
       "bolt-plan",
@@ -1611,20 +1426,9 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "units-generation"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "classic",
-      "workshop"
-    ],
+    "requires_stage": ["units-generation"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "mvp", "classic", "workshop"],
     "summary_confirmation": "required",
     "inputs": "All Inception artifacts (requirements, stories, mockups, architecture, units)",
     "outputs": "bolt-plan.md, team-allocation.md, risk-and-sequencing-rationale.md, external-dependency-map.md, delivery-planning-questions.md (under this stage's record dir, engine-resolved)",
@@ -1673,46 +1477,17 @@
     "execution": "CONDITIONAL",
     "condition": "New data models, complex business logic, or business rules need design. Skip if simple logic changes with no new business logic.",
     "lead_agent": "aidlc-architect-agent",
-    "support_agents": [
-      "aidlc-developer-agent"
-    ],
+    "support_agents": ["aidlc-developer-agent"],
     "mode": "inline",
     "for_each": "unit-of-work",
-    "produces": [
-      "entities",
-      "rules",
-      "functional-spec",
-      "traceability"
-    ],
-    "optional_produces": [
-      "frontend-components"
-    ],
+    "produces": ["entities", "rules", "functional-spec", "traceability"],
+    "optional_produces": ["frontend-components"],
     "produces_kinds": {
-      "entities": [
-        "service",
-        "spec",
-        "library"
-      ],
-      "rules": [
-        "service",
-        "spec",
-        "library"
-      ],
-      "functional-spec": [
-        "service",
-        "spec",
-        "ui",
-        "library"
-      ],
-      "traceability": [
-        "service",
-        "spec",
-        "ui",
-        "library"
-      ],
-      "frontend-components": [
-        "ui"
-      ]
+      "entities": ["service", "spec", "library"],
+      "rules": ["service", "spec", "library"],
+      "functional-spec": ["service", "spec", "ui", "library"],
+      "traceability": ["service", "spec", "ui", "library"],
+      "frontend-components": ["ui"]
     },
     "consumes": [
       {
@@ -1736,10 +1511,7 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "units-generation",
-      "contract-design"
-    ],
+    "requires_stage": ["units-generation", "contract-design"],
     "sensors": [
       "required-sections",
       "upstream-coverage",
@@ -1848,19 +1620,10 @@
       "traceability"
     ],
     "produces_kinds": {
-      "performance-requirements": [
-        "service",
-        "ui"
-      ],
-      "scalability-requirements": [
-        "service"
-      ],
-      "reliability-requirements": [
-        "service"
-      ],
-      "observability-requirements": [
-        "service"
-      ]
+      "performance-requirements": ["service", "ui"],
+      "scalability-requirements": ["service"],
+      "reliability-requirements": ["service"],
+      "observability-requirements": ["service"]
     },
     "consumes": [
       {
@@ -1885,10 +1648,7 @@
         "conditional_on": "brownfield"
       }
     ],
-    "requires_stage": [
-      "units-generation",
-      "functional-design"
-    ],
+    "requires_stage": ["units-generation", "functional-design"],
     "sensors": [
       "required-sections",
       "upstream-coverage",
@@ -1981,9 +1741,7 @@
     "execution": "CONDITIONAL",
     "condition": "NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped.",
     "lead_agent": "aidlc-architect-agent",
-    "support_agents": [
-      "aidlc-aws-platform-agent"
-    ],
+    "support_agents": ["aidlc-aws-platform-agent"],
     "mode": "inline",
     "for_each": "unit-of-work",
     "produces": [
@@ -1996,24 +1754,11 @@
       "traceability"
     ],
     "produces_kinds": {
-      "performance-design": [
-        "service",
-        "ui"
-      ],
-      "scalability-design": [
-        "service"
-      ],
-      "reliability-design": [
-        "service"
-      ],
-      "observability-design": [
-        "service"
-      ],
-      "logical-components": [
-        "service",
-        "ui",
-        "library"
-      ]
+      "performance-design": ["service", "ui"],
+      "scalability-design": ["service"],
+      "reliability-design": ["service"],
+      "observability-design": ["service"],
+      "logical-components": ["service", "ui", "library"]
     },
     "consumes": [
       {
@@ -2049,10 +1794,7 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "units-generation",
-      "nfr-requirements"
-    ],
+    "requires_stage": ["units-generation", "nfr-requirements"],
     "sensors": [
       "required-sections",
       "upstream-coverage",
@@ -2060,14 +1802,7 @@
       "type-check",
       "traceability"
     ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "infra",
-      "classic",
-      "workshop"
-    ],
+    "scopes": ["enterprise", "feature", "mvp", "infra", "classic", "workshop"],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "security-design",
     "reviewer_max_iterations": 2,
@@ -2144,10 +1879,7 @@
     "execution": "CONDITIONAL",
     "condition": "Infrastructure services need mapping, deployment architecture required, or cloud resources needed. Skip if no infrastructure changes and infrastructure already defined.",
     "lead_agent": "aidlc-aws-platform-agent",
-    "support_agents": [
-      "aidlc-devsecops-agent",
-      "aidlc-compliance-agent"
-    ],
+    "support_agents": ["aidlc-devsecops-agent", "aidlc-compliance-agent"],
     "mode": "inline",
     "for_each": "unit-of-work",
     "produces": [
@@ -2157,28 +1889,10 @@
       "traceability"
     ],
     "produces_kinds": {
-      "infrastructure-specification": [
-        "service",
-        "ui",
-        "packaging"
-      ],
-      "monitoring-design": [
-        "service",
-        "ui",
-        "packaging"
-      ],
-      "cicd-pipeline": [
-        "service",
-        "ui",
-        "packaging",
-        "library"
-      ],
-      "traceability": [
-        "service",
-        "ui",
-        "packaging",
-        "library"
-      ]
+      "infrastructure-specification": ["service", "ui", "packaging"],
+      "monitoring-design": ["service", "ui", "packaging"],
+      "cicd-pipeline": ["service", "ui", "packaging", "library"],
+      "traceability": ["service", "ui", "packaging", "library"]
     },
     "consumes": [
       {
@@ -2218,10 +1932,7 @@
         "required": false
       }
     ],
-    "requires_stage": [
-      "units-generation",
-      "nfr-design"
-    ],
+    "requires_stage": ["units-generation", "nfr-design"],
     "sensors": [
       "required-sections",
       "upstream-coverage",
@@ -2229,14 +1940,7 @@
       "type-check",
       "traceability"
     ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "infra",
-      "classic",
-      "workshop"
-    ],
+    "scopes": ["enterprise", "feature", "mvp", "infra", "classic", "workshop"],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "cicd-pipeline",
     "reviewer_max_iterations": 2,
@@ -2368,12 +2072,7 @@
       "nfr-design",
       "infrastructure-design"
     ],
-    "sensors": [
-      "required-sections",
-      "linter",
-      "type-check",
-      "traceability"
-    ],
+    "sensors": ["required-sections", "linter", "type-check", "traceability"],
     "scopes": [
       "enterprise",
       "feature",
@@ -2453,9 +2152,7 @@
     "execution": "ALWAYS",
     "condition": "Always executes once after all per-unit stages are finished.",
     "lead_agent": "aidlc-quality-agent",
-    "support_agents": [
-      "aidlc-devsecops-agent"
-    ],
+    "support_agents": ["aidlc-devsecops-agent"],
     "mode": "inline",
     "produces": [
       "build-instructions",
@@ -2480,14 +2177,8 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "code-generation"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage",
-      "type-check"
-    ],
+    "requires_stage": ["code-generation"],
+    "sensors": ["required-sections", "upstream-coverage", "type-check"],
     "scopes": [
       "enterprise",
       "feature",
@@ -2557,11 +2248,7 @@
     "lead_agent": "aidlc-pipeline-deploy-agent",
     "support_agents": [],
     "mode": "inline",
-    "produces": [
-      "ci-config",
-      "quality-gates",
-      "ci-pipeline-questions"
-    ],
+    "produces": ["ci-config", "quality-gates", "ci-pipeline-questions"],
     "consumes": [
       {
         "artifact": "code-summary",
@@ -2576,22 +2263,14 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "build-and-test"
-    ],
+    "requires_stage": ["build-and-test"],
     "sensors": [
       "required-sections",
       "upstream-coverage",
       "linter",
       "type-check"
     ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "infra",
-      "workshop"
-    ],
+    "scopes": ["enterprise", "feature", "mvp", "infra", "workshop"],
     "summary_confirmation": "required",
     "inputs": "Code generation output from code-generation stage, build/test results from build-and-test stage",
     "outputs": "ci-config.md, quality-gates.md, ci-pipeline-questions.md (under this stage's record dir, engine-resolved)",
@@ -2682,14 +2361,8 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "ci-pipeline",
-      "infrastructure-design"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
+    "requires_stage": ["ci-pipeline", "infrastructure-design"],
+    "sensors": ["required-sections", "upstream-coverage"],
     "scopes": [
       "enterprise",
       "feature",
@@ -2748,10 +2421,7 @@
     "execution": "CONDITIONAL",
     "condition": "Execute when AWS environments need provisioning or validation",
     "lead_agent": "aidlc-aws-platform-agent",
-    "support_agents": [
-      "aidlc-devsecops-agent",
-      "aidlc-compliance-agent"
-    ],
+    "support_agents": ["aidlc-devsecops-agent", "aidlc-compliance-agent"],
     "mode": "inline",
     "produces": [
       "environment-inventory",
@@ -2768,20 +2438,9 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "infrastructure-design",
-      "deployment-pipeline"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "infra",
-      "workshop"
-    ],
+    "requires_stage": ["infrastructure-design", "deployment-pipeline"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "infra", "workshop"],
     "summary_confirmation": "required",
     "inputs": "Infrastructure design from infrastructure-design stage, CD pipeline config from deployment-pipeline stage",
     "outputs": "environment-inventory.md, validation-report.md, environment-provisioning-questions.md (under this stage's record dir, engine-resolved)",
@@ -2830,9 +2489,7 @@
     "execution": "CONDITIONAL",
     "condition": "Execute after deployment pipeline and environment are ready",
     "lead_agent": "aidlc-pipeline-deploy-agent",
-    "support_agents": [
-      "aidlc-developer-agent"
-    ],
+    "support_agents": ["aidlc-developer-agent"],
     "mode": "inline",
     "produces": [
       "deployment-log",
@@ -2858,14 +2515,8 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "deployment-pipeline",
-      "environment-provisioning"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
+    "requires_stage": ["deployment-pipeline", "environment-provisioning"],
+    "sensors": ["required-sections", "upstream-coverage"],
     "scopes": [
       "enterprise",
       "feature",
@@ -2962,17 +2613,8 @@
       "infrastructure-design",
       "deployment-execution"
     ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "infra",
-      "workshop",
-      "express"
-    ],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "infra", "workshop", "express"],
     "summary_confirmation": "required",
     "inputs": "NFR design from nfr-design stage, infrastructure design from infrastructure-design stage, deployed application",
     "outputs": "dashboards.md, alarms.md, slo-config.md, log-queries.md, tracing-config.md, anomaly-config.md, observability-setup-questions.md (under this stage's record dir, engine-resolved)",
@@ -3051,18 +2693,9 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "observability-setup"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "workshop"
-    ],
+    "requires_stage": ["observability-setup"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "workshop"],
     "summary_confirmation": "required",
     "inputs": "Observability setup from observability-setup stage, NFR design from nfr-design stage, infrastructure design from infrastructure-design stage",
     "outputs": "runbooks.md, incident-plan.md, escalation-matrix.md, incident-response-questions.md (under this stage's record dir, engine-resolved)",
@@ -3141,20 +2774,9 @@
         "required": true
       }
     ],
-    "requires_stage": [
-      "nfr-requirements",
-      "nfr-design",
-      "observability-setup"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "workshop"
-    ],
+    "requires_stage": ["nfr-requirements", "nfr-design", "observability-setup"],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "workshop"],
     "summary_confirmation": "required",
     "inputs": "NFR requirements from nfr-requirements stage, NFR design from nfr-design stage, deployed application, observability data from observability-setup stage",
     "outputs": "load-test-plan.md, test-results.md, nfr-validation-matrix.md, performance-validation-questions.md (under this stage's record dir, engine-resolved)",
@@ -3203,9 +2825,7 @@
     "execution": "CONDITIONAL",
     "condition": "Execute when ongoing operational monitoring and optimization are needed",
     "lead_agent": "aidlc-operations-agent",
-    "support_agents": [
-      "aidlc-aws-platform-agent"
-    ],
+    "support_agents": ["aidlc-aws-platform-agent"],
     "mode": "inline",
     "produces": [
       "slo-report",
@@ -3246,15 +2866,8 @@
       "incident-response",
       "performance-validation"
     ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "workshop"
-    ],
+    "sensors": ["required-sections", "upstream-coverage"],
+    "scopes": ["enterprise", "feature", "workshop"],
     "summary_confirmation": "required",
     "inputs": "All Operation phase artifacts, production monitoring data",
     "outputs": "slo-report.md, cost-analysis.md, drift-report.md, feedback-loop.md, feedback-optimization-questions.md (under this stage's record dir, engine-resolved)",

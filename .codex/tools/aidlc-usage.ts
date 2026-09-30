@@ -82,14 +82,62 @@ export type PriceRow = {
 // install. The override layers ON TOP of these defaults - a partial file only
 // changes the models it names; an unknown model stays tokens-with-null-cost.
 export const DEFAULT_RATES: Record<string, PriceRow> = {
-  "opus-5": { input: 5.0, output: 25.0, cacheWrite5m: 6.25, cacheWrite1h: 10.0, cacheRead: 0.5 },
-  "opus-4-8": { input: 5.0, output: 25.0, cacheWrite5m: 6.25, cacheWrite1h: 10.0, cacheRead: 0.5 },
-  "opus-4-7": { input: 5.0, output: 25.0, cacheWrite5m: 6.25, cacheWrite1h: 10.0, cacheRead: 0.5 },
-  "opus-4-6": { input: 5.0, output: 25.0, cacheWrite5m: 6.25, cacheWrite1h: 10.0, cacheRead: 0.5 },
-  "sonnet-5": { input: 3.0, output: 15.0, cacheWrite5m: 3.75, cacheWrite1h: 6.0, cacheRead: 0.3 },
-  "sonnet-4-6": { input: 3.0, output: 15.0, cacheWrite5m: 3.75, cacheWrite1h: 6.0, cacheRead: 0.3 },
-  "haiku-4-5": { input: 1.0, output: 5.0, cacheWrite5m: 1.25, cacheWrite1h: 2.0, cacheRead: 0.1 },
-  "fable-5": { input: 10.0, output: 50.0, cacheWrite5m: 12.5, cacheWrite1h: 20.0, cacheRead: 1.0 },
+  "opus-5": {
+    input: 5.0,
+    output: 25.0,
+    cacheWrite5m: 6.25,
+    cacheWrite1h: 10.0,
+    cacheRead: 0.5,
+  },
+  "opus-4-8": {
+    input: 5.0,
+    output: 25.0,
+    cacheWrite5m: 6.25,
+    cacheWrite1h: 10.0,
+    cacheRead: 0.5,
+  },
+  "opus-4-7": {
+    input: 5.0,
+    output: 25.0,
+    cacheWrite5m: 6.25,
+    cacheWrite1h: 10.0,
+    cacheRead: 0.5,
+  },
+  "opus-4-6": {
+    input: 5.0,
+    output: 25.0,
+    cacheWrite5m: 6.25,
+    cacheWrite1h: 10.0,
+    cacheRead: 0.5,
+  },
+  "sonnet-5": {
+    input: 3.0,
+    output: 15.0,
+    cacheWrite5m: 3.75,
+    cacheWrite1h: 6.0,
+    cacheRead: 0.3,
+  },
+  "sonnet-4-6": {
+    input: 3.0,
+    output: 15.0,
+    cacheWrite5m: 3.75,
+    cacheWrite1h: 6.0,
+    cacheRead: 0.3,
+  },
+  "haiku-4-5": {
+    input: 1.0,
+    output: 5.0,
+    cacheWrite5m: 1.25,
+    cacheWrite1h: 2.0,
+    cacheRead: 0.1,
+  },
+  "fable-5": {
+    input: 10.0,
+    output: 50.0,
+    cacheWrite5m: 12.5,
+    cacheWrite1h: 20.0,
+    cacheRead: 1.0,
+  },
 };
 
 // Validate one parsed JSON object into a PriceRow, or null when it is not a
@@ -132,7 +180,9 @@ function readRatesFile(path: string): Record<string, PriceRow> {
     const rates = parsed?.rates;
     if (!rates || typeof rates !== "object") return {};
     const out: Record<string, PriceRow> = {};
-    for (const [key, value] of Object.entries(rates as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(
+      rates as Record<string, unknown>,
+    )) {
       const row = coercePriceRow(value);
       if (row) out[key] = row;
     }
@@ -168,7 +218,8 @@ export function loadRates(): Record<string, PriceRow> {
   // Layer 2: the shipped default file (present in an installed harness; absent
   // in a dev checkout's core/, where DEFAULT_RATES is the only source).
   try {
-    for (const [k, v] of Object.entries(readRatesFile(modelRatesPath()))) merged[k] = v;
+    for (const [k, v] of Object.entries(readRatesFile(modelRatesPath())))
+      merged[k] = v;
   } catch {
     /* no shipped file / unresolvable data dir - DEFAULT_RATES stands */
   }
@@ -318,7 +369,8 @@ export type UsageRow = {
 // lives under `cache_creation`; when that object is absent we treat the flat
 // `cache_creation_input_tokens` total as 5m (its pre-split form).
 function countsFromUsage(usage: Record<string, unknown>): TokenCounts {
-  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const num = (v: unknown): number =>
+    typeof v === "number" && Number.isFinite(v) ? v : 0;
   const cc = (usage.cache_creation ?? {}) as Record<string, unknown>;
   const e5 = num(cc.ephemeral_5m_input_tokens);
   const e1 = num(cc.ephemeral_1h_input_tokens);
@@ -440,7 +492,11 @@ export function dedupeByMessageId(rows: UsageRow[]): UsageRow[] {
 // row. This is what makes both transcript styles collapse losslessly - NEW-style
 // leading usage=0 lines lose to the trailing real-usage line, OLD-style ties
 // resolve to the last line (the real end-of-turn uuid/timestamp). Pure.
-function representativeOfRun(rows: UsageRow[], start: number, end: number): UsageRow {
+function representativeOfRun(
+  rows: UsageRow[],
+  start: number,
+  end: number,
+): UsageRow {
   let best = rows[start];
   let bestMag = usageMagnitude(best.counts);
   for (let k = start + 1; k <= end; k++) {
@@ -502,7 +558,9 @@ function readMetaSidecar(jsonlPath: string): { agentType?: string } | null {
   const metaPath = jsonlPath.replace(/\.jsonl$/, ".meta.json");
   if (!existsSync(metaPath)) return null;
   try {
-    return JSON.parse(readFileSync(metaPath, "utf-8")) as { agentType?: string };
+    return JSON.parse(readFileSync(metaPath, "utf-8")) as {
+      agentType?: string;
+    };
   } catch {
     return null;
   }
@@ -743,7 +801,13 @@ export type Ledger = UsageAggregate & {
 };
 
 function emptyTokenCounts(): TokenCounts {
-  return { input: 0, output: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheRead: 0 };
+  return {
+    input: 0,
+    output: 0,
+    cacheCreate5m: 0,
+    cacheCreate1h: 0,
+    cacheRead: 0,
+  };
 }
 
 function emptyTotals(): Totals {
@@ -793,10 +857,7 @@ export function sessionUsageKey(
 
 // Resolve the active intent to a stable UUID when possible. Legacy/orphan
 // records fall back to their space + record-dir identity.
-export function intentUsageKey(
-  projectDir: string,
-  sessionId?: string,
-): string {
+export function intentUsageKey(projectDir: string, sessionId?: string): string {
   try {
     if (sessionId) {
       const stamped = readSessionIntentUuid(projectDir, sessionId);
@@ -1039,7 +1100,10 @@ function withUsageLedgerLock(projectDir: string, fn: () => Ledger): Ledger {
       USAGE_LOCK_INTENT,
       USAGE_LOCK_SPACE,
     );
-    const hash = createHash("sha256").update(identity).digest("hex").slice(0, 32);
+    const hash = createHash("sha256")
+      .update(identity)
+      .digest("hex")
+      .slice(0, 32);
     const name = Buffer.from(`Global\\aidlc-usage-${hash}\0`, "utf16le");
     const handle = WIN32_USAGE_MUTEX.symbols.CreateMutexW(null, 0, ptr(name));
     if (handle === null) {
@@ -1219,7 +1283,8 @@ function formatByTokens(buckets: Record<string, Totals>): string {
   for (const [key, t] of Object.entries(buckets)) {
     const { input, output, cacheRead } = t.tokens;
     const cacheWrite = t.tokens.cacheCreate5m + t.tokens.cacheCreate1h;
-    if (input <= 0 && output <= 0 && cacheRead <= 0 && cacheWrite <= 0) continue;
+    if (input <= 0 && output <= 0 && cacheRead <= 0 && cacheWrite <= 0)
+      continue;
     parts.push(
       `${key}=${fmtTokensCompact(input)}/${fmtTokensCompact(output)}/${fmtTokensCompact(cacheRead)}/${fmtTokensCompact(cacheWrite)}`,
     );
@@ -1319,13 +1384,18 @@ export function sessionUsageAggregate(
 ): UsageAggregate | null {
   if (usageTrackingDisabled()) return null;
   const resolvedTranscript =
-    transcriptPath ?? (sessionId ? readCurrentTranscriptPath(projectDir, sessionId) : null);
-  const sessionKey = sessionUsageKey(resolvedTranscript ?? undefined, sessionId);
+    transcriptPath ??
+    (sessionId ? readCurrentTranscriptPath(projectDir, sessionId) : null);
+  const sessionKey = sessionUsageKey(
+    resolvedTranscript ?? undefined,
+    sessionId,
+  );
   const resolvedWorkflowKey =
     workflowKey ?? intentUsageKey(projectDir, sessionId);
   return (
-    loadLedger(projectDir).workflows[resolvedWorkflowKey]?.sessions[sessionKey] ??
-    null
+    loadLedger(projectDir).workflows[resolvedWorkflowKey]?.sessions[
+      sessionKey
+    ] ?? null
   );
 }
 
@@ -1384,7 +1454,8 @@ export function readCurrentTranscriptPath(
   const candidates: string[] = [];
   if (sessionId) {
     const seg = safeSessionSegment(sessionId);
-    if (seg) candidates.push(join(sessionsDir(projectDir), `${seg}.transcript`));
+    if (seg)
+      candidates.push(join(sessionsDir(projectDir), `${seg}.transcript`));
   } else {
     candidates.push(join(sessionsDir(projectDir), "current.transcript"));
   }

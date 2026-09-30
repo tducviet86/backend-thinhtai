@@ -271,7 +271,12 @@ export interface AnchorReport {
     units: string[];
     paths: number;
   }>;
-  skipped: Array<{ commit: string; space: string; intent: string; reason: string }>;
+  skipped: Array<{
+    commit: string;
+    space: string;
+    intent: string;
+    reason: string;
+  }>;
   unattributed: string[];
   /** Shallow-clone boundary commits: their delta is unknowable, so they are
    *  neither anchored nor reported unattributed. */
@@ -309,11 +314,20 @@ function git(
     encoding: "utf-8",
     maxBuffer: 512 * 1024 * 1024,
   });
-  return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  };
 }
 
 function resolveCommitish(dir: string, ref: string): string | null {
-  const parsed = git(dir, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]);
+  const parsed = git(dir, [
+    "rev-parse",
+    "--verify",
+    "--quiet",
+    `${ref}^{commit}`,
+  ]);
   const sha = parsed.stdout.trim();
   return parsed.status === 0 && /^[0-9a-f]{40,64}$/.test(sha) ? sha : null;
 }
@@ -337,7 +351,9 @@ function commitParentage(
   const object = git(dir, ["cat-file", "commit", sha]);
   if (object.status !== 0) return null;
   const header = object.stdout.split("\n\n", 1)[0] ?? "";
-  const named = header.split("\n").filter((line) => line.startsWith("parent ")).length;
+  const named = header
+    .split("\n")
+    .filter((line) => line.startsWith("parent ")).length;
   return { parents: [], shallow: named > 0 };
 }
 
@@ -351,14 +367,29 @@ function shallowBoundaryError(sha: string): Error {
 }
 
 /** Changed paths of base..head (both sides of renames; null base = full root tree). */
-function changedPaths(dir: string, base: string | null, head: string): string[] | null {
+function changedPaths(
+  dir: string,
+  base: string | null,
+  head: string,
+): string[] | null {
   const args =
     base === null
-      ? ["diff-tree", "--no-commit-id", "--name-only", "--no-renames", "-z", "-r", "--root", head]
+      ? [
+          "diff-tree",
+          "--no-commit-id",
+          "--name-only",
+          "--no-renames",
+          "-z",
+          "-r",
+          "--root",
+          head,
+        ]
       : ["diff", "--name-only", "--no-renames", "-z", base, head];
   const diffed = git(dir, args);
   if (diffed.status !== 0) return null;
-  return [...new Set(diffed.stdout.split("\0").filter((path) => path.length > 0))];
+  return [
+    ...new Set(diffed.stdout.split("\0").filter((path) => path.length > 0)),
+  ];
 }
 
 /** The commit that last wrote `path` at or before `ref`, with git's `%G?` code
@@ -370,7 +401,8 @@ function lastWriterSignature(
 ): { commit: string | null; code: string } {
   const logged = git(dir, ["log", "-1", "--format=%H%x00%G?", ref, "--", path]);
   const row = logged.stdout.trim();
-  if (logged.status !== 0 || row.length === 0) return { commit: null, code: "-" };
+  if (logged.status !== 0 || row.length === 0)
+    return { commit: null, code: "-" };
   const [commit, code] = row.split("\0");
   return {
     commit: /^[0-9a-f]{40,64}$/.test(commit ?? "") ? commit : null,
@@ -402,7 +434,11 @@ interface RecordView {
    *  newest on a timestamp tie — carry the same meaning either way. */
   auditEvents(space: string, dirName: string): AuditShardEvent[];
   /** Bytes at a record-relative path, or null when the record has no such file. */
-  readRecordFile(space: string, dirName: string, relPath: string): Buffer | null;
+  readRecordFile(
+    space: string,
+    dirName: string,
+    relPath: string,
+  ): Buffer | null;
   /** The commit that last wrote a record file at this view's ref, with git's
    *  `%G?` code for it. Null when the view has no commit history to consult
    *  (the working tree), which caps trust at `informational`. */
@@ -416,9 +452,11 @@ interface RecordView {
    *  `shard` token because its meaning is backing-specific (a repository path in
    *  commit mode, an absolute file path in the working tree), and returns
    *  commit/code null wherever no commit can be named. */
-  shardOrigin(
-    shard: string,
-  ): { label: string; commit: string | null; code: string | null };
+  shardOrigin(shard: string): {
+    label: string;
+    commit: string | null;
+    code: string | null;
+  };
   /** Human label for the report's `evidence` field and problem strings. */
   label(space: string, dirName: string, relPath: string): string;
 }
@@ -465,7 +503,10 @@ function readBlobs(dir: string, oids: readonly string[]): Map<string, Buffer> {
 const treeShellCache = new Map<string, ReadonlySet<string>>();
 
 /** Harness shell dirs at the root of `commit`'s tree. */
-function commitHarnessShellDirs(dir: string, commit: string): ReadonlySet<string> {
+function commitHarnessShellDirs(
+  dir: string,
+  commit: string,
+): ReadonlySet<string> {
   const cacheKey = `${dir}\0${commit}`;
   const cached = treeShellCache.get(cacheKey);
   if (cached !== undefined) return cached;
@@ -504,8 +545,12 @@ function commitHarnessShellDirs(dir: string, commit: string): ReadonlySet<string
     const contents = readBlobs(dir, [...oids.values()]);
     for (const [path, oid] of oids) {
       const bytes = contents.get(oid);
-      const name = path.slice(0, path.length - HARNESS_SHELL_MANIFEST_REL.length - 1);
-      if (bytes !== undefined && isHarnessShellManifest(bytes)) shells.add(name);
+      const name = path.slice(
+        0,
+        path.length - HARNESS_SHELL_MANIFEST_REL.length - 1,
+      );
+      if (bytes !== undefined && isHarnessShellManifest(bytes))
+        shells.add(name);
     }
   }
   treeShellCache.set(cacheKey, shells);
@@ -523,7 +568,8 @@ function rangeExclusionContext(
 ): SourceExclusionContext {
   const shells = new Set<string>();
   if (query.carriesShell && base !== null) {
-    for (const name of commitHarnessShellDirs(query.dir, base)) shells.add(name);
+    for (const name of commitHarnessShellDirs(query.dir, base))
+      shells.add(name);
   }
   return { harnessShellDirs: shells };
 }
@@ -547,7 +593,9 @@ function treeRecordView(
     `${spacesPrefix}/`,
   ]);
   if (listed.status !== 0) {
-    throw new Error(`cannot list the intent record under ${spacesPrefix}/ at ${ref} (${sha})`);
+    throw new Error(
+      `cannot list the intent record under ${spacesPrefix}/ at ${ref} (${sha})`,
+    );
   }
   // `<mode> SP <type> SP <oid> TAB <path>` per NUL-terminated record. Only blobs
   // can be record files; a gitlink or a nested tree entry is not readable here.
@@ -563,7 +611,7 @@ function treeRecordView(
   const contents = readBlobs(repoQueryDir, [...blobs.values()]);
   const read = (repoPath: string): Buffer | null => {
     const oid = blobs.get(repoPath);
-    return oid === undefined ? null : contents.get(oid) ?? null;
+    return oid === undefined ? null : (contents.get(oid) ?? null);
   };
   const intentsPrefix = (space: string) => `${spacesPrefix}/${space}/intents`;
   const recordPath = (space: string, dirName: string, relPath: string) =>
@@ -607,7 +655,9 @@ function treeRecordView(
       }
       return [...dirs].sort().map((dirName) => ({
         dirName,
-        repos: registry.find((entry) => recordDirMatches(entry, dirName))?.repos ?? [],
+        repos:
+          registry.find((entry) => recordDirMatches(entry, dirName))?.repos ??
+          [],
       }));
     },
     auditEvents(space, dirName) {
@@ -623,8 +673,15 @@ function treeRecordView(
       names.sort();
       const rows: AuditShardEvent[] = [];
       for (let shardIndex = 0; shardIndex < names.length; shardIndex++) {
-        const content = read(`${prefix}${names[shardIndex]}`)?.toString("utf-8") ?? "";
-        rows.push(...parseAuditShardEvents(content, `${prefix}${names[shardIndex]}`, shardIndex));
+        const content =
+          read(`${prefix}${names[shardIndex]}`)?.toString("utf-8") ?? "";
+        rows.push(
+          ...parseAuditShardEvents(
+            content,
+            `${prefix}${names[shardIndex]}`,
+            shardIndex,
+          ),
+        );
       }
       return rows;
     },
@@ -632,7 +689,11 @@ function treeRecordView(
       return read(recordPath(space, dirName, relPath));
     },
     lastWriter(space, dirName, relPath) {
-      return lastWriterSignature(repoQueryDir, sha, recordPath(space, dirName, relPath));
+      return lastWriterSignature(
+        repoQueryDir,
+        sha,
+        recordPath(space, dirName, relPath),
+      );
     },
     shardOrigin(shard) {
       // `shard` is already this backing's repository path for the file.
@@ -722,7 +783,9 @@ function resolveRepoQuery(
       requested.includes("/") ||
       requested.includes("\\")
     ) {
-      throw new Error(`--repo must be a plain recorded-repo directory name, got ${JSON.stringify(requested)}`);
+      throw new Error(
+        `--repo must be a plain recorded-repo directory name, got ${JSON.stringify(requested)}`,
+      );
     }
     const dir = repoDir(projectDir, requested);
     if (!isGitRepoDir(dir)) {
@@ -734,7 +797,9 @@ function resolveRepoQuery(
     return { name: null, dir: projectDir, keyRepo: "", carriesShell: true };
   }
   // Roof is not a repository: a sole recorded sibling repo is unambiguous.
-  const candidates = [...recordedRepos].sort().filter((name) => isGitRepoDir(repoDir(projectDir, name)));
+  const candidates = [...recordedRepos]
+    .sort()
+    .filter((name) => isGitRepoDir(repoDir(projectDir, name)));
   if (candidates.length === 1) {
     return {
       name: candidates[0],
@@ -822,7 +887,8 @@ function parseManifestClaims(
   } catch {
     return null;
   }
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return null;
   const writes = (value as { writes?: unknown }).writes;
   if (!Array.isArray(writes)) return null;
   const claims = new Set<string>();
@@ -883,12 +949,16 @@ function buildOwnershipIndex(
         if (event.event === "SOURCE_COMMITTED") {
           const commit = auditBlockField(event.block, "Commit");
           if (commit !== null) {
-            anchors.anchoredKeys.add(`${commit}\0${auditBlockField(event.block, "Repo") ?? "-"}`);
+            anchors.anchoredKeys.add(
+              `${commit}\0${auditBlockField(event.block, "Repo") ?? "-"}`,
+            );
           }
         } else if (event.event === "SWARM_SOURCE_MERGED") {
           const commit = auditBlockField(event.block, "Merge commit");
           if (commit !== null) {
-            anchors.swarmMergedKeys.add(`${commit}\0${auditBlockField(event.block, "Repo") ?? "-"}`);
+            anchors.swarmMergedKeys.add(
+              `${commit}\0${auditBlockField(event.block, "Repo") ?? "-"}`,
+            );
           }
         }
       }
@@ -906,12 +976,18 @@ function buildOwnershipIndex(
         .sort(compareShardEvents);
       const newestPerUnit = new Map<string, AuditShardEvent>();
       for (const receipt of receipts) {
-        newestPerUnit.set(auditBlockField(receipt.block, "Unit") as string, receipt);
+        newestPerUnit.set(
+          auditBlockField(receipt.block, "Unit") as string,
+          receipt,
+        );
       }
 
       for (const [unit, chosen] of newestPerUnit) {
         const stage = auditBlockField(chosen.block, "Stage") as string;
-        const fingerprint = auditBlockField(chosen.block, "Unit Source Fingerprint") as string;
+        const fingerprint = auditBlockField(
+          chosen.block,
+          "Unit Source Fingerprint",
+        ) as string;
         const iterationRaw = auditBlockField(chosen.block, "Iteration");
         const iteration =
           iterationRaw !== null && /^[1-9][0-9]*$/.test(iterationRaw)
@@ -921,7 +997,9 @@ function buildOwnershipIndex(
         if (auditBlockField(chosen.block, "Source Freshness Bypass") !== null) {
           bypasses.push("source-freshness-bypass");
         }
-        if (auditBlockField(chosen.block, "Unit Source Binding Bypass") !== null) {
+        if (
+          auditBlockField(chosen.block, "Unit Source Binding Bypass") !== null
+        ) {
           bypasses.push("unit-source-binding-bypass");
         }
         if (auditBlockField(chosen.block, "Recovery") !== null) {
@@ -942,28 +1020,47 @@ function buildOwnershipIndex(
         let manifestSha: string | null = null;
         let evidenceRel: string | null = null;
         if (fingerprint === UNBINDABLE_FINGERPRINT) {
-          problem = "review receipt carries no source binding (unbindable fingerprint)";
+          problem =
+            "review receipt carries no source binding (unbindable fingerprint)";
         } else {
           const hex = /^sha256:([0-9a-f]{64})$/.exec(fingerprint)?.[1];
           if (hex === undefined) {
-            problem = "review receipt carries a malformed Unit Source Fingerprint";
+            problem =
+              "review receipt carries a malformed Unit Source Fingerprint";
           } else {
             const hash12 = hex.slice(0, 12);
-            const candidates: Array<{ rel: string; source: "committed" | "local" }> = [
-              { rel: reviewedSourceEvidenceRelPath(unit, stage, hash12), source: "committed" },
+            const candidates: Array<{
+              rel: string;
+              source: "committed" | "local";
+            }> = [
+              {
+                rel: reviewedSourceEvidenceRelPath(unit, stage, hash12),
+                source: "committed",
+              },
             ];
             if (view.kind === "worktree") {
               // Pre-dual-write records only wrote the gitignored per-machine copy,
               // which by definition is not in any tree — only a working-tree view
               // can even see it, and then only as a diagnostic (below).
               candidates.push({
-                rel: join(engineDirFor(""), "source-review", stage, `unit-${unit}-${hash12}.tsv`).split(sep).join("/"),
+                rel: join(
+                  engineDirFor(""),
+                  "source-review",
+                  stage,
+                  `unit-${unit}-${hash12}.tsv`,
+                )
+                  .split(sep)
+                  .join("/"),
                 source: "local",
               });
             }
             for (const candidate of candidates) {
               const label = view.label(space, info.dirName, candidate.rel);
-              const bytes = view.readRecordFile(space, info.dirName, candidate.rel);
+              const bytes = view.readRecordFile(
+                space,
+                info.dirName,
+                candidate.rel,
+              );
               if (bytes === null) continue;
               if (createHash("sha256").update(bytes).digest("hex") !== hex) {
                 problem = `evidence at ${label} does not hash to the receipt fingerprint`;
@@ -1019,7 +1116,8 @@ function buildOwnershipIndex(
         if (
           manifestBytes !== null &&
           manifestSha !== null &&
-          createHash("sha256").update(manifestBytes).digest("hex") === manifestSha
+          createHash("sha256").update(manifestBytes).digest("hex") ===
+            manifestSha
         ) {
           claims = parseManifestClaims(manifestBytes, recordedRepos);
           if (claims !== null) claimsSource = "manifest";
@@ -1121,9 +1219,10 @@ function recordedRepoNames(
   spaceFilter: string | undefined,
 ): Set<string> {
   const names = new Set<string>();
-  const spaces = spaceFilter !== undefined
-    ? [spaceFilter]
-    : listSpaces(projectDir).map((space) => space.name);
+  const spaces =
+    spaceFilter !== undefined
+      ? [spaceFilter]
+      : listSpaces(projectDir).map((space) => space.name);
   for (const space of spaces) {
     for (const info of listIntents(projectDir, space)) {
       for (const repo of info.repos ?? []) names.add(repo);
@@ -1189,12 +1288,16 @@ function unitFullyLanded(
   for (const [key, entry] of owner.evidenceListing) {
     if (!key.startsWith(keyPrefix)) continue;
     const path = key.slice(keyPrefix.length);
-    if (!sourceListingEntriesEqual(entry, headListing.get(`\0${path}`))) return false;
+    if (!sourceListingEntriesEqual(entry, headListing.get(`\0${path}`)))
+      return false;
   }
   if (owner.claims !== null) {
     for (const headKey of headListing.keys()) {
       const key = sourcePathKey(query.keyRepo, headKey.slice(1));
-      if (sourceClaimCovers(key, owner.claims) && !owner.evidenceListing.has(key)) {
+      if (
+        sourceClaimCovers(key, owner.claims) &&
+        !owner.evidenceListing.has(key)
+      ) {
         return false;
       }
     }
@@ -1210,7 +1313,8 @@ function byteFormWarning(query: RepoQuery, head: string): string | null {
     .stdout.trim()
     .toLowerCase();
   const converts = autocrlf === "true" || autocrlf === "input";
-  const attributes = git(query.dir, ["cat-file", "-e", `${head}:.gitattributes`]).status === 0;
+  const attributes =
+    git(query.dir, ["cat-file", "-e", `${head}:.gitattributes`]).status === 0;
   if (!converts && !attributes) return null;
   const cause = converts
     ? `core.autocrlf=${autocrlf}${attributes ? " and .gitattributes" : ""}`
@@ -1225,9 +1329,17 @@ function byteFormWarning(query: RepoQuery, head: string): string | null {
 /** Repo-relative posix location of the spaces root inside the queried repo, or
  *  null when the record lies outside it (a multi-root workspace queried with
  *  `--repo`: the roof holds `aidlc/`, the repo is a child of the roof). */
-function spacesPrefixInRepo(projectDir: string, query: RepoQuery): string | null {
+function spacesPrefixInRepo(
+  projectDir: string,
+  query: RepoQuery,
+): string | null {
   const rel = posixRelative(query.dir, spacesRoot(projectDir));
-  if (rel.length === 0 || rel === ".." || rel.startsWith("../") || rel.startsWith("/")) {
+  if (
+    rel.length === 0 ||
+    rel === ".." ||
+    rel.startsWith("../") ||
+    rel.startsWith("/")
+  ) {
     return null;
   }
   return rel;
@@ -1262,7 +1374,9 @@ function resolveRecordView(
   const ref = recordRef ?? head;
   const sha = resolveCommitish(query.dir, ref);
   if (sha === null) {
-    throw new Error(`cannot resolve ${recordRef === undefined ? "head" : "--record-ref"} ${JSON.stringify(ref)} in ${query.dir}`);
+    throw new Error(
+      `cannot resolve ${recordRef === undefined ? "head" : "--record-ref"} ${JSON.stringify(ref)} in ${query.dir}`,
+    );
   }
   const view = treeRecordView(query.dir, prefix, ref, sha);
   const warnings: string[] = [];
@@ -1292,14 +1406,17 @@ function computeTrust(
 ): TrustReport {
   const prefix = spacesPrefixInRepo(projectDir, query);
   const recordPathsChangedInRange =
-    prefix === null ? [] : paths.filter((path) => path.startsWith(`${prefix}/`)).sort();
+    prefix === null
+      ? []
+      : paths.filter((path) => path.startsWith(`${prefix}/`)).sort();
 
   // Does the record we read already contain this change's own record edits? If
   // the pinned ref does not descend from head, the receipts predate the change.
   const recordIncludesChange =
     view.commit === null ||
     view.commit === head ||
-    git(query.dir, ["merge-base", "--is-ancestor", head, view.commit]).status === 0;
+    git(query.dir, ["merge-base", "--is-ancestor", head, view.commit])
+      .status === 0;
   const selfAttested =
     view.kind === "worktree" ||
     (recordIncludesChange && recordPathsChangedInRange.length > 0);
@@ -1346,7 +1463,8 @@ function computeTrust(
     level,
     required,
     satisfied:
-      required === null || TRUST_LEVELS.indexOf(level) >= TRUST_LEVELS.indexOf(required),
+      required === null ||
+      TRUST_LEVELS.indexOf(level) >= TRUST_LEVELS.indexOf(required),
     recordSource: view.kind,
     recordRef: view.ref,
     recordCommit: view.commit,
@@ -1371,7 +1489,9 @@ export function runResolve(
     }
   }
   if (options.diff !== undefined && options.commit !== undefined) {
-    throw new Error("pass either --diff <base>..<head> or a single <commit>, not both");
+    throw new Error(
+      "pass either --diff <base>..<head> or a single <commit>, not both",
+    );
   }
   let requireTrust: TrustLevel | null = null;
   if (options.requireTrust !== undefined) {
@@ -1396,17 +1516,27 @@ export function runResolve(
     const three = options.diff.includes("...");
     const parts = options.diff.split(three ? "..." : "..");
     if (parts.length !== 2 || parts[0] === "" || parts[1] === "") {
-      throw new Error(`--diff expects <base>..<head> or <base>...<head>, got ${JSON.stringify(options.diff)}`);
+      throw new Error(
+        `--diff expects <base>..<head> or <base>...<head>, got ${JSON.stringify(options.diff)}`,
+      );
     }
     const baseSha = resolveCommitish(query.dir, parts[0]);
     const headSha = resolveCommitish(query.dir, parts[1]);
-    if (baseSha === null) throw new Error(`cannot resolve base ${JSON.stringify(parts[0])} in ${query.dir}`);
-    if (headSha === null) throw new Error(`cannot resolve head ${JSON.stringify(parts[1])} in ${query.dir}`);
+    if (baseSha === null)
+      throw new Error(
+        `cannot resolve base ${JSON.stringify(parts[0])} in ${query.dir}`,
+      );
+    if (headSha === null)
+      throw new Error(
+        `cannot resolve head ${JSON.stringify(parts[1])} in ${query.dir}`,
+      );
     if (three) {
       const merged = git(query.dir, ["merge-base", baseSha, headSha]);
       const mergeBase = merged.stdout.trim();
       if (merged.status !== 0 || !/^[0-9a-f]{40,64}$/.test(mergeBase)) {
-        throw new Error(`cannot resolve merge-base of ${parts[0]} and ${parts[1]}`);
+        throw new Error(
+          `cannot resolve merge-base of ${parts[0]} and ${parts[1]}`,
+        );
       }
       base = mergeBase;
     } else {
@@ -1417,7 +1547,9 @@ export function runResolve(
     mode = "commit";
     const sha = resolveCommitish(query.dir, options.commit ?? "HEAD");
     if (sha === null) {
-      throw new Error(`cannot resolve commit ${JSON.stringify(options.commit ?? "HEAD")} in ${query.dir}`);
+      throw new Error(
+        `cannot resolve commit ${JSON.stringify(options.commit ?? "HEAD")} in ${query.dir}`,
+      );
     }
     const parentage = commitParentage(query.dir, sha);
     if (parentage === null) throw new Error(`cannot read parents of ${sha}`);
@@ -1427,18 +1559,33 @@ export function runResolve(
   }
 
   const paths = changedPaths(query.dir, base, head);
-  if (paths === null) throw new Error(`git diff failed for ${base ?? "(root)"}..${head} in ${query.dir}`);
-  const headListing = gitCommitSourceListing(query.dir, head, query.carriesShell);
+  if (paths === null)
+    throw new Error(
+      `git diff failed for ${base ?? "(root)"}..${head} in ${query.dir}`,
+    );
+  const headListing = gitCommitSourceListing(
+    query.dir,
+    head,
+    query.carriesShell,
+  );
   if (headListing === null) {
-    throw new Error(`cannot reconstruct the source listing of ${head} in ${query.dir}`);
+    throw new Error(
+      `cannot reconstruct the source listing of ${head} in ${query.dir}`,
+    );
   }
 
   const record = resolveRecordView(projectDir, query, options.recordRef, head);
-  const { ownerships } = buildOwnershipIndex(record.view, options.space, options.intent);
+  const { ownerships } = buildOwnershipIndex(
+    record.view,
+    options.space,
+    options.intent,
+  );
   const exclusion = rangeExclusionContext(query, base);
   const pathReports = paths
     .sort()
-    .map((path) => classifyPath(path, query, ownerships, headListing, exclusion));
+    .map((path) =>
+      classifyPath(path, query, ownerships, headListing, exclusion),
+    );
 
   const summary: Record<PathStatus, number> = {
     verified: 0,
@@ -1448,7 +1595,10 @@ export function runResolve(
     indeterminate: 0,
     excluded: 0,
   };
-  const involved = new Map<string, { owner: UnitOwnership; pathsResolved: number }>();
+  const involved = new Map<
+    string,
+    { owner: UnitOwnership; pathsResolved: number }
+  >();
   for (const report of pathReports) {
     summary[report.status]++;
     if (report.unit === undefined) continue;
@@ -1464,7 +1614,8 @@ export function runResolve(
         candidate.intent === report.intent &&
         candidate.unit === report.unit,
     );
-    if (owner !== undefined) involved.set(ownerKey, { owner, pathsResolved: 1 });
+    if (owner !== undefined)
+      involved.set(ownerKey, { owner, pathsResolved: 1 });
   }
 
   const reliedUpon = [...involved.values()]
@@ -1529,7 +1680,8 @@ export function runResolve(
   // for a guarantee this report cannot make, so reporting success would lie.
   return {
     report,
-    failed: pathReports.some((path) => failSet.has(path.status)) || !trust.satisfied,
+    failed:
+      pathReports.some((path) => failSet.has(path.status)) || !trust.satisfied,
   };
 }
 
@@ -1553,7 +1705,9 @@ export function runAnchor(
   }
   const start = resolveCommitish(query.dir, options.commit ?? "HEAD");
   if (start === null) {
-    throw new Error(`cannot resolve commit ${JSON.stringify(options.commit ?? "HEAD")} in ${query.dir}`);
+    throw new Error(
+      `cannot resolve commit ${JSON.stringify(options.commit ?? "HEAD")} in ${query.dir}`,
+    );
   }
 
   // Each row: `<sha> <parent>...` — first-parent walk, newest first.
@@ -1567,7 +1721,8 @@ export function runAnchor(
       String(maxCommits),
       start,
     ]);
-    if (listed.status !== 0) throw new Error(`git rev-list failed from ${start} in ${query.dir}`);
+    if (listed.status !== 0)
+      throw new Error(`git rev-list failed from ${start} in ${query.dir}`);
     rows = listed.stdout
       .trim()
       .split("\n")
@@ -1616,14 +1771,23 @@ export function runAnchor(
       }
     }
     const paths = changedPaths(query.dir, parents[0] ?? null, commit);
-    if (paths === null) throw new Error(`git diff failed for commit ${commit} in ${query.dir}`);
-    const attributed = new Map<string, { space: string; intent: string; units: Set<string>; paths: number }>();
+    if (paths === null)
+      throw new Error(`git diff failed for commit ${commit} in ${query.dir}`);
+    const attributed = new Map<
+      string,
+      { space: string; intent: string; units: Set<string>; paths: number }
+    >();
     const exclusion = rangeExclusionContext(query, parents[0] ?? null);
     for (const path of paths) {
-      if (sourcePathIsExcluded(path, query.carriesShell, undefined, exclusion)) {
+      if (
+        sourcePathIsExcluded(path, query.carriesShell, undefined, exclusion)
+      ) {
         continue;
       }
-      const resolved = owningUnit(ownerships, sourcePathKey(query.keyRepo, path));
+      const resolved = owningUnit(
+        ownerships,
+        sourcePathKey(query.keyRepo, path),
+      );
       if (resolved === null || resolved.ambiguous) continue; // ambiguity is resolve's to report
       const owner = resolved.owner;
       const intentKey = `${owner.space}\0${owner.intent}`;
@@ -1738,7 +1902,14 @@ const RESOLVE_FLAGS = new Set([
   "record-ref",
   "require-trust",
 ]);
-const ANCHOR_FLAGS = new Set(["commit", "reconcile", "max-commits", "repo", "space", "intent"]);
+const ANCHOR_FLAGS = new Set([
+  "commit",
+  "reconcile",
+  "max-commits",
+  "repo",
+  "space",
+  "intent",
+]);
 
 function rejectForeignFlags(
   flags: Record<string, string | boolean>,
@@ -1807,7 +1978,10 @@ export function main(argv: string[]): void {
     switch (subcommand) {
       case "resolve": {
         rejectForeignFlags(flags, RESOLVE_FLAGS, "resolve");
-        if (positional.length > 1) throw new Error(`at most one <commit> positional, got ${positional.length}`);
+        if (positional.length > 1)
+          throw new Error(
+            `at most one <commit> positional, got ${positional.length}`,
+          );
         if (positional.length === 1 && flags.commit !== undefined) {
           throw new Error("pass either <commit> or --commit <rev>, not both");
         }
@@ -1822,7 +1996,10 @@ export function main(argv: string[]): void {
           failOn:
             flags["fail-on"] === undefined
               ? []
-              : (flags["fail-on"] as string).split(",").map((status) => status.trim()).filter((status) => status.length > 0),
+              : (flags["fail-on"] as string)
+                  .split(",")
+                  .map((status) => status.trim())
+                  .filter((status) => status.length > 0),
         });
         process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
         if (failed) process.exit(3);
@@ -1830,7 +2007,8 @@ export function main(argv: string[]): void {
       }
       case "anchor": {
         rejectForeignFlags(flags, ANCHOR_FLAGS, "anchor");
-        if (positional.length > 0) throw new Error("anchor takes no positionals; use --commit <rev>");
+        if (positional.length > 0)
+          throw new Error("anchor takes no positionals; use --commit <rev>");
         const report = runAnchor(projectDir, {
           repo: flags.repo as string | undefined,
           space: flags.space as string | undefined,
@@ -1838,7 +2016,9 @@ export function main(argv: string[]): void {
           commit: flags.commit as string | undefined,
           reconcile: flags.reconcile === true,
           maxCommits:
-            flags["max-commits"] === undefined ? undefined : Number(flags["max-commits"]),
+            flags["max-commits"] === undefined
+              ? undefined
+              : Number(flags["max-commits"]),
         });
         process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
         break;
@@ -1848,7 +2028,9 @@ export function main(argv: string[]): void {
         process.stdout.write(`${USAGE}\n`);
         break;
       default:
-        printError(`Unknown subcommand: ${subcommand}. Valid: resolve, anchor, help`);
+        printError(
+          `Unknown subcommand: ${subcommand}. Valid: resolve, anchor, help`,
+        );
         process.exit(1);
     }
   } catch (e) {

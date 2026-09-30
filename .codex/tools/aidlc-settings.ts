@@ -1,8 +1,4 @@
-import {
-  readFileSync,
-  statSync,
-  type Stats,
-} from "node:fs";
+import { readFileSync, statSync, type Stats } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { installRoot } from "./aidlc-install-paths.ts";
 import type {
@@ -15,11 +11,7 @@ export const SETTINGS_FILE = "aidlc.settings.json";
 export const LOCAL_SETTINGS_FILE = "aidlc.settings.local.json";
 
 export type SettingsSource =
-  | "shipped default"
-  | "machine"
-  | "project"
-  | "local"
-  | "env";
+  "shipped default" | "machine" | "project" | "local" | "env";
 export type SettingsLayer = Exclude<SettingsSource, "shipped default" | "env">;
 export type SettingsTarget = "global" | "project" | "local";
 
@@ -100,7 +92,13 @@ const PROJECT_FLAG_KEYS = new Set([
   "sensorTimeoutMs",
   "bypasses",
 ]);
-const MODEL_KEYS = new Set(["schemaVersion", "preset", "groups", "agents", "profiles"]);
+const MODEL_KEYS = new Set([
+  "schemaVersion",
+  "preset",
+  "groups",
+  "agents",
+  "profiles",
+]);
 const MODEL_GROUPS = ["deciding", "reviewing", "writing-up"] as const;
 const MODEL_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 const MODEL_PRESETS = ["thorough", "balanced", "minimal"] as const;
@@ -130,10 +128,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function validReleaseUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
-    if (parsed.username || parsed.password || parsed.search || parsed.hash) return false;
-    return parsed.protocol === "https:" ||
+    if (parsed.username || parsed.password || parsed.search || parsed.hash)
+      return false;
+    return (
+      parsed.protocol === "https:" ||
       (parsed.protocol === "http:" &&
-        (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost"));
+        (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost"))
+    );
   } catch {
     return false;
   }
@@ -148,7 +149,9 @@ export function normalizeProjectFlagsRecord(
   if (value.schemaVersion !== 1) {
     throw new Error(`${where}.schemaVersion must be 1`);
   }
-  const unknown = Object.keys(value).filter((key) => !PROJECT_FLAG_KEYS.has(key));
+  const unknown = Object.keys(value).filter(
+    (key) => !PROJECT_FLAG_KEYS.has(key),
+  );
   if (unknown.length > 0) {
     throw new Error(`${where} has unknown key(s): ${unknown.join(", ")}`);
   }
@@ -181,9 +184,10 @@ export function normalizeProjectFlagsRecord(
   if (value.bypasses !== undefined) {
     if (
       !Array.isArray(value.bypasses) ||
-      value.bypasses.some((item) =>
-        typeof item !== "string" ||
-        !(RECORDABLE_PROJECT_BYPASSES as readonly string[]).includes(item)
+      value.bypasses.some(
+        (item) =>
+          typeof item !== "string" ||
+          !(RECORDABLE_PROJECT_BYPASSES as readonly string[]).includes(item),
       )
     ) {
       throw new Error(
@@ -197,14 +201,19 @@ export function normalizeProjectFlagsRecord(
   return out;
 }
 
-function normalizeHarnessModelMap(value: unknown, where: string): HarnessModelMap {
+function normalizeHarnessModelMap(
+  value: unknown,
+  where: string,
+): HarnessModelMap {
   if (!isRecord(value)) {
     throw new Error(`${where} must be an object keyed by harness`);
   }
   const out: HarnessModelMap = {};
   for (const [harness, model] of Object.entries(value)) {
     if (!(MODEL_HARNESSES as readonly string[]).includes(harness)) {
-      throw new Error(`${where} has unknown harness ${JSON.stringify(harness)}`);
+      throw new Error(
+        `${where} has unknown harness ${JSON.stringify(harness)}`,
+      );
     }
     if (typeof model !== "string" || model.trim().length === 0) {
       throw new Error(`${where}.${harness} must be a non-empty model ID`);
@@ -220,7 +229,8 @@ export function normalizeSettingsModels(
 ): SettingsModelPolicyRecord | null {
   if (value === undefined || value === null) return null;
   if (!isRecord(value)) throw new Error(`${where} must be an object`);
-  if (value.schemaVersion !== 1) throw new Error(`${where}.schemaVersion must be 1`);
+  if (value.schemaVersion !== 1)
+    throw new Error(`${where}.schemaVersion must be 1`);
   const unknown = Object.keys(value).filter((key) => !MODEL_KEYS.has(key));
   if (unknown.length > 0) {
     throw new Error(`${where} has unknown key(s): ${unknown.join(", ")}`);
@@ -231,7 +241,9 @@ export function normalizeSettingsModels(
       typeof value.preset !== "string" ||
       !(MODEL_PRESETS as readonly string[]).includes(value.preset)
     ) {
-      throw new Error(`${where}.preset must be one of ${MODEL_PRESETS.join(", ")}`);
+      throw new Error(
+        `${where}.preset must be one of ${MODEL_PRESETS.join(", ")}`,
+      );
     }
     out.preset = value.preset;
   }
@@ -243,7 +255,9 @@ export function normalizeSettingsModels(
     const groups: NonNullable<ModelPolicyRecord["groups"]> = {};
     for (const [name, policy] of Object.entries(raw)) {
       if (!(MODEL_GROUPS as readonly string[]).includes(name)) {
-        throw new Error(`${groupWhere} has unknown group ${JSON.stringify(name)}`);
+        throw new Error(
+          `${groupWhere} has unknown group ${JSON.stringify(name)}`,
+        );
       }
       if (
         !isRecord(policy) ||
@@ -259,33 +273,44 @@ export function normalizeSettingsModels(
     }
     return groups;
   };
-  if (value.groups !== undefined) out.groups = normalizeGroups(value.groups, `${where}.groups`);
+  if (value.groups !== undefined)
+    out.groups = normalizeGroups(value.groups, `${where}.groups`);
   const agents: Record<string, SettingsModelAgentPolicy> = {};
   if (value.agents !== undefined) {
-    if (!isRecord(value.agents)) throw new Error(`${where}.agents must be an object`);
+    if (!isRecord(value.agents))
+      throw new Error(`${where}.agents must be an object`);
     for (const [name, raw] of Object.entries(value.agents)) {
       if (!PROFILE_NAME.test(name) || !isRecord(raw)) {
-        throw new Error(`${where}.agents has invalid agent ${JSON.stringify(name)}`);
+        throw new Error(
+          `${where}.agents has invalid agent ${JSON.stringify(name)}`,
+        );
       }
-      const agentUnknown = Object.keys(raw).filter((key) =>
-        key !== "effort" && key !== "model"
+      const agentUnknown = Object.keys(raw).filter(
+        (key) => key !== "effort" && key !== "model",
       );
       if (agentUnknown.length > 0) {
-        throw new Error(`${where}.agents.${name} has unknown key(s): ${agentUnknown.join(", ")}`);
+        throw new Error(
+          `${where}.agents.${name} has unknown key(s): ${agentUnknown.join(", ")}`,
+        );
       }
       if (
         raw.effort !== undefined &&
-        (
-          typeof raw.effort !== "string" ||
-          !(MODEL_EFFORTS as readonly string[]).includes(raw.effort)
-        )
+        (typeof raw.effort !== "string" ||
+          !(MODEL_EFFORTS as readonly string[]).includes(raw.effort))
       ) {
         throw new Error(`${where}.agents.${name}.effort must be valid`);
       }
-      const model = raw.model === undefined
-        ? undefined
-        : normalizeHarnessModelMap(raw.model, `${where}.agents.${name}.model`);
-      if (raw.effort !== undefined || (model && Object.keys(model).length > 0)) {
+      const model =
+        raw.model === undefined
+          ? undefined
+          : normalizeHarnessModelMap(
+              raw.model,
+              `${where}.agents.${name}.model`,
+            );
+      if (
+        raw.effort !== undefined ||
+        (model && Object.keys(model).length > 0)
+      ) {
         const effort = raw.effort as ModelAgentPolicy["effort"];
         agents[name] = {
           ...(effort !== undefined ? { effort } : {}),
@@ -296,7 +321,8 @@ export function normalizeSettingsModels(
   }
   if (Object.keys(agents).length > 0) out.agents = agents;
   if (value.profiles !== undefined) {
-    if (!isRecord(value.profiles)) throw new Error(`${where}.profiles must be an object`);
+    if (!isRecord(value.profiles))
+      throw new Error(`${where}.profiles must be an object`);
     const profiles: NonNullable<ModelPolicyRecord["profiles"]> = {};
     for (const [name, raw] of Object.entries(value.profiles)) {
       if (
@@ -321,10 +347,13 @@ export function normalizeAidlcSettings(
   layer: SettingsLayer,
   path: string,
 ): AidlcSettingsFile {
-  if (!isRecord(value)) throw new Error(`${path}: settings must be a JSON object`);
+  if (!isRecord(value))
+    throw new Error(`${path}: settings must be a JSON object`);
   const unknown = Object.keys(value).filter((key) => !TOP_LEVEL_KEYS.has(key));
   if (unknown.length > 0) {
-    throw new Error(`${path}: settings contain unknown key(s): ${unknown.join(", ")}`);
+    throw new Error(
+      `${path}: settings contain unknown key(s): ${unknown.join(", ")}`,
+    );
   }
   if (value.schemaVersion !== 1) {
     throw new Error(`${path}: settings.schemaVersion must be 1`);
@@ -350,10 +379,8 @@ export function normalizeAidlcSettings(
   }
   if (
     value["release-base-url"] !== undefined &&
-    (
-      typeof value["release-base-url"] !== "string" ||
-      !validReleaseUrl(value["release-base-url"])
-    )
+    (typeof value["release-base-url"] !== "string" ||
+      !validReleaseUrl(value["release-base-url"]))
   ) {
     throw new Error(
       `${path}: settings.release-base-url must be HTTPS without credentials, query, or fragment`,
@@ -361,10 +388,7 @@ export function normalizeAidlcSettings(
   }
   if (
     value["ca-bundle"] !== undefined &&
-    (
-      typeof value["ca-bundle"] !== "string" ||
-      !isAbsolute(value["ca-bundle"])
-    )
+    (typeof value["ca-bundle"] !== "string" || !isAbsolute(value["ca-bundle"]))
   ) {
     throw new Error(`${path}: settings.ca-bundle must be an absolute path`);
   }
@@ -407,15 +431,18 @@ export function settingsPathForTarget(
   return target === "global"
     ? machineSettingsPath()
     : target === "local"
-    ? localSettingsPath(projectDir)
-    : projectSettingsPath(projectDir);
+      ? localSettingsPath(projectDir)
+      : projectSettingsPath(projectDir);
 }
 
 function layerForTarget(target: SettingsTarget): SettingsLayer {
   return target === "global" ? "machine" : target;
 }
 
-function readCached(path: string, layer: SettingsLayer): AidlcSettingsFile | null {
+function readCached(
+  path: string,
+  layer: SettingsLayer,
+): AidlcSettingsFile | null {
   const cached = settingsCache.get(path);
   if (cached) return cached.value;
   settingsStatCount++;
@@ -423,11 +450,7 @@ function readCached(path: string, layer: SettingsLayer): AidlcSettingsFile | nul
   try {
     stat = statSync(path);
   } catch (error) {
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      error.code === "ENOENT"
-    ) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       settingsCache.set(path, { value: null });
       return null;
     }
@@ -437,7 +460,8 @@ function readCached(path: string, layer: SettingsLayer): AidlcSettingsFile | nul
     settingsCache.set(path, { value: null });
     return null;
   }
-  if (!stat.isFile()) throw new Error(`${path}: settings path is not a regular file`);
+  if (!stat.isFile())
+    throw new Error(`${path}: settings path is not a regular file`);
   settingsReadCount++;
   let parsed: unknown;
   try {
@@ -456,7 +480,10 @@ export function readSettingsTarget(
   projectDir: string,
   target: SettingsTarget,
 ): AidlcSettingsFile | null {
-  return readCached(settingsPathForTarget(projectDir, target), layerForTarget(target));
+  return readCached(
+    settingsPathForTarget(projectDir, target),
+    layerForTarget(target),
+  );
 }
 
 function mergeLeafValues(
@@ -467,10 +494,13 @@ function mergeLeafValues(
   prefix = "",
 ): void {
   for (const [key, value] of Object.entries(source)) {
-    if (key === "$schema" || (key === "schemaVersion" && prefix === "")) continue;
+    if (key === "$schema" || (key === "schemaVersion" && prefix === ""))
+      continue;
     const path = prefix ? `${prefix}.${key}` : key;
     if (isRecord(value)) {
-      const nested = isRecord(target[key]) ? target[key] as Record<string, unknown> : {};
+      const nested = isRecord(target[key])
+        ? (target[key] as Record<string, unknown>)
+        : {};
       target[key] = nested;
       mergeLeafValues(nested, value, origin, origins, path);
     } else {
@@ -509,7 +539,9 @@ function resolveWithLayers(
   };
 }
 
-export function resolveAidlcSettings(projectDir: string): ResolvedAidlcSettings {
+export function resolveAidlcSettings(
+  projectDir: string,
+): ResolvedAidlcSettings {
   const paths = {
     machine: machineSettingsPath(),
     project: projectSettingsPath(projectDir),
@@ -575,7 +607,9 @@ export function settingsModelsFromHarnessPolicy(
   harness: ModelHarness,
   policy: ModelPolicyRecord | null,
 ): SettingsModelPolicyRecord | null {
-  const { agents: _policyAgents, ...base } = policy ?? { schemaVersion: 1 as const };
+  const { agents: _policyAgents, ...base } = policy ?? {
+    schemaVersion: 1 as const,
+  };
   const agents: Record<string, SettingsModelAgentPolicy> = {};
   const names = new Set([
     ...Object.keys(current?.agents ?? {}),
@@ -590,7 +624,9 @@ export function settingsModelsFromHarnessPolicy(
     if (effort !== undefined || Object.keys(existingModels).length > 0) {
       agents[name] = {
         ...(effort !== undefined ? { effort } : {}),
-        ...(Object.keys(existingModels).length > 0 ? { model: existingModels } : {}),
+        ...(Object.keys(existingModels).length > 0
+          ? { model: existingModels }
+          : {}),
       };
     }
   }
@@ -599,7 +635,7 @@ export function settingsModelsFromHarnessPolicy(
     ...(Object.keys(agents).length > 0 ? { agents } : {}),
   });
   return normalized &&
-      Object.keys(normalized).some((key) => key !== "schemaVersion")
+    Object.keys(normalized).some((key) => key !== "schemaVersion")
     ? normalized
     : null;
 }
@@ -610,7 +646,7 @@ export function updateSettingsSection(
   value: SettingsModelPolicyRecord | ProjectFlagsRecord | null,
 ): AidlcSettingsFile | null {
   const next: AidlcSettingsFile = current
-    ? JSON.parse(JSON.stringify(current)) as AidlcSettingsFile
+    ? (JSON.parse(JSON.stringify(current)) as AidlcSettingsFile)
     : { schemaVersion: 1 };
   if (value === null) delete next[section];
   else Object.assign(next, { [section]: value });
@@ -618,7 +654,9 @@ export function updateSettingsSection(
 }
 
 export function settingsFileHasValues(value: AidlcSettingsFile): boolean {
-  return Object.keys(value).some((key) => key !== "$schema" && key !== "schemaVersion");
+  return Object.keys(value).some(
+    (key) => key !== "$schema" && key !== "schemaVersion",
+  );
 }
 
 export function serializeAidlcSettings(value: AidlcSettingsFile): string {
@@ -704,8 +742,15 @@ export const AIDLC_SETTINGS_SCHEMA = {
                 type: "object",
                 additionalProperties: false,
                 properties: Object.fromEntries(
-                  ["claude", "codex", "copilot", "cursor", "kiro", "kiro-ide", "opencode"]
-                    .map((name) => [name, { type: "string", minLength: 1 }]),
+                  [
+                    "claude",
+                    "codex",
+                    "copilot",
+                    "cursor",
+                    "kiro",
+                    "kiro-ide",
+                    "opencode",
+                  ].map((name) => [name, { type: "string", minLength: 1 }]),
                 ),
               },
             },

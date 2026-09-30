@@ -28,24 +28,26 @@ For every application, verify defenses against each category:
 
 For each component and data flow, assess:
 
-| Threat | Question | Example Mitigation |
-|--------|----------|-------------------|
-| **S**poofing | Can an attacker impersonate a user or service? | Authentication, mutual TLS, API keys |
-| **T**ampering | Can data be modified in transit or at rest? | Input validation, checksums, signed tokens |
-| **R**epudiation | Can a user deny performing an action? | Audit logging, non-repudiation controls |
-| **I**nformation Disclosure | Can sensitive data leak? | Encryption, access controls, data masking |
-| **D**enial of Service | Can the system be made unavailable? | Rate limiting, autoscaling, circuit breakers |
-| **E**levation of Privilege | Can a user gain unauthorized permissions? | Least privilege, RBAC enforcement, input validation |
+| Threat                     | Question                                       | Example Mitigation                                  |
+| -------------------------- | ---------------------------------------------- | --------------------------------------------------- |
+| **S**poofing               | Can an attacker impersonate a user or service? | Authentication, mutual TLS, API keys                |
+| **T**ampering              | Can data be modified in transit or at rest?    | Input validation, checksums, signed tokens          |
+| **R**epudiation            | Can a user deny performing an action?          | Audit logging, non-repudiation controls             |
+| **I**nformation Disclosure | Can sensitive data leak?                       | Encryption, access controls, data masking           |
+| **D**enial of Service      | Can the system be made unavailable?            | Rate limiting, autoscaling, circuit breakers        |
+| **E**levation of Privilege | Can a user gain unauthorized permissions?      | Least privilege, RBAC enforcement, input validation |
 
 ## Authentication & Authorization Patterns
 
 ### Authentication
+
 - **Session-based**: Server-side sessions with HttpOnly/Secure/SameSite cookies. Best for server-rendered web apps.
 - **JWT**: Stateless tokens with short expiry (15 min access, 7 day refresh). Best for SPAs and APIs. Store access token in memory, refresh token in HttpOnly cookie.
 - **API Keys**: For service-to-service communication. Rotate regularly. Scope to minimum permissions.
 - **OAuth2/OIDC**: For third-party authentication delegation. Use authorization code flow with PKCE. Never use implicit flow.
 
 ### Authorization
+
 - **RBAC (Role-Based)**: Assign permissions to roles, roles to users. Good for well-defined hierarchies.
 - **ABAC (Attribute-Based)**: Evaluate rules based on user, resource, action, and environment attributes. Good for complex, context-dependent policies.
 - **Object-Level**: Always verify the requesting user has access to the specific resource being requested. Never trust client-provided ownership claims.
@@ -54,16 +56,17 @@ For each component and data flow, assess:
 
 Classify data into tiers and apply controls:
 
-| Tier | Examples | At Rest | In Transit | Access | Retention |
-|------|----------|---------|------------|--------|-----------|
-| Public | Marketing content | None required | HTTPS preferred | Open | Indefinite |
-| Internal | Business docs | Encrypted volume | HTTPS required | Authenticated | Per policy |
-| Confidential | PII, financial | AES-256, key rotation | TLS 1.2+ required | Role-restricted | Minimized |
-| Restricted | Passwords, keys | HSM/KMS, separate storage | mTLS | Named individuals | Shortest possible |
+| Tier         | Examples          | At Rest                   | In Transit        | Access            | Retention         |
+| ------------ | ----------------- | ------------------------- | ----------------- | ----------------- | ----------------- |
+| Public       | Marketing content | None required             | HTTPS preferred   | Open              | Indefinite        |
+| Internal     | Business docs     | Encrypted volume          | HTTPS required    | Authenticated     | Per policy        |
+| Confidential | PII, financial    | AES-256, key rotation     | TLS 1.2+ required | Role-restricted   | Minimized         |
+| Restricted   | Passwords, keys   | HSM/KMS, separate storage | mTLS              | Named individuals | Shortest possible |
 
 ## Secure Coding Practices Checklist
 
 For code review, verify:
+
 - [ ] All user input validated (type, length, range, format)
 - [ ] SQL queries parameterized (no string interpolation)
 - [ ] Output encoded for context (HTML, URL, JS)

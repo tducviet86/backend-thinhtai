@@ -44,6 +44,7 @@ Runs deterministically inside `aidlc-utility init`. Kept as reference for state-
 Read the state contract from `.codex/knowledge/aidlc-shared/state-template.md`.
 Overwrite `<record>/aidlc-state.md` with the full populated version generated
 from the compiled stage graph and scope grid:
+
 - Project description: persist the exact text in
   `<record>/project-description.json` as one JSON string; write only a safe
   single-line preview to the state `Project` field
@@ -66,21 +67,25 @@ from the compiled stage graph and scope grid:
 ### Step 3: Determine Routing
 
 Based on project type:
+
 - **Brownfield** → First post-initialization stage: reverse-engineering (Inception)
 - **Greenfield** → First post-initialization stage: requirements-analysis (Inception), skip reverse-engineering
 
 Update aidlc-state.md with the routing decision:
+
 - Set `Stages to Execute` and `Stages to Skip` based on scope + project type
 - Mark reverse-engineering as SKIP for greenfield projects
 
 ### Step 4: Finalize State
 
 **If invoked from `--init`:**
+
 - Set Lifecycle Phase to READY
 - Set Current Stage to `workspace initialized — run /aidlc [scope] to start`
 - Do NOT continue to the Ideation phase
 
 **If invoked from workflow start:**
+
 - Set Lifecycle Phase to the first post-initialization phase (IDEATION or INCEPTION depending on scope)
 - Set Current Stage to the first post-initialization stage
 

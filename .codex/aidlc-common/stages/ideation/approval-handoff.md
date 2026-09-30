@@ -55,6 +55,7 @@ outputs: initiative-brief.md, decision-log.md, approval-handoff-questions.md (un
 ### Step 1: Load Prior Context
 
 Read ALL Ideation phase artifacts:
+
 - Intent statement and stakeholder map from `<record>/ideation/intent-capture/`
 - Market research from `<record>/ideation/market-research/` (if exists)
 - Feasibility assessment, constraint register, RAID log from `<record>/ideation/feasibility/` (if exists)
@@ -65,6 +66,7 @@ Read ALL Ideation phase artifacts:
 ### Step 2: Generate Approval Questions
 
 Create `<record>/ideation/approval-handoff/approval-handoff-questions.md` with questions:
+
 - Do all stakeholders agree on the intent and scope?
 - Have all critical risks been acknowledged with mitigations?
 - Is there budget/resource commitment?
@@ -77,6 +79,7 @@ Follow stage-protocol.md question flow.
 ### Step 3: Compile Initiative Brief
 
 Create `<record>/ideation/approval-handoff/initiative-brief.md` — a one-pager combining:
+
 - Intent and problem statement
 - Market validation summary
 - Feasibility and risk highlights
@@ -90,6 +93,7 @@ Create `<record>/ideation/approval-handoff/decision-log.md` — record of all de
 ### Step 4: Phase Boundary Verification
 
 Run Ideation → Inception verification check:
+
 - Intent → Scope → Intent Backlog consistency
 - All scope items have feasibility backing
 - Write results to `<record>/verification/phase-check-ideation.md`

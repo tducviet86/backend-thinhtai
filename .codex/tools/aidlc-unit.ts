@@ -95,7 +95,11 @@ interface GitResult {
   code: number;
 }
 
-function git(projectDir: string, args: string[], env?: NodeJS.ProcessEnv): GitResult {
+function git(
+  projectDir: string,
+  args: string[],
+  env?: NodeJS.ProcessEnv,
+): GitResult {
   const result = spawnSync("git", args, {
     cwd: projectDir,
     encoding: "utf-8",
@@ -168,11 +172,16 @@ export interface UnitClaimOverview {
 function repositoryRemote(projectDir: string): string | null {
   const result = git(projectDir, ["remote"]);
   if (!result.ok) return null;
-  const remotes = result.stdout.split(/\r?\n/).map((v) => v.trim()).filter(Boolean);
+  const remotes = result.stdout
+    .split(/\r?\n/)
+    .map((v) => v.trim())
+    .filter(Boolean);
   if (remotes.length === 0) return null;
   if (remotes.includes("origin")) return "origin";
   if (remotes.length === 1) return remotes[0];
-  fail(`Multiple git remotes are configured (${remotes.join(", ")}); configure origin for Unit claims.`);
+  fail(
+    `Multiple git remotes are configured (${remotes.join(", ")}); configure origin for Unit claims.`,
+  );
 }
 
 function currentBranch(projectDir: string): string {
@@ -193,8 +202,12 @@ function affirmedIntegrationBranch(projectDir: string): string | null {
       const body = readFileSync(join(memoryRoot, name), "utf-8");
       const section = extractMarkdownSection(body, "## Way of Working");
       const explicit =
-        /\b(?:base|integration|merge target)(?: branch)?\b[^`\n]*`([^`]+)`/i.exec(section) ??
-        /`([^`]+)`[^.\n]*\b(?:base|integration|merge target)(?: branch)?\b/i.exec(section);
+        /\b(?:base|integration|merge target)(?: branch)?\b[^`\n]*`([^`]+)`/i.exec(
+          section,
+        ) ??
+        /`([^`]+)`[^.\n]*\b(?:base|integration|merge target)(?: branch)?\b/i.exec(
+          section,
+        );
       if (
         explicit &&
         /^(?:main|master|develop|release\/[A-Za-z0-9._/-]+)$/.test(explicit[1])
@@ -212,12 +225,23 @@ function integrationBranch(projectDir: string, remote: string | null): string {
   const affirmed = affirmedIntegrationBranch(projectDir);
   if (affirmed) return affirmed;
   if (remote) {
-    const cached = git(projectDir, ["symbolic-ref", "--short", `refs/remotes/${remote}/HEAD`]);
+    const cached = git(projectDir, [
+      "symbolic-ref",
+      "--short",
+      `refs/remotes/${remote}/HEAD`,
+    ]);
     if (cached.ok && cached.stdout.trim().startsWith(`${remote}/`)) {
       return cached.stdout.trim().slice(remote.length + 1);
     }
-    const advertised = git(projectDir, ["ls-remote", "--symref", remote, "HEAD"]);
-    const match = advertised.stdout.match(/^ref:\s+refs\/heads\/([^\s]+)\s+HEAD$/m);
+    const advertised = git(projectDir, [
+      "ls-remote",
+      "--symref",
+      remote,
+      "HEAD",
+    ]);
+    const match = advertised.stdout.match(
+      /^ref:\s+refs\/heads\/([^\s]+)\s+HEAD$/m,
+    );
     if (match) return match[1];
   }
   const current = currentBranch(projectDir);
@@ -246,9 +270,12 @@ function fetchIntegration(projectDir: string): {
   const branch = integrationBranch(projectDir, remote);
   if (remote) {
     const fetched = git(projectDir, ["fetch", remote, branch]);
-    if (!fetched.ok) fail(`git fetch ${remote} ${branch} failed: ${fetched.stderr.trim()}`);
+    if (!fetched.ok)
+      fail(`git fetch ${remote} ${branch} failed: ${fetched.stderr.trim()}`);
   }
-  const ref = remote ? `refs/remotes/${remote}/${branch}` : `refs/heads/${branch}`;
+  const ref = remote
+    ? `refs/remotes/${remote}/${branch}`
+    : `refs/heads/${branch}`;
   const oid = git(projectDir, ["rev-parse", "--verify", ref]);
   if (!oid.ok) fail(`Integration ref ${ref} does not exist.`);
   return { remote, branch, ref, oid: oid.stdout.trim() };
@@ -279,7 +306,9 @@ function refTip(
   if (remote) {
     const found = git(projectDir, ["ls-remote", remote, ref]);
     if (!found.ok) {
-      fail(`Unit claim registry read failed: ${found.stderr.trim() || found.stdout.trim()}`);
+      fail(
+        `Unit claim registry read failed: ${found.stderr.trim() || found.stdout.trim()}`,
+      );
     }
     const line = found.stdout.trim().split(/\r?\n/).find(Boolean);
     return line ? line.split(/\s+/)[0] : null;
@@ -311,14 +340,10 @@ function readPayload(
       (parsed.audit_shard !== undefined &&
         (typeof parsed.audit_shard !== "string" ||
           !/^[A-Za-z0-9._-]+\.md$/.test(parsed.audit_shard))) ||
-      (
-        parsed.candidate_tree_oid !== undefined &&
-        !/^[0-9a-f]{40}$/.test(parsed.candidate_tree_oid)
-      ) ||
-      (
-        parsed.candidate_head_oid !== undefined &&
-        !/^[0-9a-f]{40}$/.test(parsed.candidate_head_oid)
-      )
+      (parsed.candidate_tree_oid !== undefined &&
+        !/^[0-9a-f]{40}$/.test(parsed.candidate_tree_oid)) ||
+      (parsed.candidate_head_oid !== undefined &&
+        !/^[0-9a-f]{40}$/.test(parsed.candidate_head_oid))
     ) {
       return null;
     }
@@ -427,17 +452,27 @@ function createClaimCommit(
       GIT_COMMITTER_NAME: "AI-DLC Unit Claims",
       GIT_COMMITTER_EMAIL: "aidlc-unit@local",
     };
-    const read = git(projectDir, ["read-tree", sourceTreeOid ?? parentOid], env);
+    const read = git(
+      projectDir,
+      ["read-tree", sourceTreeOid ?? parentOid],
+      env,
+    );
     if (!read.ok) fail(`git read-tree failed: ${read.stderr.trim()}`);
     const blob = spawnSync("git", ["hash-object", "-w", "--stdin"], {
       cwd: projectDir,
       encoding: "utf-8",
       input: `${JSON.stringify(payload, null, 2)}\n`,
     });
-    if (blob.status !== 0) fail(`git hash-object failed: ${(blob.stderr ?? "").trim()}`);
+    if (blob.status !== 0)
+      fail(`git hash-object failed: ${(blob.stderr ?? "").trim()}`);
     const update = git(
       projectDir,
-      ["update-index", "--add", "--cacheinfo", `100644,${(blob.stdout ?? "").trim()},${CLAIM_FILE}`],
+      [
+        "update-index",
+        "--add",
+        "--cacheinfo",
+        `100644,${(blob.stdout ?? "").trim()},${CLAIM_FILE}`,
+      ],
       env,
     );
     if (!update.ok) fail(`git update-index failed: ${update.stderr.trim()}`);
@@ -469,7 +504,12 @@ function updateClaimRef(
 ): boolean {
   if (remote) {
     const lease = `--force-with-lease=${ref}:${expectedOid ?? ""}`;
-    const pushed = git(projectDir, ["push", remote, lease, `${commitOid}:${ref}`]);
+    const pushed = git(projectDir, [
+      "push",
+      remote,
+      lease,
+      `${commitOid}:${ref}`,
+    ]);
     return pushed.ok;
   }
   const updated = git(projectDir, [
@@ -488,7 +528,10 @@ function activeIdentity(projectDir: string): {
 } {
   const space = activeSpace(projectDir);
   const intentUuid = activeIntentUuid(projectDir, space);
-  if (!intentUuid) fail("No active intent UUID; switch to the workflow before claiming a Unit.");
+  if (!intentUuid)
+    fail(
+      "No active intent UUID; switch to the workflow before claiming a Unit.",
+    );
   return { space, intentUuid, intentId8: idSuffix(intentUuid) };
 }
 
@@ -496,18 +539,25 @@ function stateAtOid(projectDir: string, oid: string): string {
   const relative = relativeRecordDir(projectDir);
   if (!relative) fail("Cannot resolve the active intent record path.");
   const shown = git(projectDir, ["show", `${oid}:${relative}/aidlc-state.md`]);
-  if (!shown.ok) fail("The fetched integration ref does not contain the active intent state.");
+  if (!shown.ok)
+    fail(
+      "The fetched integration ref does not contain the active intent state.",
+    );
   return shown.stdout;
 }
 
-function dependencyEdgesAtOid(projectDir: string, oid: string): ReturnType<typeof parseBoltDag> {
+function dependencyEdgesAtOid(
+  projectDir: string,
+  oid: string,
+): ReturnType<typeof parseBoltDag> {
   const relative = relativeRecordDir(projectDir);
   if (!relative) fail("Cannot resolve the active intent record path.");
-  const shown = git(
-    projectDir,
-    ["show", `${oid}:${relative}/inception/units-generation/unit-of-work-dependency.md`],
-  );
-  if (!shown.ok) fail("The fetched integration ref has no Unit dependency artifact.");
+  const shown = git(projectDir, [
+    "show",
+    `${oid}:${relative}/inception/units-generation/unit-of-work-dependency.md`,
+  ]);
+  if (!shown.ok)
+    fail("The fetched integration ref has no Unit dependency artifact.");
   return parseBoltDag(shown.stdout);
 }
 
@@ -520,7 +570,12 @@ function completedUnits(state: string): Set<string> {
   const table = section
     .split(/\r?\n/)
     .filter((line) => line.startsWith("|"))
-    .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
+    .map((line) =>
+      line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    );
   const header = table.find((cells) => cells[0]?.toLowerCase() === "unit");
   if (!header) return new Set();
   const mergedIndex = header.findIndex(
@@ -580,7 +635,8 @@ function skeletonCompletedAtOid(projectDir: string, oid: string): boolean {
       events.push({
         event,
         names,
-        timestamp: /^\*\*Timestamp\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim() ?? "",
+        timestamp:
+          /^\*\*Timestamp\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim() ?? "",
         skeleton: /^\*\*Walking skeleton\*\*:\s*true\s*$/m.test(block),
         position: position++,
       });
@@ -588,8 +644,10 @@ function skeletonCompletedAtOid(projectDir: string, oid: string): boolean {
   }
   events.sort((a, b) =>
     a.timestamp !== b.timestamp
-      ? (a.timestamp < b.timestamp ? -1 : 1)
-      : a.position - b.position
+      ? a.timestamp < b.timestamp
+        ? -1
+        : 1
+      : a.position - b.position,
   );
   const started = new Set<string>();
   for (const event of events) {
@@ -611,11 +669,19 @@ function skeletonCompletedAtOid(projectDir: string, oid: string): boolean {
 function openingStatus(
   projectDir: string,
   baseOid: string,
-): { units: string[]; blockers: Map<string, string[]>; completed: Set<string> } {
+): {
+  units: string[];
+  blockers: Map<string, string[]>;
+  completed: Set<string>;
+} {
   const state = stateAtOid(projectDir, baseOid);
-  if (!isTeamUnitOwnership(state)) fail("Unit claims require Unit Ownership: team.");
+  if (!isTeamUnitOwnership(state))
+    fail("Unit claims require Unit Ownership: team.");
   const parsed = dependencyEdgesAtOid(projectDir, baseOid);
-  if (!parsed.ok) fail(`Cannot resolve Unit dependencies: ${parsed.reason}: ${parsed.detail}`);
+  if (!parsed.ok)
+    fail(
+      `Cannot resolve Unit dependencies: ${parsed.reason}: ${parsed.detail}`,
+    );
   const completed = completedUnits(state);
   const scope = getField(state, "Scope") ?? "";
   const skeletonOn = loadScopeMetadata()[scope]?.skeleton === true;
@@ -630,9 +696,11 @@ function openingStatus(
   return { units: parsed.units.map((edge) => edge.name), blockers, completed };
 }
 
-function localOpeningStatus(
-  projectDir: string,
-): { units: string[]; blockers: Map<string, string[]>; completed: Set<string> } {
+function localOpeningStatus(projectDir: string): {
+  units: string[];
+  blockers: Map<string, string[]>;
+  completed: Set<string>;
+} {
   const state = readStateFile(projectDir);
   const dependencyBody = readFileSync(unitDependencyPath(projectDir), "utf-8");
   return localOpeningStatusFrom(state, dependencyBody);
@@ -641,10 +709,18 @@ function localOpeningStatus(
 function localOpeningStatusFrom(
   state: string,
   dependencyBody: string,
-): { units: string[]; blockers: Map<string, string[]>; completed: Set<string> } {
-  if (!isTeamUnitOwnership(state)) fail("Unit claims require Unit Ownership: team.");
+): {
+  units: string[];
+  blockers: Map<string, string[]>;
+  completed: Set<string>;
+} {
+  if (!isTeamUnitOwnership(state))
+    fail("Unit claims require Unit Ownership: team.");
   const parsed = parseBoltDag(dependencyBody);
-  if (!parsed.ok) fail(`Cannot resolve Unit dependencies: ${parsed.reason}: ${parsed.detail}`);
+  if (!parsed.ok)
+    fail(
+      `Cannot resolve Unit dependencies: ${parsed.reason}: ${parsed.detail}`,
+    );
   const completed = completedUnits(state);
   const scope = getField(state, "Scope") ?? "";
   const skeletonBlocked =
@@ -681,7 +757,8 @@ function buildOverview(
   warning?: string,
 ): UnitClaimOverview {
   const claimable: string[] = [];
-  const claimed: Array<{ unit: string; owner: string; generation: number }> = [];
+  const claimed: Array<{ unit: string; owner: string; generation: number }> =
+    [];
   const waiting: Array<{ unit: string; blockedBy: string[] }> = [];
   for (const unit of opening.units) {
     if (opening.completed.has(unit)) continue;
@@ -694,7 +771,13 @@ function buildOverview(
     if (blockedBy.length > 0) waiting.push({ unit, blockedBy });
     else claimable.push(unit);
   }
-  return { claimable, claimed, waiting, claims, ...(warning ? { warning } : {}) };
+  return {
+    claimable,
+    claimed,
+    waiting,
+    claims,
+    ...(warning ? { warning } : {}),
+  };
 }
 
 function cacheClaims(
@@ -708,11 +791,10 @@ function cacheClaims(
   for (const [unit, claim] of claims) {
     const prior =
       priorCache?.space === identity.space &&
-        priorCache.intent_uuid === identity.intentUuid
+      priorCache.intent_uuid === identity.intentUuid
         ? priorCache.claims[unit]
         : undefined;
-    const movementObserved =
-      prior !== undefined && prior.oid !== claim.oid;
+    const movementObserved = prior !== undefined && prior.oid !== claim.oid;
     const observedAt = prior?.observed_at ?? isoTimestamp();
     const nextObservedAt = movementObserved ? isoTimestamp() : observedAt;
     claim.observedAt = observedAt;
@@ -821,10 +903,8 @@ function cachedClaimsForIdentity(
       prior &&
       (prior.generation > payload.generation ||
         (prior.generation === payload.generation &&
-          (
-            prior.oid === oid ||
-            (prior.status === "claimed" && payload.status === "released")
-          )))
+          (prior.oid === oid ||
+            (prior.status === "claimed" && payload.status === "released"))))
     ) {
       continue;
     }
@@ -838,14 +918,14 @@ function cachedClaimsForIdentity(
       ref: payload.claim_ref,
       observedAt:
         cache?.space === identity.space &&
-          cache.intent_uuid === identity.intentUuid
+        cache.intent_uuid === identity.intentUuid
           ? cache.claims[payload.unit]?.observed_at
           : undefined,
       movementObserved:
         cache?.space === identity.space &&
-          cache.intent_uuid === identity.intentUuid &&
-          cache.claims[payload.unit] !== undefined &&
-          cache.claims[payload.unit]?.oid !== oid,
+        cache.intent_uuid === identity.intentUuid &&
+        cache.claims[payload.unit] !== undefined &&
+        cache.claims[payload.unit]?.oid !== oid,
       payload,
     });
   }
@@ -912,15 +992,17 @@ export function unitClaimOverview(projectDir: string): UnitClaimOverview {
   const identity = activeIdentity(pd);
   const integration = fetchIntegration(pd);
   const opening = openingStatus(pd, integration.oid);
-  const claims = allClaims(pd, integration.remote, identity.intentId8, opening.units);
+  const claims = allClaims(
+    pd,
+    integration.remote,
+    identity.intentId8,
+    opening.units,
+  );
   const observedClaims = cacheClaims(pd, claims);
   return buildOverview(opening, observedClaims);
 }
 
-function updateCachedClaim(
-  projectDir: string,
-  claim: UnitClaimView,
-): void {
+function updateCachedClaim(projectDir: string, claim: UnitClaimView): void {
   const claims = cachedClaims(projectDir);
   claims.set(claim.unit, claim);
   cacheClaims(projectDir, claims);
@@ -929,7 +1011,9 @@ function updateCachedClaim(
 function gitOutput(projectDir: string, args: string[], label: string): string {
   const result = git(projectDir, args);
   if (!result.ok) {
-    fail(`${label}: ${result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`}`);
+    fail(
+      `${label}: ${result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`}`,
+    );
   }
   return result.stdout.trim();
 }
@@ -942,11 +1026,7 @@ function gitPathExistsAt(
   return git(projectDir, ["cat-file", "-e", `${oid}:${path}`]).ok;
 }
 
-function gitTextAt(
-  projectDir: string,
-  oid: string,
-  path: string,
-): string {
+function gitTextAt(projectDir: string, oid: string, path: string): string {
   const shown = git(projectDir, ["show", `${oid}:${path}`]);
   if (!shown.ok) fail(`Pinned candidate is missing ${path}.`);
   return shown.stdout;
@@ -976,7 +1056,7 @@ function candidateAuditEvents(
           pos,
         };
       })
-      .filter((event): event is CandidateAuditEvent => event !== null)
+      .filter((event): event is CandidateAuditEvent => event !== null),
   );
   return events.sort((a, b) => {
     if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
@@ -1004,8 +1084,7 @@ function attemptEventMatches(
 ): boolean {
   return (
     auditBlockField(event.block, "Unit") === unit &&
-    auditBlockField(event.block, "Attempt Generation") ===
-      String(generation) &&
+    auditBlockField(event.block, "Attempt Generation") === String(generation) &&
     auditBlockMatchesStage(event.block, stage)
   );
 }
@@ -1029,8 +1108,7 @@ function candidateReviewFingerprint(
     unitKind,
   );
   const manifest: Array<[string, string]> = names.map((name) => {
-    const logicalPath =
-      `construction/${unit}/${stage.slug}/${artifactFilename(name)}`;
+    const logicalPath = `construction/${unit}/${stage.slug}/${artifactFilename(name)}`;
     const path = `${recordPrefix}/${logicalPath}`;
     if (!gitPathExistsAt(projectDir, oid, path)) {
       return [logicalPath, "missing"];
@@ -1041,9 +1119,9 @@ function candidateReviewFingerprint(
     return [logicalPath, `sha256:${digest}`];
   });
   manifest.sort(([a], [b]) => a.localeCompare(b));
-  return `sha256:${
-    createHash("sha256").update(JSON.stringify(manifest)).digest("hex")
-  }`;
+  return `sha256:${createHash("sha256")
+    .update(JSON.stringify(manifest))
+    .digest("hex")}`;
 }
 
 function candidateReviewerReady(
@@ -1103,16 +1181,25 @@ function validateCandidateUnitProgress(
   const rows = section
     .split(/\r?\n/)
     .filter((line) => line.startsWith("|"))
-    .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
+    .map((line) =>
+      line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    );
   const header = rows.find((cells) => cells[0]?.toLowerCase() === "unit");
   if (!header) fail("Pinned candidate Unit Progress projection has no header.");
   const row = rows.find((cells) => cells[0] === claim.unit);
   if (!row || row.length !== header.length) {
-    fail(`Pinned candidate Unit Progress has no valid row for "${claim.unit}".`);
+    fail(
+      `Pinned candidate Unit Progress has no valid row for "${claim.unit}".`,
+    );
   }
   const ownerIndex = header.findIndex((cell) => cell.toLowerCase() === "owner");
   if (ownerIndex < 0 || row[ownerIndex] !== claim.owner) {
-    fail(`Pinned candidate Unit Progress owner does not match "${claim.owner}".`);
+    fail(
+      `Pinned candidate Unit Progress owner does not match "${claim.owner}".`,
+    );
   }
   for (const stage of stages) {
     const stageIndex = header.indexOf(stage);
@@ -1139,7 +1226,12 @@ function mainUnitRowMerged(
     .slice(after, next ? after + next.index : state.length)
     .split(/\r?\n/)
     .filter((line) => line.startsWith("|"))
-    .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
+    .map((line) =>
+      line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    );
   const header = rows.find((cells) => cells[0]?.toLowerCase() === "unit");
   const row = rows.find((cells) => cells[0] === transaction.unit);
   if (!header || !row || row.length !== header.length) return false;
@@ -1195,10 +1287,8 @@ function isTransportedMainAuthority(event: CandidateAuditEvent): boolean {
   }
   return (
     (event.event === "GATE_APPROVED" || event.event === "GATE_REJECTED") &&
-    (
-      auditBlockField(event.block, "Stage") === "unit-merge" ||
-      auditBlockField(event.block, "Gate Scope") === "unit-merge"
-    )
+    (auditBlockField(event.block, "Stage") === "unit-merge" ||
+      auditBlockField(event.block, "Gate Scope") === "unit-merge")
   );
 }
 
@@ -1212,10 +1302,7 @@ function transportedAuditViolation(
   }
   if (TRANSPORTED_ATTEMPT_EVENTS.has(event.event)) {
     const eventUnit = auditBlockField(event.block, "Unit");
-    const eventGeneration = auditBlockField(
-      event.block,
-      "Attempt Generation",
-    );
+    const eventGeneration = auditBlockField(event.block, "Attempt Generation");
     if (eventUnit !== unit) {
       return `${event.event} receipt belongs to Unit ${eventUnit ?? "(unitless)"}`;
     }
@@ -1229,21 +1316,17 @@ function transportedAuditViolation(
   }
   if (TRANSPORTED_DATA_EVENTS.has(event.event)) {
     const eventUnit = auditBlockField(event.block, "Unit");
-    const eventGeneration = auditBlockField(
-      event.block,
-      "Attempt Generation",
-    );
+    const eventGeneration = auditBlockField(event.block, "Attempt Generation");
     if (eventUnit !== null && eventUnit !== unit) {
       return `${event.event} row belongs to Unit ${eventUnit}`;
     }
-    if (
-      eventGeneration !== null &&
-      eventGeneration !== String(generation)
-    ) {
+    if (eventGeneration !== null && eventGeneration !== String(generation)) {
       return `${event.event} row belongs to attempt generation ${eventGeneration}`;
     }
-    const file = (auditBlockField(event.block, "File") ?? "")
-      .replace(/\\/g, "/");
+    const file = (auditBlockField(event.block, "File") ?? "").replace(
+      /\\/g,
+      "/",
+    );
     const unitArtifactRoot = `construction/${unit}/`;
     if (
       !file.startsWith(unitArtifactRoot) &&
@@ -1285,13 +1368,15 @@ function candidateBoundary(
     .map((line) => line.split("\t").at(-1) ?? "")
     .filter(Boolean);
   const changedAudit = addedAudit.filter((path) =>
-    isActiveIntentAuditPath(path, recordPrefix)
+    isActiveIntentAuditPath(path, recordPrefix),
   );
   const violations = auditChanges
     .filter((line) => !line.startsWith("A\t"))
-    .map((line) => `${line.split("\t").at(-1) ?? line} (inherited audit shard)`);
-  for (const path of addedAudit.filter((path) =>
-    !isActiveIntentAuditPath(path, recordPrefix)
+    .map(
+      (line) => `${line.split("\t").at(-1) ?? line} (inherited audit shard)`,
+    );
+  for (const path of addedAudit.filter(
+    (path) => !isActiveIntentAuditPath(path, recordPrefix),
   )) {
     violations.push(`${path} (invalid active-intent audit shard path)`);
   }
@@ -1302,10 +1387,8 @@ function candidateBoundary(
   }
   if (
     expectedAuditShard &&
-    (
-      changedAudit.length !== 1 ||
-      changedAudit[0] !== `${auditRoot}/${expectedAuditShard}`
-    )
+    (changedAudit.length !== 1 ||
+      changedAudit[0] !== `${auditRoot}/${expectedAuditShard}`)
   ) {
     violations.push(
       `${auditRoot}/ (expected claim-bound audit shard ${expectedAuditShard})`,
@@ -1331,12 +1414,15 @@ function candidateBoundary(
     const pathKey = path.toLowerCase();
     const reviewMarkerIndex = path.indexOf(reviewUnitMarker);
     if (reviewMarkerIndex !== -1) {
-      const reviewParts = path.slice(reviewMarkerIndex + reviewUnitMarker.length).split("/");
+      const reviewParts = path
+        .slice(reviewMarkerIndex + reviewUnitMarker.length)
+        .split("/");
       if (
         reviewParts.length === 5 &&
         reviewParts[1] === "units" &&
         reviewParts[2] === unit
-      ) continue;
+      )
+        continue;
     }
     if (pathKey.startsWith(unitRootKey)) continue;
     if (changedAudit.includes(path)) continue;
@@ -1358,9 +1444,7 @@ function candidateBoundary(
   )) {
     const violation = transportedAuditViolation(event, unit, generation);
     if (violation) {
-      violations.push(
-        `${event.shard} (${violation})`,
-      );
+      violations.push(`${event.shard} (${violation})`);
     }
   }
 
@@ -1378,7 +1462,8 @@ function candidateEvidence(
   liveIntegrationOid = candidateBaseOid,
 ): UnitMergeEvidence {
   const recordPrefix = relativeRecordDir(projectDir);
-  if (!recordPrefix) fail("Cannot resolve the active intent record for candidate evidence.");
+  if (!recordPrefix)
+    fail("Cannot resolve the active intent record for candidate evidence.");
   const statePath = `${recordPrefix}/aidlc-state.md`;
   const state = gitTextAt(projectDir, claim.oid, statePath);
   if (!isTeamUnitOwnership(state)) {
@@ -1389,12 +1474,9 @@ function candidateEvidence(
     fail("Pinned integration state does not record Unit Ownership: team.");
   }
   const scope = getField(integrationState, "Scope") ?? "";
-  const stages = unitMajorConstructionStageSlugs(
-    scope,
-    integrationState,
-    true,
-  );
-  if (stages.length === 0) fail("Pinned candidate has no active per-unit Construction stages.");
+  const stages = unitMajorConstructionStageSlugs(scope, integrationState, true);
+  if (stages.length === 0)
+    fail("Pinned candidate has no active per-unit Construction stages.");
   validateCandidateUnitProgress(state, claim, stages);
   const graph = loadStageGraphAll();
   const baseState = stateAtOid(projectDir, candidateBaseOid);
@@ -1406,22 +1488,22 @@ function candidateEvidence(
   const baseDag = dependencyEdgesAtOid(projectDir, candidateBaseOid);
   const dag = dependencyEdgesAtOid(projectDir, liveIntegrationOid);
   if (!baseDag.ok) {
-    fail(`Pinned candidate base Unit DAG is ${baseDag.reason}: ${baseDag.detail}.`);
+    fail(
+      `Pinned candidate base Unit DAG is ${baseDag.reason}: ${baseDag.detail}.`,
+    );
   }
   if (!dag.ok) {
     fail(`Pinned integration Unit DAG is ${dag.reason}: ${dag.detail}.`);
   }
-  const contract = (
-    units: typeof dag.units,
-    stageColumns: string[],
-  ): string => JSON.stringify({
-    stage_columns: stageColumns,
-    units: units.map((entry) => ({
-      name: entry.name,
-      kind: entry.kind ?? null,
-      depends_on: [...entry.depends_on].sort(),
-    })),
-  });
+  const contract = (units: typeof dag.units, stageColumns: string[]): string =>
+    JSON.stringify({
+      stage_columns: stageColumns,
+      units: units.map((entry) => ({
+        name: entry.name,
+        kind: entry.kind ?? null,
+        depends_on: [...entry.depends_on].sort(),
+      })),
+    });
   if (contract(baseDag.units, baseStages) !== contract(dag.units, stages)) {
     fail(
       `Unit "${claim.unit}" candidate is based on a stale Construction contract; ` +
@@ -1465,9 +1547,9 @@ function candidateEvidence(
   }
   if (boundary.violations.length > 0) {
     fail(
-      `Pinned candidate violates claimed Unit ownership at: ${
-        boundary.violations.join(", ")
-      }.`,
+      `Pinned candidate violates claimed Unit ownership at: ${boundary.violations.join(
+        ", ",
+      )}.`,
     );
   }
   const changedAudit = boundary.changedAudit;
@@ -1476,49 +1558,46 @@ function candidateEvidence(
     claim.oid,
     changedAudit,
   );
-  const authorityRows = transportedEvents.filter((event) =>
-    TRANSPORTED_ATTEMPT_EVENTS.has(event.event) ||
-    TRANSPORTED_DATA_EVENTS.has(event.event)
+  const authorityRows = transportedEvents.filter(
+    (event) =>
+      TRANSPORTED_ATTEMPT_EVENTS.has(event.event) ||
+      TRANSPORTED_DATA_EVENTS.has(event.event),
   );
   const events = authorityRows;
   const stagesCompleted = stages.filter((stage) =>
-    unitLifecycleSnapshot(
-      projectDir,
-      stage,
-      authorityRows,
-      integrationState,
-      {
-        artifactFingerprint: (stageNode, unitName) =>
-          candidateReviewFingerprint(
-            projectDir,
-            claim.oid,
-            recordPrefix,
-            unitName,
-            stageNode,
-            unitKind,
-          ),
-      },
-    ).receipts.has(claim.unit)
+    unitLifecycleSnapshot(projectDir, stage, authorityRows, integrationState, {
+      artifactFingerprint: (stageNode, unitName) =>
+        candidateReviewFingerprint(
+          projectDir,
+          claim.oid,
+          recordPrefix,
+          unitName,
+          stageNode,
+          unitKind,
+        ),
+    }).receipts.has(claim.unit),
   );
   const gatesExpected =
     claim.payload.gate_rhythm === "unit-end"
       ? [stages[stages.length - 1]]
       : stages;
-  const gatesApproved = gatesExpected.filter((stage) =>
-    unitGateStatus(
-      projectDir,
-      stage,
-      claim.unit,
-      claim.payload.gate_rhythm,
-      authorityRows,
-    ) === "approved"
+  const gatesApproved = gatesExpected.filter(
+    (stage) =>
+      unitGateStatus(
+        projectDir,
+        stage,
+        claim.unit,
+        claim.payload.gate_rhythm,
+        authorityRows,
+      ) === "approved",
   );
   const reviewersExpected: string[] = [];
   const reviewersReady: string[] = [];
   const artifactPaths: string[] = [];
   for (const stageSlug of stages) {
     const stage = graph.find((entry) => entry.slug === stageSlug);
-    if (!stage) fail(`Pinned candidate references unknown stage "${stageSlug}".`);
+    if (!stage)
+      fail(`Pinned candidate references unknown stage "${stageSlug}".`);
     const names = filterProducesByKind(
       stage.produces_kinds,
       stage.produces ?? [],
@@ -1556,8 +1635,7 @@ function candidateEvidence(
       }
     }
   }
-  const questionsPath =
-    `${recordPrefix}/construction/${claim.unit}/code-generation/code-generation-questions.md`;
+  const questionsPath = `${recordPrefix}/construction/${claim.unit}/code-generation/code-generation-questions.md`;
   let planFingerprint: string | null = null;
   if (stages.includes("code-generation")) {
     const plan = gitTextAt(
@@ -1574,14 +1652,15 @@ function candidateEvidence(
     const fingerprint = recordedApprovalFingerprint(questions);
     const embedded = parseTestingContract(plan);
     const currentContract = resolveTestingPosture(projectDir);
-    const approvalEvent = events.findLast((event) =>
-      event.event === "PLAN_APPROVAL_RECORDED" &&
-      attemptEventMatches(
-        event,
-        claim.unit,
-        claim.generation,
-        "code-generation",
-      )
+    const approvalEvent = events.findLast(
+      (event) =>
+        event.event === "PLAN_APPROVAL_RECORDED" &&
+        attemptEventMatches(
+          event,
+          claim.unit,
+          claim.generation,
+          "code-generation",
+        ),
     );
     const questionsSha256 = createHash("sha256")
       .update(questions, "utf-8")
@@ -1612,8 +1691,7 @@ function candidateEvidence(
         questionsPath &&
       auditBlockField(approvalEvent.block, "Questions SHA-256") ===
         questionsSha256 &&
-      auditBlockField(approvalEvent.block, "Prompt SHA-256") ===
-        promptSha256 &&
+      auditBlockField(approvalEvent.block, "Prompt SHA-256") === promptSha256 &&
       (auditBlockField(approvalEvent.block, "Directive Epoch") ?? "").length >
         0 &&
       (auditBlockField(approvalEvent.block, "Run floor") ?? "").length > 0 &&
@@ -1638,9 +1716,12 @@ function candidateEvidence(
     merge_held: mergeHeld,
   };
   const incomplete: string[] = [];
-  if (stagesCompleted.length !== stages.length) incomplete.push("UNIT_COMPLETED receipts");
-  if (gatesApproved.length !== gatesExpected.length) incomplete.push("team gate approvals");
-  if (reviewersReady.length !== reviewersExpected.length) incomplete.push("reviewer READY receipts");
+  if (stagesCompleted.length !== stages.length)
+    incomplete.push("UNIT_COMPLETED receipts");
+  if (gatesApproved.length !== gatesExpected.length)
+    incomplete.push("team gate approvals");
+  if (reviewersReady.length !== reviewersExpected.length)
+    incomplete.push("reviewer READY receipts");
   if (stages.includes("code-generation") && !planFingerprint) {
     incomplete.push("Plan Approval fingerprint");
   }
@@ -1665,7 +1746,10 @@ function publishUnit(args: string[], projectDir?: string): void {
     ["status", "--porcelain", "--untracked-files=no"],
     "Cannot inspect candidate worktree",
   );
-  if (dirty) fail("Unit publication requires a clean tracked worktree; commit the candidate first.");
+  if (dirty)
+    fail(
+      "Unit publication requires a clean tracked worktree; commit the candidate first.",
+    );
   const remote = repositoryRemote(pd);
   const current = currentClaim(pd, remote, stamp.claim_ref);
   if (
@@ -1675,17 +1759,23 @@ function publishUnit(args: string[], projectDir?: string): void {
   ) {
     fail(`Unit "${unit}" claim is stale or released; publication refused.`);
   }
-  const headOid = gitOutput(pd, ["rev-parse", "HEAD"], "Cannot resolve candidate HEAD");
+  const headOid = gitOutput(
+    pd,
+    ["rev-parse", "HEAD"],
+    "Cannot resolve candidate HEAD",
+  );
   const headTree = gitOutput(
     pd,
     ["rev-parse", "HEAD^{tree}"],
     "Cannot resolve candidate tree",
   );
   const integration = fetchIntegration(pd);
-  const integrationIsAncestor = localGit(
-    pd,
-    ["merge-base", "--is-ancestor", integration.oid, headOid],
-  ).ok;
+  const integrationIsAncestor = localGit(pd, [
+    "merge-base",
+    "--is-ancestor",
+    integration.oid,
+    headOid,
+  ]).ok;
   const publicationBaseOid = integrationIsAncestor
     ? integration.oid
     : current.payload.base_oid;
@@ -1700,13 +1790,15 @@ function publishUnit(args: string[], projectDir?: string): void {
   ) {
     const recoveredStamp = { ...stamp, claim_oid: current.oid };
     finalizeClaimCheckout(pd, recoveredStamp, current);
-    console.log(JSON.stringify({
-      published: true,
-      recovered: true,
-      unit,
-      candidate_oid: current.oid,
-      generation: current.generation,
-    }));
+    console.log(
+      JSON.stringify({
+        published: true,
+        recovered: true,
+        unit,
+        candidate_oid: current.oid,
+        generation: current.generation,
+      }),
+    );
     return;
   }
   const payload: UnitClaimPayload = {
@@ -1717,30 +1809,32 @@ function publishUnit(args: string[], projectDir?: string): void {
     candidate_tree_oid: headTree,
     candidate_head_oid: headOid,
   };
-  const commit = createClaimCommit(
-    pd,
-    current.oid,
-    payload,
-    headTree,
-    headOid,
-  );
+  const commit = createClaimCommit(pd, current.oid, payload, headTree, headOid);
   if (!updateClaimRef(pd, remote, stamp.claim_ref, commit, current.oid)) {
-    fail(`Unit "${unit}" publication compare-and-swap failed; refresh the claim and retry.`);
+    fail(
+      `Unit "${unit}" publication compare-and-swap failed; refresh the claim and retry.`,
+    );
   }
   invalidateLiveClaimPayloadCache(pd, unit);
   const published = currentClaim(pd, remote, stamp.claim_ref);
-  if (!published || published.oid !== commit || published.nonce !== stamp.nonce) {
+  if (
+    !published ||
+    published.oid !== commit ||
+    published.nonce !== stamp.nonce
+  ) {
     fail(`Unit "${unit}" publication verification failed.`);
   }
   const updatedStamp = { ...stamp, claim_oid: published.oid };
   finalizeClaimCheckout(pd, updatedStamp, published);
-  console.log(JSON.stringify({
-    published: true,
-    unit,
-    candidate_oid: published.oid,
-    candidate_head_oid: headOid,
-    generation: published.generation,
-  }));
+  console.log(
+    JSON.stringify({
+      published: true,
+      unit,
+      candidate_oid: published.oid,
+      candidate_head_oid: headOid,
+      generation: published.generation,
+    }),
+  );
 }
 
 interface PinnedClaimCheck {
@@ -1765,7 +1859,9 @@ function pinnedClaimFromTransaction(
     payload.base_oid !== transaction.candidate_base_oid ||
     payload.candidate_tree_oid !== transaction.candidate_tree_oid
   ) {
-    fail(`Pinned Unit "${transaction.unit}" claim payload is unavailable or invalid.`);
+    fail(
+      `Pinned Unit "${transaction.unit}" claim payload is unavailable or invalid.`,
+    );
   }
   return {
     unit: payload.unit,
@@ -1856,7 +1952,9 @@ function currentPinnedClaim(
   return { claim: current };
 }
 
-function orderedAuditRows(projectDir: string): ReturnType<typeof readAuditShardEvents> {
+function orderedAuditRows(
+  projectDir: string,
+): ReturnType<typeof readAuditShardEvents> {
   return readAuditShardEvents(projectDir).sort((a, b) => {
     if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
     if (a.shardIndex !== b.shardIndex) return a.shardIndex - b.shardIndex;
@@ -1896,15 +1994,15 @@ function requireMergeDispatchDecision(
 ): { strategy: "merge"; target: string } {
   const all = mainAuthorityAuditRows(projectDir);
   if (!transaction.pin_id) {
-    fail(`Unit "${transaction.unit}" merge transaction has no pin identity; pin it again.`);
+    fail(
+      `Unit "${transaction.unit}" merge transaction has no pin identity; pin it again.`,
+    );
   }
   const relevant = all.filter(
     (row) =>
-      (
-        row.event === "MERGE_DISPATCH_INVOKED" ||
+      (row.event === "MERGE_DISPATCH_INVOKED" ||
         row.event === "MERGE_DISPATCH_RETURNED" ||
-        row.event === "MERGE_DISPATCH_FALLBACK"
-      ) &&
+        row.event === "MERGE_DISPATCH_FALLBACK") &&
       auditBlockField(row.block, "Bolt slug") === transaction.unit &&
       auditBlockField(row.block, "Pinned OID") === transaction.pinned_oid &&
       auditBlockField(row.block, "Attempt Generation") ===
@@ -1915,7 +2013,9 @@ function requireMergeDispatchDecision(
     (row) => row.event === "MERGE_DISPATCH_INVOKED",
   );
   if (invokedIndex < 0) {
-    fail(`Unit "${transaction.unit}" merge gate requires MERGE_DISPATCH_INVOKED after pinning.`);
+    fail(
+      `Unit "${transaction.unit}" merge gate requires MERGE_DISPATCH_INVOKED after pinning.`,
+    );
   }
   const terminal = relevant
     .slice(invokedIndex + 1)
@@ -1957,7 +2057,10 @@ function requireMergeDispatchDecision(
       `Unit "${transaction.unit}" pinned transaction requires merge strategy; dispatch returned "${strategy ?? "missing"}".`,
     );
   }
-  if (!target) fail(`Unit "${transaction.unit}" merge dispatch omitted its target branch.`);
+  if (!target)
+    fail(
+      `Unit "${transaction.unit}" merge dispatch omitted its target branch.`,
+    );
   return { strategy: "merge", target };
 }
 
@@ -1998,7 +2101,8 @@ function pinUnit(args: string[], projectDir?: string): void {
   }
   assertMainCheckout(pd);
   const state = readStateFile(pd);
-  if (!isTeamUnitOwnership(state)) fail("Unit pinning requires Unit Ownership: team.");
+  if (!isTeamUnitOwnership(state))
+    fail("Unit pinning requires Unit Ownership: team.");
   const identity = activeIdentity(pd);
   const inFlight = readUnitMergeTransaction(pd, unit);
   if (
@@ -2030,7 +2134,11 @@ function pinUnit(args: string[], projectDir?: string): void {
     claim.payload.base_oid,
     integration.oid,
   );
-  const mainBefore = gitOutput(pd, ["rev-parse", "HEAD"], "Cannot resolve main HEAD");
+  const mainBefore = gitOutput(
+    pd,
+    ["rev-parse", "HEAD"],
+    "Cannot resolve main HEAD",
+  );
   const transaction: UnitMergeTransaction = {
     version: 1,
     status: "pinned",
@@ -2055,16 +2163,18 @@ function pinUnit(args: string[], projectDir?: string): void {
   };
   updateCachedClaim(pd, claim);
   writeUnitMergeTransaction(pd, transaction);
-  console.log(JSON.stringify({
-    pinned: true,
-    unit,
-    pinned_oid: claim.oid,
-    pin_id: transaction.pin_id,
-    generation: claim.generation,
-    evidence,
-    gate_required: true,
-    merge_dispatch_required: true,
-  }));
+  console.log(
+    JSON.stringify({
+      pinned: true,
+      unit,
+      pinned_oid: claim.oid,
+      pin_id: transaction.pin_id,
+      generation: claim.generation,
+      evidence,
+      gate_required: true,
+      merge_dispatch_required: true,
+    }),
+  );
 }
 
 function gateUnitMerge(args: string[], projectDir?: string): void {
@@ -2072,15 +2182,16 @@ function gateUnitMerge(args: string[], projectDir?: string): void {
   const unit = positional[0];
   const decision = flags.decision;
   const userInput = flags["user-input"]?.trim();
-  if (!unit || (decision !== "approve" && decision !== "reject") || !userInput) {
+  if (
+    !unit ||
+    (decision !== "approve" && decision !== "reject") ||
+    !userInput
+  ) {
     fail(
       "Usage: aidlc-unit gate <unit> --decision <approve|reject> --user-input <text>",
     );
   }
-  if (
-    !humanPresenceGuardDisabled() &&
-    isNonAnswer(userInput)
-  ) {
+  if (!humanPresenceGuardDisabled() && isNonAnswer(userInput)) {
     fail(
       `Refusing Unit "${unit}" merge approval: --user-input "${userInput}" is cancellation boilerplate, not a human decision.`,
     );
@@ -2096,7 +2207,10 @@ function gateUnitMerge(args: string[], projectDir?: string): void {
   }
   const pd = resolveProjectDir(projectDir);
   const transaction = readUnitMergeTransaction(pd, unit);
-  if (!transaction || !["pinned", "approved", "rejected"].includes(transaction.status)) {
+  if (
+    !transaction ||
+    !["pinned", "approved", "rejected"].includes(transaction.status)
+  ) {
     fail(`Unit "${unit}" has no pinned merge transaction.`);
   }
   assertTransactionIdentity(pd, transaction);
@@ -2109,7 +2223,9 @@ function gateUnitMerge(args: string[], projectDir?: string): void {
     liveIntegration.oid,
   );
   if (JSON.stringify(evidence) !== JSON.stringify(transaction.evidence)) {
-    fail(`Unit "${unit}" pinned evidence journal changed; run aidlc-unit pin ${unit} again.`);
+    fail(
+      `Unit "${unit}" pinned evidence journal changed; run aidlc-unit pin ${unit} again.`,
+    );
   }
   if (transaction.evidence.merge_held) {
     fail(
@@ -2118,19 +2234,19 @@ function gateUnitMerge(args: string[], projectDir?: string): void {
   }
   const existingDecision = mergeGateRecord(pd, transaction)?.decision;
   if (
-    (
-      (transaction.status === "approved" && decision === "approve") ||
-      (transaction.status === "rejected" && decision === "reject")
-    ) &&
+    ((transaction.status === "approved" && decision === "approve") ||
+      (transaction.status === "rejected" && decision === "reject")) &&
     existingDecision === decision
   ) {
-    console.log(JSON.stringify({
-      gated: true,
-      recovered: true,
-      unit,
-      decision,
-      pinned_oid: transaction.pinned_oid,
-    }));
+    console.log(
+      JSON.stringify({
+        gated: true,
+        recovered: true,
+        unit,
+        decision,
+        pinned_oid: transaction.pinned_oid,
+      }),
+    );
     return;
   }
   const dispatch = requireMergeDispatchDecision(pd, transaction);
@@ -2160,23 +2276,21 @@ function gateUnitMerge(args: string[], projectDir?: string): void {
     target_branch: dispatch.target,
     strategy: dispatch.strategy,
   });
-  console.log(JSON.stringify({
-    gated: true,
-    unit,
-    decision,
-    pinned_oid: transaction.pinned_oid,
-    generation: transaction.generation,
-    outside_unit_record_paths:
-      transaction.evidence.outside_unit_record_paths,
-    outside_unit_record_tree_note:
-      "These paths are outside the unit's record tree and require human overlap judgment.",
-  }));
+  console.log(
+    JSON.stringify({
+      gated: true,
+      unit,
+      decision,
+      pinned_oid: transaction.pinned_oid,
+      generation: transaction.generation,
+      outside_unit_record_paths: transaction.evidence.outside_unit_record_paths,
+      outside_unit_record_tree_note:
+        "These paths are outside the unit's record tree and require human overlap judgment.",
+    }),
+  );
 }
 
-function isActiveIntentAuditPath(
-  path: string,
-  recordPrefix: string,
-): boolean {
+function isActiveIntentAuditPath(path: string, recordPrefix: string): boolean {
   const root = `${recordPrefix}/audit/`;
   if (!path.startsWith(root)) return false;
   const leaf = path.slice(root.length);
@@ -2202,7 +2316,10 @@ function isEngineMergeMetadata(
 function conflictFiles(projectDir: string): string[] {
   const listed = git(projectDir, ["diff", "--name-only", "--diff-filter=U"]);
   return listed.ok
-    ? listed.stdout.split(/\r?\n/).map((value) => value.trim()).filter(Boolean)
+    ? listed.stdout
+        .split(/\r?\n/)
+        .map((value) => value.trim())
+        .filter(Boolean)
     : [];
 }
 
@@ -2215,10 +2332,12 @@ function checkpointMainMetadata(
     ["rev-parse", "HEAD"],
     "Cannot resolve metadata checkpoint parent",
   );
-  const statusResult = git(
-    projectDir,
-    ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
-  );
+  const statusResult = git(projectDir, [
+    "status",
+    "--porcelain=v1",
+    "-z",
+    "--untracked-files=all",
+  ]);
   if (!statusResult.ok) {
     fail(
       `Cannot inspect main worktree: ${statusResult.stderr.trim() || `exit ${statusResult.code}`}`,
@@ -2257,13 +2376,11 @@ function checkpointMainMetadata(
       `Failed to stage main engine metadata checkpoint: ${added.stderr.trim() || added.stdout.trim()}.`,
     );
   }
-  const committed = git(projectDir, [
-    "commit",
-    "-m",
-    message,
-  ]);
+  const committed = git(projectDir, ["commit", "-m", message]);
   if (!committed.ok) {
-    fail(`Failed to checkpoint main engine metadata: ${committed.stderr.trim()}.`);
+    fail(
+      `Failed to checkpoint main engine metadata: ${committed.stderr.trim()}.`,
+    );
   }
   return {
     parentOid,
@@ -2275,13 +2392,10 @@ function checkpointMainMetadata(
   };
 }
 
-function restoreMainMetadata(
-  projectDir: string,
-  paths: string[],
-): void {
+function restoreMainMetadata(projectDir: string, paths: string[]): void {
   const recordPrefix = relativeRecordDir(projectDir);
   for (const path of paths.filter((path) =>
-    isEngineMergeMetadata(projectDir, path, recordPrefix)
+    isEngineMergeMetadata(projectDir, path, recordPrefix),
   )) {
     if (gitPathExistsAt(projectDir, "HEAD", path)) {
       const restored = git(projectDir, ["checkout", "HEAD", "--", path]);
@@ -2357,8 +2471,8 @@ function landedTreeViolations(
         violations: ["active intent record is unavailable"],
       };
   const allowedCommitChanges = new Set(
-    candidatePaths.filter((path) =>
-      !isEngineMergeMetadata(projectDir, path, recordPrefix)
+    candidatePaths.filter(
+      (path) => !isEngineMergeMetadata(projectDir, path, recordPrefix),
     ),
   );
   const actualCommitChanges = gitOutput(
@@ -2370,9 +2484,7 @@ function landedTreeViolations(
     .filter(Boolean);
   const violations = [
     ...boundary.violations,
-    ...actualCommitChanges.filter(
-    (path) => !allowedCommitChanges.has(path),
-    ),
+    ...actualCommitChanges.filter((path) => !allowedCommitChanges.has(path)),
   ];
   for (const path of candidatePaths) {
     const actual = gitObjectAt(projectDir, treeish, path);
@@ -2403,9 +2515,9 @@ function assertLandCandidateBoundary(
   );
   if (boundary.violations.length > 0) {
     fail(
-      `Unit "${transaction.unit}" landing violates claimed Unit ownership at: ${
-        boundary.violations.join(", ")
-      }.`,
+      `Unit "${transaction.unit}" landing violates claimed Unit ownership at: ${boundary.violations.join(
+        ", ",
+      )}.`,
     );
   }
 }
@@ -2424,12 +2536,7 @@ function validateLandedMerge(
   if (branch !== target) {
     fail(`Unit landing expected branch "${target}", found "${branch}".`);
   }
-  if (
-    !git(
-      projectDir,
-      ["merge-base", "--is-ancestor", commitOid, "HEAD"],
-    ).ok
-  ) {
+  if (!git(projectDir, ["merge-base", "--is-ancestor", commitOid, "HEAD"]).ok) {
     fail(`Recorded Unit merge commit ${commitOid} is not on ${target}.`);
   }
   const parents = mergeCommitParents(projectDir, commitOid);
@@ -2457,15 +2564,12 @@ function recoveredMergeCommit(
   transaction: UnitMergeTransaction,
   target: string,
 ): string | null {
-  const history = git(
-    projectDir,
-    [
-      "log",
-      "--first-parent",
-      "--format=%H%x00%P",
-      `${transaction.main_before_oid}..HEAD`,
-    ],
-  );
+  const history = git(projectDir, [
+    "log",
+    "--first-parent",
+    "--format=%H%x00%P",
+    `${transaction.main_before_oid}..HEAD`,
+  ]);
   if (!history.ok) return null;
   for (const line of history.stdout.split(/\r?\n/).filter(Boolean)) {
     const [commitOid, parentText = ""] = line.split("\u0000");
@@ -2538,16 +2642,22 @@ function rollbackMetadataCheckpoint(
   if (
     transaction.checkpoint_commit_oid &&
     transaction.checkpoint_parent_oid &&
-    gitOutput(projectDir, ["rev-parse", "HEAD"], "Cannot inspect checkpoint HEAD") ===
-      transaction.checkpoint_commit_oid
+    gitOutput(
+      projectDir,
+      ["rev-parse", "HEAD"],
+      "Cannot inspect checkpoint HEAD",
+    ) === transaction.checkpoint_commit_oid
   ) {
     validateMetadataCheckpoint(projectDir, transaction);
-    const reset = git(
-      projectDir,
-      ["reset", "--mixed", transaction.checkpoint_parent_oid],
-    );
+    const reset = git(projectDir, [
+      "reset",
+      "--mixed",
+      transaction.checkpoint_parent_oid,
+    ]);
     if (!reset.ok) {
-      fail(`Failed to restore pre-merge metadata checkpoint: ${reset.stderr.trim()}.`);
+      fail(
+        `Failed to restore pre-merge metadata checkpoint: ${reset.stderr.trim()}.`,
+      );
     }
   }
   return {
@@ -2608,10 +2718,12 @@ function landGit(
   } else {
     validateMetadataCheckpoint(projectDir, working);
   }
-  const existingMergeHead = git(
-    projectDir,
-    ["rev-parse", "-q", "--verify", "MERGE_HEAD"],
-  );
+  const existingMergeHead = git(projectDir, [
+    "rev-parse",
+    "-q",
+    "--verify",
+    "MERGE_HEAD",
+  ]);
   if (!existingMergeHead.ok) {
     if (working.checkpoint_commit_oid) {
       const head = gitOutput(
@@ -2640,10 +2752,12 @@ function landGit(
   const changed = candidateChangedPaths(projectDir, transaction);
   const merged = existingMergeHead.ok
     ? { ok: true, stdout: "", stderr: "", code: 0 }
-    : git(
-      projectDir,
-      ["merge", "--no-commit", "--no-ff", transaction.pinned_oid],
-    );
+    : git(projectDir, [
+        "merge",
+        "--no-commit",
+        "--no-ff",
+        transaction.pinned_oid,
+      ]);
   restoreMainMetadata(projectDir, changed);
   const conflicts = conflictFiles(projectDir).filter(
     (path) => !isEngineMergeMetadata(projectDir, path),
@@ -2655,12 +2769,19 @@ function landGit(
       ...working,
       conflict_files: conflicts,
     });
-    fail(`Unit "${transaction.unit}" source conflicts: ${conflicts.join(", ")}.`);
+    fail(
+      `Unit "${transaction.unit}" source conflicts: ${conflicts.join(", ")}.`,
+    );
   }
-  if (!merged.ok && !git(projectDir, ["rev-parse", "-q", "--verify", "MERGE_HEAD"]).ok) {
+  if (
+    !merged.ok &&
+    !git(projectDir, ["rev-parse", "-q", "--verify", "MERGE_HEAD"]).ok
+  ) {
     working = rollbackMetadataCheckpoint(projectDir, working);
     writeUnitMergeTransaction(projectDir, working);
-    fail(`Pinned git merge failed: ${merged.stderr.trim() || merged.stdout.trim()}.`);
+    fail(
+      `Pinned git merge failed: ${merged.stderr.trim() || merged.stdout.trim()}.`,
+    );
   }
   const pendingTree = gitOutput(
     projectDir,
@@ -2794,11 +2915,9 @@ function validateMergeRiskAcknowledgment(
       (row) =>
         row.event === "GATE_APPROVED" ||
         row.event === "GATE_REJECTED" ||
-        (
-          row.event === "RECOVERY_COMPLETED" &&
+        (row.event === "RECOVERY_COMPLETED" &&
           auditBlockField(row.block, "Recovery") ===
-            "unit-merge-released-attempt"
-        ),
+            "unit-merge-released-attempt"),
     );
     if (!all.slice(floor + 1).some((row) => row.event === "HUMAN_TURN")) {
       fail(
@@ -2817,8 +2936,7 @@ function recordReleasedAfterGitAcceptance(
 ): UnitMergeTransaction {
   if (
     transaction.released_after_git?.tombstone_oid === tombstone.oid &&
-    transaction.released_after_git.tombstone_generation ===
-      tombstone.generation
+    transaction.released_after_git.tombstone_generation === tombstone.generation
   ) {
     return transaction;
   }
@@ -2855,8 +2973,7 @@ function landUnit(args: string[], projectDir?: string): void {
   const { positional, flags } = parseArgs(args);
   const unit = positional[0];
   const step = flags.step ?? "all";
-  const acceptReleasedAttempt =
-    flags["accept-released-attempt"] === "true";
+  const acceptReleasedAttempt = flags["accept-released-attempt"] === "true";
   if (
     !unit ||
     !["git", "state", "audit", "all"].includes(step) ||
@@ -2870,7 +2987,12 @@ function landUnit(args: string[], projectDir?: string): void {
   const pd = resolveProjectDir(projectDir);
   assertMainCheckout(pd);
   const existing = readUnitMergeTransaction(pd, unit);
-  if (!existing || !["approved", "git-landed", "state-folded", "complete"].includes(existing.status)) {
+  if (
+    !existing ||
+    !["approved", "git-landed", "state-folded", "complete"].includes(
+      existing.status,
+    )
+  ) {
     fail(`Unit "${unit}" merge is not approved.`);
   }
   let transaction: UnitMergeTransaction = existing;
@@ -2888,10 +3010,7 @@ function landUnit(args: string[], projectDir?: string): void {
     claimCheck = currentPinnedClaim(pd, transaction, {
       acceptReleasedAttempt,
     });
-    if (
-      claimCheck.releasedTombstone &&
-      !transaction.released_after_git
-    ) {
+    if (claimCheck.releasedTombstone && !transaction.released_after_git) {
       const userInput = validateMergeRiskAcknowledgment(
         pd,
         unit,
@@ -2910,13 +3029,12 @@ function landUnit(args: string[], projectDir?: string): void {
     fail(`Unit "${unit}" has no current approved merge-gate receipt.`);
   }
   if (gate.strategy !== "merge" || !gate.target) {
-    fail(`Unit "${unit}" approved merge gate has invalid strategy or target evidence.`);
+    fail(
+      `Unit "${unit}" approved merge gate has invalid strategy or target evidence.`,
+    );
   }
-  const target =
-    flags.target ?? gate.target;
-  if (
-    target !== gate.target
-  ) {
+  const target = flags.target ?? gate.target;
+  if (target !== gate.target) {
     fail(
       `Unit "${unit}" merge gate approved target "${gate.target}", not "${target}".`,
     );
@@ -2950,7 +3068,9 @@ function landUnit(args: string[], projectDir?: string): void {
     const liveIntegration = fetchIntegration(pd);
     const landingBranch = currentBranch(pd);
     if (landingBranch !== target) {
-      fail(`Unit landing expected branch "${target}", found "${landingBranch}".`);
+      fail(
+        `Unit landing expected branch "${target}", found "${landingBranch}".`,
+      );
     }
     const landingHead = gitOutput(
       pd,
@@ -2958,10 +3078,12 @@ function landUnit(args: string[], projectDir?: string): void {
       "Cannot resolve local landing target",
     );
     if (
-      !git(
-        pd,
-        ["merge-base", "--is-ancestor", liveIntegration.oid, landingHead],
-      ).ok
+      !git(pd, [
+        "merge-base",
+        "--is-ancestor",
+        liveIntegration.oid,
+        landingHead,
+      ]).ok
     ) {
       fail(
         `Unit "${unit}" local target "${target}" is stale: fetched ` +
@@ -2991,12 +3113,7 @@ function landUnit(args: string[], projectDir?: string): void {
     if (!transaction.git_commit_oid) {
       fail(`Unit "${unit}" has no validated git landing commit.`);
     }
-    validateLandedMerge(
-      pd,
-      transaction,
-      transaction.git_commit_oid,
-      target,
-    );
+    validateLandedMerge(pd, transaction, transaction.git_commit_oid, target);
     const liveState = readStateFile(pd);
     const liveScope = getField(liveState, "Scope") ?? "";
     const liveStageColumns = unitMajorConstructionStageSlugs(
@@ -3005,27 +3122,26 @@ function landUnit(args: string[], projectDir?: string): void {
       true,
     );
     if (liveStageColumns.length === 0) {
-      fail(`Unit "${unit}" live main state has no active per-unit Construction columns.`);
+      fail(
+        `Unit "${unit}" live main state has no active per-unit Construction columns.`,
+      );
     }
     transaction = {
       ...transaction,
       live_stage_columns: liveStageColumns,
       state_fold_authorized:
         transaction.state_fold_authorized ??
-          (
-            claimCheck
-              ? {
-                  authorized_at: isoTimestamp(),
-                  mode: claimCheck.releasedTombstone
-                    ? "released-after-git"
-                    : "live-claim",
-                  observed_oid:
-                    claimCheck.releasedTombstone?.oid ??
-                    claimCheck.claim.oid,
-                  owner: claimCheck.claim.owner,
-                }
-              : transaction.state_fold_authorized
-          ),
+        (claimCheck
+          ? {
+              authorized_at: isoTimestamp(),
+              mode: claimCheck.releasedTombstone
+                ? "released-after-git"
+                : "live-claim",
+              observed_oid:
+                claimCheck.releasedTombstone?.oid ?? claimCheck.claim.oid,
+              owner: claimCheck.claim.owner,
+            }
+          : transaction.state_fold_authorized),
     };
     if (!transaction.state_fold_authorized) {
       fail(
@@ -3039,25 +3155,28 @@ function landUnit(args: string[], projectDir?: string): void {
   }
   if (runAuditStep && transaction.status !== "complete") {
     if (!unitMergedReceipts(pd).has(unit)) {
-      fail(`Unit "${unit}" state fold has no current-generation UNIT_MERGED receipt.`);
+      fail(
+        `Unit "${unit}" state fold has no current-generation UNIT_MERGED receipt.`,
+      );
     }
     if (!mainUnitRowMerged(pd, transaction)) {
-      fail(`Unit "${unit}" state fold has not applied the authoritative merged row.`);
+      fail(
+        `Unit "${unit}" state fold has not applied the authoritative merged row.`,
+      );
     }
-    checkpointMainMetadata(
-      pd,
-      `Finalize Unit ${unit} merge metadata`,
-    );
+    checkpointMainMetadata(pd, `Finalize Unit ${unit} merge metadata`);
     transaction = { ...transaction, status: "complete" };
     writeUnitMergeTransaction(pd, transaction);
   }
-  console.log(JSON.stringify({
-    landed: transaction.status === "complete",
-    status: transaction.status,
-    unit,
-    pinned_oid: transaction.pinned_oid,
-    git_commit_oid: transaction.git_commit_oid ?? null,
-  }));
+  console.log(
+    JSON.stringify({
+      landed: transaction.status === "complete",
+      status: transaction.status,
+      unit,
+      pinned_oid: transaction.pinned_oid,
+      git_commit_oid: transaction.git_commit_oid ?? null,
+    }),
+  );
 }
 
 function assertMainCheckout(projectDir: string): void {
@@ -3068,7 +3187,9 @@ function assertMainCheckout(projectDir: string): void {
   const commonAbs = resolve(topReal, common.stdout.trim());
   const mainReal = realpathSync(dirname(commonAbs));
   if (topReal !== mainReal) {
-    fail(`This command must run from the unscoped main checkout, not sibling worktree ${topReal}.`);
+    fail(
+      `This command must run from the unscoped main checkout, not sibling worktree ${topReal}.`,
+    );
   }
 }
 
@@ -3167,11 +3288,7 @@ function writePendingRelease(
     identity.intentUuid,
   );
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(
-    path,
-    `${JSON.stringify(pending, null, 2)}\n`,
-    "utf-8",
-  );
+  writeFileSync(path, `${JSON.stringify(pending, null, 2)}\n`, "utf-8");
 }
 
 function adoptUnit(args: string[], projectDir?: string): void {
@@ -3182,7 +3299,8 @@ function adoptUnit(args: string[], projectDir?: string): void {
   if (unitError) fail(unitError);
   const pd = resolveProjectDir(projectDir);
   const state = readStateFile(pd);
-  if (!isTeamUnitOwnership(state)) fail("Unit adoption requires Unit Ownership: team.");
+  if (!isTeamUnitOwnership(state))
+    fail("Unit adoption requires Unit Ownership: team.");
   const identity = activeIdentity(pd);
   const ref = claimRef(identity.intentId8, unit);
   const branch = gitOutput(
@@ -3191,7 +3309,9 @@ function adoptUnit(args: string[], projectDir?: string): void {
     "Unit adoption requires the checked-out local claim branch",
   );
   if (branch !== ref) {
-    fail(`Unit adoption requires checked-out branch "${ref}", found "${branch}".`);
+    fail(
+      `Unit adoption requires checked-out branch "${ref}", found "${branch}".`,
+    );
   }
   const existing = readUnitScopeStamp(pd);
   if (existing && existing.unit !== unit) {
@@ -3208,9 +3328,15 @@ function adoptUnit(args: string[], projectDir?: string): void {
     !claim.payload.audit_shard ||
     !/^[A-Za-z0-9._-]+\.md$/.test(claim.payload.audit_shard)
   ) {
-    fail(`Unit "${unit}" checked-out claim identity or audit shard is invalid.`);
+    fail(
+      `Unit "${unit}" checked-out claim identity or audit shard is invalid.`,
+    );
   }
-  const head = gitOutput(pd, ["rev-parse", "HEAD"], "Cannot resolve checked-out claim");
+  const head = gitOutput(
+    pd,
+    ["rev-parse", "HEAD"],
+    "Cannot resolve checked-out claim",
+  );
   if (head !== claim.oid) {
     fail(`Unit adoption requires HEAD at live claim OID ${claim.oid}.`);
   }
@@ -3221,7 +3347,9 @@ function adoptUnit(args: string[], projectDir?: string): void {
     checkedOut.generation !== claim.generation ||
     checkedOut.audit_shard !== claim.payload.audit_shard
   ) {
-    fail(`Unit "${unit}" checked-out claim payload does not match the live claim ref.`);
+    fail(
+      `Unit "${unit}" checked-out claim payload does not match the live claim ref.`,
+    );
   }
   const stamp: UnitScopeStamp = {
     version: 1,
@@ -3246,7 +3374,10 @@ function adoptUnit(args: string[], projectDir?: string): void {
 function claimUnit(args: string[], projectDir?: string): void {
   const { positional, flags } = parseArgs(args);
   const unit = positional[0];
-  if (!unit) fail("Usage: aidlc-unit claim <unit> [--team <label>] [--rhythm per-stage|unit-end]");
+  if (!unit)
+    fail(
+      "Usage: aidlc-unit claim <unit> [--team <label>] [--rhythm per-stage|unit-end]",
+    );
   const unitError = validateUnitName(unit);
   if (unitError) fail(unitError);
   if (
@@ -3258,7 +3389,8 @@ function claimUnit(args: string[], projectDir?: string): void {
   }
   const pd = resolveProjectDir(projectDir);
   const state = readStateFile(pd);
-  if (!isTeamUnitOwnership(state)) fail("Unit claims require Unit Ownership: team.");
+  if (!isTeamUnitOwnership(state))
+    fail("Unit claims require Unit Ownership: team.");
   const identity = activeIdentity(pd);
   validateClaimRefUnit(identity.intentId8, unit);
   const existingStamp = readUnitScopeStamp(pd);
@@ -3279,14 +3411,17 @@ function claimUnit(args: string[], projectDir?: string): void {
       recovered.nonce === existingStamp.nonce
     ) {
       finalizeClaimCheckout(pd, existingStamp, recovered);
-      console.log(JSON.stringify({ claimed: true, recovered: true, ...existingStamp }));
+      console.log(
+        JSON.stringify({ claimed: true, recovered: true, ...existingStamp }),
+      );
       return;
     }
     clearUnitScopeStamp(pd);
   }
   const integration = fetchIntegration(pd);
   const opening = openingStatus(pd, integration.oid);
-  if (!opening.units.includes(unit)) fail(`Unit "${unit}" is not in the authoritative Unit DAG.`);
+  if (!opening.units.includes(unit))
+    fail(`Unit "${unit}" is not in the authoritative Unit DAG.`);
   if (opening.completed.has(unit)) {
     fail(`Unit "${unit}" is already complete on the integration ref.`);
   }
@@ -3295,7 +3430,7 @@ function claimUnit(args: string[], projectDir?: string): void {
     const named = blockers.map((dep) =>
       dep === "walking-skeleton"
         ? "walking skeleton Bolt is not complete"
-        : `${unit} waits on ${dep}`
+        : `${unit} waits on ${dep}`,
     );
     fail(named.join("; "));
   }
@@ -3332,7 +3467,11 @@ function claimUnit(args: string[], projectDir?: string): void {
     gate_rhythm: rhythm,
     audit_shard: auditShard,
   };
-  const commit = createClaimCommit(pd, current?.oid ?? integration.oid, payload);
+  const commit = createClaimCommit(
+    pd,
+    current?.oid ?? integration.oid,
+    payload,
+  );
   const stamp: UnitScopeStamp = {
     version: 1,
     space: identity.space,
@@ -3352,7 +3491,9 @@ function claimUnit(args: string[], projectDir?: string): void {
   // Persist the intended claim before the CAS. A process killed after the push
   // can validate this nonce on retry and finish without creating a new attempt.
   writeUnitScopeStamp(pd, stamp);
-  if (!updateClaimRef(pd, integration.remote, ref, commit, current?.oid ?? null)) {
+  if (
+    !updateClaimRef(pd, integration.remote, ref, commit, current?.oid ?? null)
+  ) {
     clearUnitScopeStamp(pd);
     const winner = currentClaim(pd, integration.remote, ref);
     fail(
@@ -3365,7 +3506,9 @@ function claimUnit(args: string[], projectDir?: string): void {
   const winner = currentClaim(pd, integration.remote, ref);
   if (!winner || winner.nonce !== nonce) {
     clearUnitScopeStamp(pd);
-    fail(`Unit "${unit}" claim verification failed; current holder is "${winner?.owner ?? "unknown"}".`);
+    fail(
+      `Unit "${unit}" claim verification failed; current holder is "${winner?.owner ?? "unknown"}".`,
+    );
   }
   finalizeClaimCheckout(pd, stamp, winner);
   console.log(JSON.stringify({ claimed: true, ...stamp }));
@@ -3374,7 +3517,8 @@ function claimUnit(args: string[], projectDir?: string): void {
 function releaseUnit(args: string[], projectDir?: string): void {
   const { positional, flags } = parseArgs(args);
   const unit = positional[0];
-  if (!unit) fail("Usage: aidlc-unit release <unit> [--expect-nonce <claim-nonce>]");
+  if (!unit)
+    fail("Usage: aidlc-unit release <unit> [--expect-nonce <claim-nonce>]");
   const unitError = validateUnitName(unit);
   if (unitError) fail(unitError);
   const pd = resolveProjectDir(projectDir);
@@ -3383,7 +3527,8 @@ function releaseUnit(args: string[], projectDir?: string): void {
   }
   assertMainCheckout(pd);
   const state = readStateFile(pd);
-  if (!isTeamUnitOwnership(state)) fail("Unit release requires Unit Ownership: team.");
+  if (!isTeamUnitOwnership(state))
+    fail("Unit release requires Unit Ownership: team.");
   const identity = activeIdentity(pd);
   const integration = fetchIntegration(pd);
   const ref = claimRef(identity.intentId8, unit);
@@ -3392,16 +3537,12 @@ function releaseUnit(args: string[], projectDir?: string): void {
     const pending = readPendingRelease(pd, unit, identity);
     if (
       pending &&
-      (
-        pending.intent_uuid !== identity.intentUuid ||
+      (pending.intent_uuid !== identity.intentUuid ||
         pending.unit !== unit ||
         pending.release_nonce !== current.nonce ||
         pending.claim_generation + 1 !== current.generation ||
-        (
-          pending.status === "released" &&
-          pending.released_generation !== current.generation
-        )
-      )
+        (pending.status === "released" &&
+          pending.released_generation !== current.generation))
     ) {
       fail(
         `Unit "${unit}" release recovery does not match the recorded attempt; ` +
@@ -3419,14 +3560,16 @@ function releaseUnit(args: string[], projectDir?: string): void {
         released_oid: current.oid,
       });
     }
-    console.log(JSON.stringify({
-      released: true,
-      recovered: true,
-      unit,
-      generation: current.generation,
-      claim_ref: ref,
-      claim_oid: current.oid,
-    }));
+    console.log(
+      JSON.stringify({
+        released: true,
+        recovered: true,
+        unit,
+        generation: current.generation,
+        claim_ref: ref,
+        claim_oid: current.oid,
+      }),
+    );
     return;
   }
   if (current?.status !== "claimed") fail(`Unit "${unit}" has no live claim.`);
@@ -3442,10 +3585,7 @@ function releaseUnit(args: string[], projectDir?: string): void {
     );
   }
   const priorPending = readPendingRelease(pd, unit, identity);
-  if (
-    priorPending?.status === "released" &&
-    !flags["expect-nonce"]
-  ) {
+  if (priorPending?.status === "released" && !flags["expect-nonce"]) {
     fail(
       `Unit "${unit}" was released previously and may now be a successor claim. ` +
         `Re-run with --expect-nonce ${current.nonce} to release this exact attempt.`,
@@ -3453,12 +3593,10 @@ function releaseUnit(args: string[], projectDir?: string): void {
   }
   if (
     priorPending?.status === "pending" &&
-    (
-      priorPending.intent_uuid !== identity.intentUuid ||
+    (priorPending.intent_uuid !== identity.intentUuid ||
       priorPending.unit !== unit ||
       priorPending.claim_generation !== current.generation ||
-      priorPending.claim_nonce !== current.nonce
-    )
+      priorPending.claim_nonce !== current.nonce)
   ) {
     fail(
       `Unit "${unit}" now belongs to a different claim attempt; refusing to ` +
@@ -3474,17 +3612,18 @@ function releaseUnit(args: string[], projectDir?: string): void {
     claim_nonce: current.nonce,
     release_nonce: randomUUID(),
   };
-  const activePending = pending.status === "pending"
-    ? pending
-    : {
-        version: 1 as const,
-        status: "pending" as const,
-        intent_uuid: identity.intentUuid,
-        unit,
-        claim_generation: current.generation,
-        claim_nonce: current.nonce,
-        release_nonce: randomUUID(),
-      };
+  const activePending =
+    pending.status === "pending"
+      ? pending
+      : {
+          version: 1 as const,
+          status: "pending" as const,
+          intent_uuid: identity.intentUuid,
+          unit,
+          claim_generation: current.generation,
+          claim_nonce: current.nonce,
+          release_nonce: randomUUID(),
+        };
   writePendingRelease(pd, identity, activePending);
   const payload: UnitClaimPayload = {
     ...current.payload,
@@ -3513,13 +3652,15 @@ function releaseUnit(args: string[], projectDir?: string): void {
     released_generation: released.generation,
     released_oid: released.oid,
   });
-  console.log(JSON.stringify({
-    released: true,
-    unit,
-    generation: released.generation,
-    claim_ref: ref,
-    claim_oid: released.oid,
-  }));
+  console.log(
+    JSON.stringify({
+      released: true,
+      unit,
+      generation: released.generation,
+      claim_ref: ref,
+      claim_oid: released.oid,
+    }),
+  );
 }
 
 function clearUnitOwner(projectDir: string, unit: string): void {
@@ -3527,22 +3668,27 @@ function clearUnitOwner(projectDir: string, unit: string): void {
     const stateContent = readStateFile(projectDir);
     const lines = stateContent.split("\n");
     let changed = false;
-    const updated = lines.map((line) => {
-      if (!line.startsWith("|")) return line;
-      const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
-      if (
-        cells.length < 2 ||
-        (cells[0].toLowerCase() === "unit" &&
-          cells[1].toLowerCase() === "owner") ||
-        cells.every((cell) => /^-+$/.test(cell)) ||
-        cells[0] !== unit
-      ) {
-        return line;
-      }
-      cells[1] = "-";
-      changed = true;
-      return `| ${cells.join(" | ")} |`;
-    }).join("\n");
+    const updated = lines
+      .map((line) => {
+        if (!line.startsWith("|")) return line;
+        const cells = line
+          .split("|")
+          .slice(1, -1)
+          .map((cell) => cell.trim());
+        if (
+          cells.length < 2 ||
+          (cells[0].toLowerCase() === "unit" &&
+            cells[1].toLowerCase() === "owner") ||
+          cells.every((cell) => /^-+$/.test(cell)) ||
+          cells[0] !== unit
+        ) {
+          return line;
+        }
+        cells[1] = "-";
+        changed = true;
+        return `| ${cells.join(" | ")} |`;
+      })
+      .join("\n");
     if (changed) writeStateFile(projectDir, updated);
   });
 }
@@ -3575,14 +3721,21 @@ export function main(argv: string[]): void {
     else if (command === "merge-status") {
       const unit = args[0];
       if (!unit) fail("Usage: aidlc-unit merge-status <unit>");
-      console.log(JSON.stringify(
-        readUnitMergeTransaction(resolveProjectDir(projectDir), unit),
-        null,
-        2,
-      ));
-    }
-    else if (command === "status") {
-      console.log(JSON.stringify(unitClaimOverview(resolveProjectDir(projectDir)), null, 2));
+      console.log(
+        JSON.stringify(
+          readUnitMergeTransaction(resolveProjectDir(projectDir), unit),
+          null,
+          2,
+        ),
+      );
+    } else if (command === "status") {
+      console.log(
+        JSON.stringify(
+          unitClaimOverview(resolveProjectDir(projectDir)),
+          null,
+          2,
+        ),
+      );
     } else {
       fail(
         "Usage: aidlc-unit <adopt|claim|release|participate|publish|pin|gate|land|merge-status|status> ...",

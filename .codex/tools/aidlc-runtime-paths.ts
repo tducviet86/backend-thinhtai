@@ -9,7 +9,8 @@ const PROJECTED_INVOKE = "aidlc";
 // x.y.z-preview.YYYYMMDD.N. Literal of PREVIEW_CHANNEL / VERSION_ID in
 // aidlc-channel.ts, repeated here because hooks ship this module with a closed
 // set of sibling tools and must not grow that closure; t330 keeps them in step.
-const FRAMEWORK_VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-preview\.\d{8}\.[1-9]\d*)?$/;
+const FRAMEWORK_VERSION =
+  /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-preview\.\d{8}\.[1-9]\d*)?$/;
 
 export interface HarnessLocation {
   harnessDir?: string;
@@ -25,7 +26,13 @@ export interface ProjectHarness {
   frameworkVersion?: string;
 }
 
-const HARNESS_PRECEDENCE = [".claude", ".kiro", ".codex", ".cursor", ".aidlc"] as const;
+const HARNESS_PRECEDENCE = [
+  ".claude",
+  ".kiro",
+  ".codex",
+  ".cursor",
+  ".aidlc",
+] as const;
 
 function markerRecord(path: string): Record<string, unknown> {
   let value: unknown;
@@ -80,9 +87,12 @@ function harnessIdentity(root: string, strict = false): ProjectHarness | null {
     const frameworkVersion = marker.frameworkVersion;
     if (
       existsSync(stampPath) &&
-      (typeof frameworkVersion !== "string" || !FRAMEWORK_VERSION.test(frameworkVersion))
+      (typeof frameworkVersion !== "string" ||
+        !FRAMEWORK_VERSION.test(frameworkVersion))
     ) {
-      throw new Error(`${stampPath}: frameworkVersion must be a release version id`);
+      throw new Error(
+        `${stampPath}: frameworkVersion must be a release version id`,
+      );
     }
     return {
       root,
@@ -101,19 +111,26 @@ export function discoverProjectHarnesses(projectDir: string): ProjectHarness[] {
   try {
     entries = readdirSync(projectDir, { withFileTypes: true });
   } catch (error) {
-    if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) return [];
+    if (
+      ["ENOENT", "ENOTDIR"].includes(
+        (error as NodeJS.ErrnoException).code ?? "",
+      )
+    )
+      return [];
     throw error;
   }
   const priority = (name: string): number => {
-    const index = HARNESS_PRECEDENCE.indexOf(name as typeof HARNESS_PRECEDENCE[number]);
+    const index = HARNESS_PRECEDENCE.indexOf(
+      name as (typeof HARNESS_PRECEDENCE)[number],
+    );
     return index < 0 ? HARNESS_PRECEDENCE.length : index;
   };
   const harnesses: ProjectHarness[] = [];
-  for (
-    const entry of entries.sort((left, right) =>
-      priority(left.name) - priority(right.name) || left.name.localeCompare(right.name)
-    )
-  ) {
+  for (const entry of entries.sort(
+    (left, right) =>
+      priority(left.name) - priority(right.name) ||
+      left.name.localeCompare(right.name),
+  )) {
     if (!entry.isDirectory()) continue;
     const identity = harnessIdentity(join(projectDir, entry.name));
     if (identity) harnesses.push(identity);
@@ -159,8 +176,8 @@ export function aidlcToolInvocation(
 ): string {
   const invoke = aidlcInvocation();
   if (!invoke.startsWith("bun ")) return aidlcDispatcherInvocation(route);
-  const tool = sourceTool ??
-    route.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+  const tool =
+    sourceTool ?? route.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
   const path = qualifiedSource
     ? `${runtimeHarnessDir()}/tools/aidlc-${tool}.ts`
     : `aidlc-${tool}.ts`;
@@ -179,10 +196,14 @@ function explicitRuntimeProjectDir(): string | null {
       ? argv[index + 1]
       : resolve(process.cwd(), argv[index + 1]);
   }
-  const explicit = process.env.AIDLC_PROJECT_DIR ??
-    process.env.CLAUDE_PROJECT_DIR ?? process.env.KIRO_PROJECT_DIR;
+  const explicit =
+    process.env.AIDLC_PROJECT_DIR ??
+    process.env.CLAUDE_PROJECT_DIR ??
+    process.env.KIRO_PROJECT_DIR;
   return explicit
-    ? isAbsolute(explicit) ? explicit : resolve(process.cwd(), explicit)
+    ? isAbsolute(explicit)
+      ? explicit
+      : resolve(process.cwd(), explicit)
     : null;
 }
 
@@ -241,17 +262,26 @@ export function runtimeHarnessName(
   return "claude";
 }
 
-function distributionFor(harnessDir: string, projectDir = runtimeProjectDir()): string {
+function distributionFor(
+  harnessDir: string,
+  projectDir = runtimeProjectDir(),
+): string {
   return runtimeHarnessName(projectDir, harnessDir);
 }
 
-function explicitHarnessRoot(harnessDir: string, distribution: string): string | null {
+function explicitHarnessRoot(
+  harnessDir: string,
+  distribution: string,
+): string | null {
   const direct = process.env.AIDLC_RUNTIME_HARNESS_ROOT?.trim();
-  if (direct) return isAbsolute(direct) ? direct : resolve(process.cwd(), direct);
+  if (direct)
+    return isAbsolute(direct) ? direct : resolve(process.cwd(), direct);
 
   const runtimeRoot = process.env.AIDLC_RUNTIME_ROOT?.trim();
   if (!runtimeRoot) return null;
-  const root = isAbsolute(runtimeRoot) ? runtimeRoot : resolve(process.cwd(), runtimeRoot);
+  const root = isAbsolute(runtimeRoot)
+    ? runtimeRoot
+    : resolve(process.cwd(), runtimeRoot);
   const distributionRoot = join(root, distribution);
   return existsSync(join(distributionRoot, harnessDir))
     ? join(distributionRoot, harnessDir)
@@ -260,11 +290,9 @@ function explicitHarnessRoot(harnessDir: string, distribution: string): string |
 
 function moduleHarnessRoot(harnessDir: string): string | null {
   return existsSync(join(MODULE_HARNESS_ROOT, "tools")) &&
-    (
-      basename(MODULE_HARNESS_ROOT) === harnessDir ||
+    (basename(MODULE_HARNESS_ROOT) === harnessDir ||
       !isCompiledExecutable() ||
-      basename(process.execPath).startsWith("bun")
-    )
+      basename(process.execPath).startsWith("bun"))
     ? MODULE_HARNESS_ROOT
     : null;
 }
@@ -283,10 +311,10 @@ export function packagedDistributionRoot(
 export function resolveHarnessRoot(location: HarnessLocation = {}): string {
   const projectDir = location.projectDir ?? runtimeProjectDir();
   const harnessDir = location.harnessDir ?? runtimeHarnessDir(projectDir);
-  const distribution = location.distribution ?? distributionFor(harnessDir, projectDir);
+  const distribution =
+    location.distribution ?? distributionFor(harnessDir, projectDir);
   const projectRoot =
-    basename(projectDir) === harnessDir &&
-    existsSync(join(projectDir, "tools"))
+    basename(projectDir) === harnessDir && existsSync(join(projectDir, "tools"))
       ? projectDir
       : join(projectDir, harnessDir);
 
@@ -304,7 +332,10 @@ export function resolveHarnessRoot(location: HarnessLocation = {}): string {
   if (explicit) return explicit;
 
   const moduleRoot = moduleHarnessRoot(harnessDir);
-  const packagedRoot = join(packagedDistributionRoot(harnessDir, distribution), harnessDir);
+  const packagedRoot = join(
+    packagedDistributionRoot(harnessDir, distribution),
+    harnessDir,
+  );
 
   if (moduleRoot) return moduleRoot;
   if (isAidlcHarnessRoot(projectRoot)) return projectRoot;
@@ -329,13 +360,15 @@ export function resolveSkillsPath(
     ...location,
     harnessDir,
   });
-  const distribution = location.distribution ??
-    runtimeHarnessName(projectDir, harnessDir);
-  const distributionRoot = dirname(resolveHarnessRoot({
-    ...location,
-    harnessDir,
-    distribution,
-  }));
+  const distribution =
+    location.distribution ?? runtimeHarnessName(projectDir, harnessDir);
+  const distributionRoot = dirname(
+    resolveHarnessRoot({
+      ...location,
+      harnessDir,
+      distribution,
+    }),
+  );
   if (distribution === "copilot") {
     return join(distributionRoot, ".github", "skills", ...segments);
   }

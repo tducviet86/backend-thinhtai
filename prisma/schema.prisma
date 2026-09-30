@@ -86,6 +86,7 @@ enum BookingStatus {
   CANCELLED_BY_ADMIN
   PAYMENT_FAILED
   NO_SHOW
+  EXPIRED
 }
 
 enum PaymentType {
@@ -103,6 +104,77 @@ enum PaymentStatus {
   CANCELLED
   REFUNDED
   PARTIALLY_REFUNDED
+  SUPERSEDED
+  EXPIRED
+}
+
+enum PaymentOption {
+  DEPOSIT_50
+  FULL_100
+}
+
+enum PaymentPurpose {
+  INITIAL
+  BALANCE
+  MANUAL
+}
+
+enum CaptureDisposition {
+  APPLIED
+  REFUND_REQUIRED
+  REVIEW_REQUIRED
+}
+
+enum CancellationCause {
+  CUSTOMER_CANCELLATION
+  OPERATOR_CANCELLATION
+  BOOKING_EXPIRY
+}
+
+enum CancellationActor {
+  CUSTOMER
+  STAFF
+  ADMIN
+  SYSTEM
+}
+
+enum RefundReason {
+  CUSTOMER_CANCELLATION
+  OPERATOR_CANCELLATION
+  BOOKING_EXPIRY
+  LATE_CAPTURE
+  SUPERSEDED_CAPTURE
+}
+
+enum RefundStatus {
+  REQUESTED
+  PROCESSING
+  PENDING_PROVIDER
+  SUCCEEDED
+  RETRYABLE_FAILED
+  MANUAL_REVIEW
+}
+
+enum RefundAttemptStatus {
+  PREPARED
+  SENT
+  PENDING
+  SUCCEEDED
+  DEFINITIVELY_FAILED
+  UNKNOWN
+}
+
+enum WebhookEventStatus {
+  RECEIVED
+  APPLIED
+  REFUND_SCHEDULED
+  FAILURE_RECORDED
+  REVIEW_REQUIRED
+}
+
+enum IdempotencyStatus {
+  IN_PROGRESS
+  COMPLETED
 }
 
 enum ReviewStatus {
@@ -128,18 +200,19 @@ enum SeoPageStatus {
 }
 
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  email         String         @unique
+  id            String                @id @default(uuid()) @db.Uuid
+  email         String                @unique
   passwordHash  String
   firstName     String
   lastName      String
-  status        UserStatus     @default(ACTIVE)
-  tokenVersion  Int            @default(0)
+  status        UserStatus            @default(ACTIVE)
+  tokenVersion  Int                   @default(0)
   roles         UserRole[]
   refreshTokens RefreshToken[]
   customer      Customer?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  cancellations BookingCancellation[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
 }
 
 model Role {
@@ -177,14 +250,18 @@ model RolePermission {
 }
 
 model RefreshToken {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @db.Uuid
-  tokenHash    String    @unique
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @db.Uuid
+  tokenHash    String        @unique
   expiresAt    DateTime
   revokedAt    DateTime?
-  replacedById String?   @db.Uuid
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime  @default(now())
+  replacedById String?       @unique @db.Uuid
+  successor    RefreshToken? @relation("RefreshTokenRotation", fields: [replacedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  predecessor  RefreshToken? @relation("RefreshTokenRotation")
+  // NULL preserves legacy revocations; later rotation code sets this atomically.
+  consumedAt   DateTime?      @db.Timestamptz(3)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime       @default(now())
 
   @@index([userId, expiresAt])
 }
@@ -365,50 +442,67 @@ model DailyRate {
 }
 
 model Promotion {
-  id         String   @id @default(uuid()) @db.Uuid
-  code       String   @unique
-  percentOff Decimal? @db.Decimal(5, 2)
-  amountOff  Decimal? @db.Decimal(12, 2)
+  id         String       @id @default(uuid()) @db.Uuid
+  code       String       @unique
+  percentOff Decimal?     @db.Decimal(5, 2)
+  amountOff  Decimal?     @db.Decimal(12, 2)
   startsAt   DateTime
   endsAt     DateTime
-  active     Boolean  @default(true)
+  active     Boolean      @default(true)
   maxUses    Int?
-  uses       Int      @default(0)
+  uses       Int          @default(0)
+  quotes     PriceQuote[]
 }
 
 model PriceQuote {
-  id              String   @id @default(uuid()) @db.Uuid
-  unitId          String   @db.Uuid
-  checkIn         DateTime @db.Date
-  checkOut        DateTime @db.Date
+  id              String     @id @default(uuid()) @db.Uuid
+  unitId          String     @db.Uuid
+  checkIn         DateTime   @db.Date
+  checkOut        DateTime   @db.Date
   guests          Int
-  currency        String   @db.Char(3)
+  currency        String     @db.Char(3)
   breakdown       Json
-  subtotal        Decimal  @db.Decimal(12, 2)
-  cleaningFee     Decimal  @db.Decimal(12, 2)
-  serviceFee      Decimal  @db.Decimal(12, 2)
-  discount        Decimal  @db.Decimal(12, 2)
-  total           Decimal  @db.Decimal(12, 2)
-  requiredDeposit Decimal  @db.Decimal(12, 2)
+  subtotal        Decimal    @db.Decimal(12, 2)
+  cleaningFee     Decimal    @db.Decimal(12, 2)
+  serviceFee      Decimal    @db.Decimal(12, 2)
+  discount        Decimal    @db.Decimal(12, 2)
+  total           Decimal    @db.Decimal(12, 2)
+  requiredDeposit Decimal    @db.Decimal(12, 2)
   expiresAt       DateTime
-  createdAt       DateTime @default(now())
+  createdAt       DateTime   @default(now())
+  holdId          String?    @db.Uuid
+  hold            Hold?      @relation(fields: [holdId], references: [id], onDelete: Restrict)
+  promotionId     String?    @db.Uuid
+  promotion       Promotion? @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  booking         Booking?
 
   @@index([unitId, expiresAt])
+  @@index([holdId])
 }
 
 model Hold {
-  id             String     @id @default(uuid()) @db.Uuid
-  unitId         String     @db.Uuid
-  unit           Unit       @relation(fields: [unitId], references: [id])
-  bookingDraftId String?    @unique @db.Uuid
-  startDate      DateTime   @db.Date
-  endDate        DateTime   @db.Date
+  id             String       @id @default(uuid()) @db.Uuid
+  unitId         String       @db.Uuid
+  unit           Unit         @relation(fields: [unitId], references: [id])
+  bookingDraftId String?      @unique @db.Uuid
+  // Reuse the existing conversion identifier; its new FK is initially NOT VALID in SQL.
+  booking        Booking?     @relation(fields: [bookingDraftId], references: [id], onDelete: Restrict)
+  startDate      DateTime     @db.Date
+  endDate        DateTime     @db.Date
   expiresAt      DateTime
-  status         HoldStatus @default(ACTIVE)
-  createdAt      DateTime   @default(now())
+  status         HoldStatus   @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  // NULL identifies legacy holds; no raw token or identifying fingerprint is stored.
+  tokenHash      String?      @unique @db.VarChar(64)
+  clientKeyHash  String?      @db.VarChar(64)
+  convertedAt    DateTime?    @db.Timestamptz(3)
+  releasedAt     DateTime?    @db.Timestamptz(3)
+  expiredAt      DateTime?    @db.Timestamptz(3)
+  quotes         PriceQuote[]
 
   @@index([unitId, status, startDate, endDate])
   @@index([status, expiresAt])
+  @@index([clientKeyHash, status, expiresAt])
 }
 
 model AvailabilityBlock {
@@ -426,37 +520,54 @@ model AvailabilityBlock {
 }
 
 model Booking {
-  id              String              @id @default(uuid()) @db.Uuid
-  bookingCode     String              @unique
-  customerId      String              @db.Uuid
-  customer        Customer            @relation(fields: [customerId], references: [id])
-  unitId          String              @db.Uuid
-  unit            Unit                @relation(fields: [unitId], references: [id])
-  source          BookingSource
-  checkIn         DateTime            @db.Date
-  checkOut        DateTime            @db.Date
-  guestCount      Int
-  status          BookingStatus
-  currency        String              @db.Char(3)
-  subtotal        Decimal             @db.Decimal(12, 2)
-  fees            Decimal             @db.Decimal(12, 2)
-  discount        Decimal             @db.Decimal(12, 2)
-  total           Decimal             @db.Decimal(12, 2)
-  depositRequired Decimal             @db.Decimal(12, 2)
-  paidAmount      Decimal             @default(0) @db.Decimal(12, 2)
-  remainingAmount Decimal             @db.Decimal(12, 2)
-  normalTotal     Decimal?            @db.Decimal(12, 2)
-  overrideReason  String?
-  createdByUserId String?             @db.Uuid
-  payments        Payment[]
-  reviews         Review[]
-  unitChanges     BookingUnitChange[]
-  extensions      BookingExtension[]
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id                   String               @id @default(uuid()) @db.Uuid
+  bookingCode          String               @unique
+  customerId           String               @db.Uuid
+  customer             Customer             @relation(fields: [customerId], references: [id])
+  unitId               String               @db.Uuid
+  unit                 Unit                 @relation(fields: [unitId], references: [id])
+  source               BookingSource
+  checkIn              DateTime             @db.Date
+  checkOut             DateTime             @db.Date
+  guestCount           Int
+  status               BookingStatus
+  currency             String               @db.Char(3)
+  subtotal             Decimal              @db.Decimal(12, 2)
+  fees                 Decimal              @db.Decimal(12, 2)
+  discount             Decimal              @db.Decimal(12, 2)
+  total                Decimal              @db.Decimal(12, 2)
+  depositRequired      Decimal              @db.Decimal(12, 2)
+  paidAmount           Decimal              @default(0) @db.Decimal(12, 2)
+  remainingAmount      Decimal              @db.Decimal(12, 2)
+  normalTotal          Decimal?             @db.Decimal(12, 2)
+  overrideReason       String?
+  createdByUserId      String?              @db.Uuid
+  payments             Payment[]
+  reviews              Review[]
+  unitChanges          BookingUnitChange[]
+  extensions           BookingExtension[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  // Nullable, without inferred defaults: historical commercial terms remain untouched.
+  paymentOption        PaymentOption?
+  confirmationRequired Decimal?             @db.Decimal(12, 2)
+  paymentDueAt         DateTime?            @db.Timestamptz(3)
+  expiredAt            DateTime?            @db.Timestamptz(3)
+  confirmedAt          DateTime?            @db.Timestamptz(3)
+  checkInAt            DateTime?            @db.Timestamptz(3)
+  stayTimeZone         String?
+  policyVersion        String?
+  pricingSnapshot      Json?
+  quoteId              String?              @unique @db.Uuid
+  quote                PriceQuote?          @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  hold                 Hold?
+  cancellation         BookingCancellation?
+  captures             PaymentCapture[]
+  refunds              Refund[]
 
   @@index([unitId, status, checkIn, checkOut])
   @@index([customerId, createdAt])
+  @@index([status, paymentDueAt])
 }
 
 model BookingUnitChange {
@@ -487,33 +598,178 @@ model BookingExtension {
 }
 
 model Payment {
-  id                String        @id @default(uuid()) @db.Uuid
-  bookingId         String        @db.Uuid
-  booking           Booking       @relation(fields: [bookingId], references: [id])
-  type              PaymentType
-  method            String
-  provider          String?
-  providerReference String?
-  amount            Decimal       @db.Decimal(12, 2)
-  currency          String        @db.Char(3)
-  status            PaymentStatus @default(PENDING)
-  createdAt         DateTime      @default(now())
-  paidAt            DateTime?
+  id                 String                @id @default(uuid()) @db.Uuid
+  bookingId          String                @db.Uuid
+  booking            Booking               @relation(fields: [bookingId], references: [id])
+  type               PaymentType
+  method             String
+  provider           String?
+  providerReference  String?
+  amount             Decimal               @db.Decimal(12, 2)
+  currency           String                @db.Char(3)
+  status             PaymentStatus         @default(PENDING)
+  createdAt          DateTime              @default(now())
+  paidAt             DateTime?
+  // amount/providerReference/createdAt already represent the request, merchant reference and creation time.
+  purpose            PaymentPurpose?
+  merchantId         String?
+  expiresAt          DateTime?             @db.Timestamptz(3)
+  supersededAt       DateTime?             @db.Timestamptz(3)
+  closedAt           DateTime?             @db.Timestamptz(3)
+  providerCreateDate String?               @db.VarChar(14)
+  providerRequest    Json?
+  nextReconcileAt    DateTime?             @db.Timestamptz(3)
+  leaseUntil         DateTime?             @db.Timestamptz(3)
+  leaseOwner         String?
+  captures           PaymentCapture[]
+  webhookEvents      PaymentWebhookEvent[]
+  // SQL also enforces one live VNPAY attempt per booking for purpose IS NOT NULL.
 
   @@unique([provider, providerReference])
+  // Composite FK target prevents captures from being attached to a different booking.
+  @@unique([id, bookingId])
   @@index([bookingId, status])
+  @@index([status, nextReconcileAt])
 }
 
 model PaymentWebhookEvent {
-  id              String    @id @default(uuid()) @db.Uuid
-  provider        String
-  providerEventId String
-  payloadHash     String
-  processedAt     DateTime?
-  error           String?
-  createdAt       DateTime  @default(now())
+  id               String              @id @default(uuid()) @db.Uuid
+  provider         String
+  providerEventId  String
+  payloadHash      String
+  processedAt      DateTime?
+  error            String?
+  createdAt        DateTime            @default(now())
+  paymentId        String?             @db.Uuid
+  payment          Payment?            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  merchantId       String?
+  eventFingerprint String?             @db.VarChar(64)
+  status           WebhookEventStatus?
+  ackCode          String?             @db.VarChar(2)
+  providerEvidence Json?
 
   @@unique([provider, providerEventId])
+  @@unique([provider, merchantId, eventFingerprint], map: "PaymentWebhookEvent_scoped_fingerprint_key")
+  @@index([paymentId])
+  @@index([status, createdAt])
+}
+
+// A charge can exist even when its attempt was superseded or its booking is terminal.
+model PaymentCapture {
+  id                    String             @id @default(uuid()) @db.Uuid
+  paymentId             String             @db.Uuid
+  bookingId             String             @db.Uuid
+  payment               Payment            @relation(fields: [paymentId, bookingId], references: [id, bookingId], onDelete: Restrict)
+  booking               Booking            @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  provider              String
+  merchantId            String
+  providerTransactionId String
+  amount                Decimal            @db.Decimal(12, 2)
+  currency              String             @db.Char(3)
+  appliedAmount         Decimal            @default(0) @db.Decimal(12, 2)
+  disposition           CaptureDisposition
+  capturedAt            DateTime?          @db.Timestamptz(3)
+  recordedAt            DateTime           @default(now()) @db.Timestamptz(3)
+  providerEvidence      Json?
+  refunds               Refund[]
+
+  @@unique([provider, merchantId, providerTransactionId], map: "PaymentCapture_provider_transaction_key")
+  @@unique([id, bookingId])
+  @@index([paymentId, bookingId])
+  @@index([bookingId, recordedAt])
+}
+
+model BookingCancellation {
+  id                String            @id @default(uuid()) @db.Uuid
+  bookingId         String            @unique @db.Uuid
+  booking           Booking           @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  cause             CancellationCause
+  actorType         CancellationActor
+  actorUserId       String?           @db.Uuid
+  actor             User?             @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  reason            String
+  cancelledAt       DateTime          @db.Timestamptz(3)
+  checkInAt         DateTime          @db.Timestamptz(3)
+  policyVersion     String
+  paidBasis         Decimal           @db.Decimal(12, 2)
+  refundPercent     Int
+  refundEntitlement Decimal           @db.Decimal(12, 2)
+  currency          String            @db.Char(3)
+  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
+  refunds           Refund[]
+
+  @@unique([id, bookingId])
+  @@index([actorUserId, cancelledAt])
+}
+
+model Refund {
+  id             String               @id @default(uuid()) @db.Uuid
+  bookingId      String               @db.Uuid
+  booking        Booking              @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  captureId      String               @db.Uuid
+  capture        PaymentCapture       @relation(fields: [captureId, bookingId], references: [id, bookingId], onDelete: Restrict)
+  cancellationId String?              @db.Uuid
+  cancellation   BookingCancellation? @relation(fields: [cancellationId, bookingId], references: [id, bookingId], onDelete: Restrict)
+  amount         Decimal              @db.Decimal(12, 2)
+  currency       String               @db.Char(3)
+  reason         RefundReason
+  status         RefundStatus         @default(REQUESTED)
+  idempotencyKey String               @unique @db.VarChar(128)
+  requestedAt    DateTime             @default(now()) @db.Timestamptz(3)
+  processedAt    DateTime?            @db.Timestamptz(3)
+  nextAttemptAt  DateTime?            @db.Timestamptz(3)
+  leaseUntil     DateTime?            @db.Timestamptz(3)
+  leaseOwner     String?
+  lastErrorCode  String?
+  lastError      String?
+  attempts       RefundAttempt[]
+
+  @@unique([captureId, reason])
+  @@index([bookingId, requestedAt])
+  @@index([cancellationId, bookingId])
+  @@index([status, nextAttemptAt])
+}
+
+// Provider request identity belongs to an execution, not a second refund obligation.
+model RefundAttempt {
+  id                      String              @id @default(uuid()) @db.Uuid
+  refundId                String              @db.Uuid
+  refund                  Refund              @relation(fields: [refundId], references: [id], onDelete: Restrict)
+  sequence                Int
+  provider                String
+  merchantId              String
+  providerRequestId       String              @db.VarChar(32)
+  providerRefundReference String?
+  status                  RefundAttemptStatus @default(PREPARED)
+  requestPayload          Json
+  responsePayload         Json?
+  createdAt               DateTime            @default(now()) @db.Timestamptz(3)
+  sentAt                  DateTime?           @db.Timestamptz(3)
+  processedAt             DateTime?           @db.Timestamptz(3)
+  errorCode               String?
+
+  @@unique([refundId, sequence])
+  @@unique([provider, merchantId, providerRequestId], map: "RefundAttempt_provider_request_key")
+  @@unique([provider, merchantId, providerRefundReference], map: "RefundAttempt_provider_refund_key")
+  @@index([status, createdAt])
+}
+
+model IdempotencyRecord {
+  id                 String            @id @default(uuid()) @db.Uuid
+  scope              String            @db.VarChar(160)
+  keyHash            String            @db.VarChar(64)
+  requestHash        String            @db.VarChar(64)
+  status             IdempotencyStatus @default(IN_PROGRESS)
+  resourceType       String?
+  resourceId         String?           @db.Uuid
+  httpStatus         Int?
+  // Only encrypted response bytes, if recovering a lost secret-bearing response is necessary.
+  responseCiphertext Bytes?
+  createdAt          DateTime          @default(now()) @db.Timestamptz(3)
+  expiresAt          DateTime?         @db.Timestamptz(3)
+
+  @@unique([scope, keyHash])
+  @@index([expiresAt])
 }
 
 model Review {

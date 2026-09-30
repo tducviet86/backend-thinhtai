@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "test:unit": "jest --runInBand --testPathPattern=src",
+    "test:migrations": "node --test test/migrations/rental-lifecycle.test.mjs",
     "test:e2e": "jest --runInBand --config test/jest-e2e.json",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
@@ -19,7 +20,9 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts"
   },
-  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
@@ -66,13 +69,23 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0"
   },
-  "engines": { "node": ">=22" }
-  ,"jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+  "engines": {
+    "node": ">=22"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
-    "collectCoverageFrom": ["src/**/*.(t|j)s"],
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "src/**/*.(t|j)s"
+    ],
     "coverageDirectory": "coverage",
     "testEnvironment": "node"
   }

@@ -15,12 +15,17 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { extractTarGz } from "./aidlc-archive.ts";
 import {
-  renderCompletion,
-  type Shell,
-} from "./aidlc-completions.ts";
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
+import { extractTarGz } from "./aidlc-archive.ts";
+import { renderCompletion, type Shell } from "./aidlc-completions.ts";
 import {
   EXIT,
   type CommandResult,
@@ -32,10 +37,7 @@ import {
   usage,
   valueAfter,
 } from "./aidlc-command.ts";
-import {
-  success as successText,
-  warnVerdict,
-} from "./aidlc-color.ts";
+import { success as successText, warnVerdict } from "./aidlc-color.ts";
 import {
   compareVersions,
   isReleaseChannel,
@@ -135,7 +137,8 @@ function requestedVersion(value: string): string {
 }
 
 function offline(argv: readonly string[]): boolean | undefined {
-  if (argv.includes("--offline") || process.env.AIDLC_OFFLINE === "1") return true;
+  if (argv.includes("--offline") || process.env.AIDLC_OFFLINE === "1")
+    return true;
   if (process.env.AIDLC_OFFLINE === "0") return false;
   return undefined;
 }
@@ -178,23 +181,12 @@ const PUBLIC_LIFECYCLE_GRAMMARS: Readonly<
       "--project-dir",
       "--release-base-url",
     ]),
-    bare: new Set([
-      "--json",
-      "--no-color",
-      "--offline",
-      "--quiet",
-    ]),
+    bare: new Set(["--json", "--no-color", "--offline", "--quiet"]),
     positionals: 1,
   },
   uninstall: {
     values: new Set(["--project-dir"]),
-    bare: new Set([
-      "--json",
-      "--no-color",
-      "--purge",
-      "--quiet",
-      "--yes",
-    ]),
+    bare: new Set(["--json", "--no-color", "--purge", "--quiet", "--yes"]),
     positionals: 0,
   },
 };
@@ -240,9 +232,9 @@ export function validatePublicLifecycleArgs(
     if (command === "use" && positionals.length === 0) {
       return "use requires exactly one version";
     }
-    return `unexpected ${command} positional ${
-      JSON.stringify(positionals[grammar.positionals] ?? positionals[0])
-    }`;
+    return `unexpected ${command} positional ${JSON.stringify(
+      positionals[grammar.positionals] ?? positionals[0],
+    )}`;
   }
   if (argv.includes("--json") && argv.includes("--quiet")) {
     return "--json and --quiet are mutually exclusive";
@@ -258,7 +250,8 @@ export function validatePublicLifecycleArgs(
       return `--channel must be ${RELEASE_CHANNELS.join(" or ")}`;
     }
     for (const flag of ["--from", "--version"]) {
-      if (argv.includes(flag)) return `--channel cannot be combined with ${flag}`;
+      if (argv.includes(flag))
+        return `--channel cannot be combined with ${flag}`;
     }
   }
   return null;
@@ -278,14 +271,16 @@ function binaryAsset(target = targetTriple()): string {
 function installedDistributions(version: string): string[] {
   const root = runtimeRoot(version);
   if (!existsSync(root)) return [];
-  return readdirSync(root).filter((entry) => {
-    try {
-      projectionFiles(join(root, entry));
-      return true;
-    } catch {
-      return false;
-    }
-  }).sort();
+  return readdirSync(root)
+    .filter((entry) => {
+      try {
+        projectionFiles(join(root, entry));
+        return true;
+      } catch {
+        return false;
+      }
+    })
+    .sort();
 }
 
 function completeVersion(version: string): boolean {
@@ -309,7 +304,9 @@ function processIsAlive(pid: number): boolean {
   }
 }
 
-const RESERVATION_ENTRY = new RegExp(`^(${VERSION_ID_PATTERN})-(\\d+)-[a-f0-9-]+$`);
+const RESERVATION_ENTRY = new RegExp(
+  `^(${VERSION_ID_PATTERN})-(\\d+)-[a-f0-9-]+$`,
+);
 
 function reservedVersions(): Set<string> {
   const reserved = new Set<string>();
@@ -341,34 +338,42 @@ function reserveVersion(
     reservationRoot(),
     `${requireVersion(version)}-${process.pid}-${randomUUID()}`,
   );
-  executePlan({
-    schemaVersion: 1,
-    root,
-    operations: [writeOperation(
-      relative(root, path),
-      `${JSON.stringify({ version, pid: process.pid, createdAt: new Date().toISOString() })}\n`,
-      "absent",
-      0o600,
-    )],
-  }, {
-    validateLocked: options.requireComplete
-      ? () => {
-          const inspection = inspectInstalledVersion(version);
-          if (!inspection.complete) {
-            commandError(
-              `cannot reserve incomplete retained version ${version}: ${
-                inspection.reason ?? "integrity validation failed"
-              }`,
-              EXIT.integrity,
-            );
+  executePlan(
+    {
+      schemaVersion: 1,
+      root,
+      operations: [
+        writeOperation(
+          relative(root, path),
+          `${JSON.stringify({ version, pid: process.pid, createdAt: new Date().toISOString() })}\n`,
+          "absent",
+          0o600,
+        ),
+      ],
+    },
+    {
+      validateLocked: options.requireComplete
+        ? () => {
+            const inspection = inspectInstalledVersion(version);
+            if (!inspection.complete) {
+              commandError(
+                `cannot reserve incomplete retained version ${version}: ${
+                  inspection.reason ?? "integrity validation failed"
+                }`,
+                EXIT.integrity,
+              );
+            }
           }
-        }
-      : undefined,
-  });
+        : undefined,
+    },
+  );
   return () => {
     rmSync(path, { force: true });
     try {
-      if (existsSync(reservationRoot()) && readdirSync(reservationRoot()).length === 0) {
+      if (
+        existsSync(reservationRoot()) &&
+        readdirSync(reservationRoot()).length === 0
+      ) {
         rmdirSync(reservationRoot());
       }
     } catch {
@@ -404,8 +409,10 @@ function requireConfirmation(argv: readonly string[], message: string): void {
 function windowsLauncherOwnedByInstaller(): boolean {
   try {
     const helper = readFileSync(windowsShimPath(), "utf-8");
-    return readFileSync(commandPath(), "utf-8") === windowsShim() &&
-      [windowsShimHelper(), ...previousWindowsShimHelpers()].includes(helper);
+    return (
+      readFileSync(commandPath(), "utf-8") === windowsShim() &&
+      [windowsShimHelper(), ...previousWindowsShimHelpers()].includes(helper)
+    );
   } catch {
     return false;
   }
@@ -413,8 +420,12 @@ function windowsLauncherOwnedByInstaller(): boolean {
 
 function unixLauncherOwnedByInstaller(): boolean {
   try {
-    return lstatSync(commandPath()).isFile() &&
-      [unixShim(), stableOnlyUnixShim()].includes(readFileSync(commandPath(), "utf-8"));
+    return (
+      lstatSync(commandPath()).isFile() &&
+      [unixShim(), stableOnlyUnixShim()].includes(
+        readFileSync(commandPath(), "utf-8"),
+      )
+    );
   } catch {
     return false;
   }
@@ -423,17 +434,22 @@ function unixLauncherOwnedByInstaller(): boolean {
 function commandOwnedByInstaller(version: string): boolean {
   try {
     if (process.platform === "win32") {
-      return windowsLauncherOwnedByInstaller() &&
-        readActiveExecutable() === resolve(installedExecutablePath(version));
+      return (
+        windowsLauncherOwnedByInstaller() &&
+        readActiveExecutable() === resolve(installedExecutablePath(version))
+      );
     }
     if (
       lstatSync(commandPath()).isSymbolicLink() &&
-      realpathSync(commandPath()) === realpathSync(installedExecutablePath(version))
+      realpathSync(commandPath()) ===
+        realpathSync(installedExecutablePath(version))
     ) {
       return true;
     }
-    return unixLauncherOwnedByInstaller() &&
-      readActiveExecutable() === resolve(installedExecutablePath(version));
+    return (
+      unixLauncherOwnedByInstaller() &&
+      readActiveExecutable() === resolve(installedExecutablePath(version))
+    );
   } catch {
     return false;
   }
@@ -483,8 +499,13 @@ function readPinRegistry(reconcileProject?: string): PinRegistry {
     preserved: {},
   };
   const { pins, warnings, conflicted, preserved } = registry;
-  const groups = new Map<string, Array<[project: string, rawVersion: unknown]>>();
-  for (const [project, rawVersion] of Object.entries(value as Record<string, unknown>)) {
+  const groups = new Map<
+    string,
+    Array<[project: string, rawVersion: unknown]>
+  >();
+  for (const [project, rawVersion] of Object.entries(
+    value as Record<string, unknown>,
+  )) {
     if (!isAbsolute(project)) {
       warnings.push(`${path} contains an invalid pin entry for ${project}`);
       preserved[project] = rawVersion;
@@ -510,8 +531,9 @@ function readPinRegistry(reconcileProject?: string): PinRegistry {
     groups.set(canonical, group);
   }
   for (const [canonical, entries] of groups) {
-    const malformed = entries.filter(([, rawVersion]) =>
-      typeof rawVersion !== "string" || !VERSION_ID.test(rawVersion)
+    const malformed = entries.filter(
+      ([, rawVersion]) =>
+        typeof rawVersion !== "string" || !VERSION_ID.test(rawVersion),
     );
     if (malformed.length > 0) {
       for (const [project] of malformed) {
@@ -520,16 +542,20 @@ function readPinRegistry(reconcileProject?: string): PinRegistry {
       // A filesystem-equivalent key group is one ownership record. If any
       // member is unusable, preserve the complete raw group so an unrelated
       // rewrite cannot hide the warning or silently choose another member.
-      for (const [project, rawVersion] of entries) preserved[project] = rawVersion;
+      for (const [project, rawVersion] of entries)
+        preserved[project] = rawVersion;
       continue;
     }
-    const versions = new Set(entries.map(([, rawVersion]) => rawVersion as string));
+    const versions = new Set(
+      entries.map(([, rawVersion]) => rawVersion as string),
+    );
     if (versions.size === 1) {
       pins[canonical] = entries[0][1] as string;
       continue;
     }
     conflicted.add(canonical);
-    for (const [project, rawVersion] of entries) preserved[project] = rawVersion;
+    for (const [project, rawVersion] of entries)
+      preserved[project] = rawVersion;
     warnings.push(
       `${path} contains conflicting equivalent pin entries for ${canonical}`,
     );
@@ -549,9 +575,11 @@ function canonicalProjectPath(projectDir: string): string {
 function projectDeclaresPin(projectDir: string, version: string): boolean {
   try {
     const pinPath = join(projectDir, ".aidlc-version");
-    return existsSync(pinPath) &&
+    return (
+      existsSync(pinPath) &&
       statSync(pinPath).isFile() &&
-      readFileSync(pinPath, "utf-8").trim() === version;
+      readFileSync(pinPath, "utf-8").trim() === version
+    );
   } catch {
     return false;
   }
@@ -576,76 +604,93 @@ function commitProjectPin(projectDir: string, version: string | null): void {
   const targetPath = projectPinTargetPath(projectDir);
   const registryPath = join(installRoot(), "pins.json");
   const registry = readPinRegistry(project);
-  if (registry.unreadable) commandError(registry.warnings.join("; "), EXIT.integrity);
+  if (registry.unreadable)
+    commandError(registry.warnings.join("; "), EXIT.integrity);
   // Other projects' entries ride along unchanged (usable ones canonicalized,
   // unusable ones verbatim); this project's equivalent keys were skipped on
   // read and collapse to the single canonical registration below.
-  const pins: Record<string, unknown> = { ...registry.preserved, ...registry.pins };
+  const pins: Record<string, unknown> = {
+    ...registry.preserved,
+    ...registry.pins,
+  };
   if (version !== null) pins[project] = version;
 
-  const projectOperations = version === null
-    ? [
-        ...(existsSync(pinPath)
-          ? [{
-              kind: "remove" as const,
-              path: ".aidlc-version",
-              expected: transactionState(pinPath) as string,
-            }]
-          : []),
-        ...(existsSync(targetPath)
-          ? [{
-              kind: "remove" as const,
-              path: relative(projectDir, targetPath),
-              expected: transactionState(targetPath) as string,
-            }]
-          : []),
-      ]
-    : [
-        writeOperation(
-          ".aidlc-version",
-          `${version}\n`,
-          transactionState(pinPath),
-        ),
-        writeOperation(
-          relative(projectDir, targetPath),
-          `${resolve(installedExecutablePath(version))}\n`,
-          transactionState(targetPath),
-          0o600,
-        ),
-      ];
+  const projectOperations =
+    version === null
+      ? [
+          ...(existsSync(pinPath)
+            ? [
+                {
+                  kind: "remove" as const,
+                  path: ".aidlc-version",
+                  expected: transactionState(pinPath) as string,
+                },
+              ]
+            : []),
+          ...(existsSync(targetPath)
+            ? [
+                {
+                  kind: "remove" as const,
+                  path: relative(projectDir, targetPath),
+                  expected: transactionState(targetPath) as string,
+                },
+              ]
+            : []),
+        ]
+      : [
+          writeOperation(
+            ".aidlc-version",
+            `${version}\n`,
+            transactionState(pinPath),
+          ),
+          writeOperation(
+            relative(projectDir, targetPath),
+            `${resolve(installedExecutablePath(version))}\n`,
+            transactionState(targetPath),
+            0o600,
+          ),
+        ];
 
   const root = machineTransactionRoot();
-  executePlan({
-    schemaVersion: 1,
-    root,
-    operations: [writeOperation(
-      relative(root, registryPath),
-      `${JSON.stringify(pins, null, 2)}\n`,
-      transactionState(registryPath),
-      0o600,
-    )],
-  }, {
-    validateLocked: () => {
-      if (version === null) return;
-      const inspection = inspectInstalledVersion(version, projectDistribution(projectDir));
-      if (!inspection.complete) {
-        commandError(
-          `retained version ${version} became incomplete before the pin commit: ${
-            inspection.reason ?? "integrity validation failed"
-          }`,
-          EXIT.integrity,
+  executePlan(
+    {
+      schemaVersion: 1,
+      root,
+      operations: [
+        writeOperation(
+          relative(root, registryPath),
+          `${JSON.stringify(pins, null, 2)}\n`,
+          transactionState(registryPath),
+          0o600,
+        ),
+      ],
+    },
+    {
+      validateLocked: () => {
+        if (version === null) return;
+        const inspection = inspectInstalledVersion(
+          version,
+          projectDistribution(projectDir),
         );
-      }
+        if (!inspection.complete) {
+          commandError(
+            `retained version ${version} became incomplete before the pin commit: ${
+              inspection.reason ?? "integrity validation failed"
+            }`,
+            EXIT.integrity,
+          );
+        }
+      },
+      validateCommitted: () => {
+        if (projectOperations.length === 0) return;
+        executePlan({
+          schemaVersion: 1,
+          root: projectDir,
+          operations: projectOperations,
+        });
+      },
     },
-    validateCommitted: () => {
-      if (projectOperations.length === 0) return;
-      executePlan({
-        schemaVersion: 1,
-        root: projectDir,
-        operations: projectOperations,
-      });
-    },
-  });
+  );
 }
 
 export type PinnedDispatchResult =
@@ -705,9 +750,10 @@ export function resolvePinnedDispatch(
     return {
       kind: "failure",
       code: EXIT.integrity,
-      message: `this project's pin registry is invalid: ${
-        join(installRoot(), "pins.json")
-      } contains conflicting equivalent pin entries for ${project}`,
+      message: `this project's pin registry is invalid: ${join(
+        installRoot(),
+        "pins.json",
+      )} contains conflicting equivalent pin entries for ${project}`,
       remediation,
     };
   }
@@ -748,19 +794,24 @@ export function resolvePinnedDispatch(
   };
 }
 
-function lifecycleFailureResult(error: unknown, argv: readonly string[]): CommandResult {
+function lifecycleFailureResult(
+  error: unknown,
+  argv: readonly string[],
+): CommandResult {
   const message = error instanceof Error ? error.message : String(error);
-  const code = error instanceof LifecycleCommandError
-    ? error.exitCode
-    : error instanceof ReleaseUnavailableError
-    ? EXIT.unavailable
-    : /mutation scope cannot mutate/.test(message)
-    ? EXIT.integrity
-    : valueAfter(argv, "--from") &&
-        /(checksum|version\.json|checksums\.txt|release is missing|invalid asset|size mismatch)/i
-          .test(message)
-    ? EXIT.integrity
-    : EXIT.failure;
+  const code =
+    error instanceof LifecycleCommandError
+      ? error.exitCode
+      : error instanceof ReleaseUnavailableError
+        ? EXIT.unavailable
+        : /mutation scope cannot mutate/.test(message)
+          ? EXIT.integrity
+          : valueAfter(argv, "--from") &&
+              /(checksum|version\.json|checksums\.txt|release is missing|invalid asset|size mismatch)/i.test(
+                message,
+              )
+            ? EXIT.integrity
+            : EXIT.failure;
   return failure(message, code);
 }
 
@@ -773,7 +824,9 @@ function treesMatch(left: string, right: string): boolean {
   const leftFiles = walkFiles(left).map((path) => path.replaceAll("\\", "/"));
   const rightFiles = walkFiles(right).map((path) => path.replaceAll("\\", "/"));
   if (JSON.stringify(leftFiles) !== JSON.stringify(rightFiles)) return false;
-  return leftFiles.every((path) => sha256File(join(left, path)) === sha256File(join(right, path)));
+  return leftFiles.every(
+    (path) => sha256File(join(left, path)) === sha256File(join(right, path)),
+  );
 }
 
 type RetainedVersion = {
@@ -800,7 +853,8 @@ function retainedVersions(): {
   pinWarnings: string[];
 } {
   const { pins, warnings } = registeredPins();
-  if (!existsSync(versionsRoot())) return { versions: [], pinWarnings: warnings };
+  if (!existsSync(versionsRoot()))
+    return { versions: [], pinWarnings: warnings };
   const active = activeVersion();
   const reservations = reservedVersions();
   const rollback = existsSync(rollbackVersionPath())
@@ -818,11 +872,17 @@ function retainedVersions(): {
       complete: completeVersion(version),
       reserved: reservations.has("*") || reservations.has(version),
       pinPaths: Object.entries(pins)
-        .filter(([project, pinnedVersion]) => pinnedVersion === version && existsSync(project))
+        .filter(
+          ([project, pinnedVersion]) =>
+            pinnedVersion === version && existsSync(project),
+        )
         .map(([project]) => project)
         .sort(),
       stalePinPaths: Object.entries(pins)
-        .filter(([project, pinnedVersion]) => pinnedVersion === version && !existsSync(project))
+        .filter(
+          ([project, pinnedVersion]) =>
+            pinnedVersion === version && !existsSync(project),
+        )
         .map(([project]) => project)
         .sort(),
     }));
@@ -887,7 +947,9 @@ function assertVersionsRemainPrunable(versions: readonly string[]): void {
   const stillRemovable = new Set(
     partitionRetained(refreshed.versions).removable.map((item) => item.version),
   );
-  const protectedVersions = versions.filter((version) => !stillRemovable.has(version));
+  const protectedVersions = versions.filter(
+    (version) => !stillRemovable.has(version),
+  );
   if (protectedVersions.length > 0) {
     commandError(
       `prune cancelled because version protection changed: ${protectedVersions.join(", ")}`,
@@ -898,11 +960,17 @@ function assertVersionsRemainPrunable(versions: readonly string[]): void {
 
 function projectDistribution(projectDir: string): string | null {
   const harnessDir = runtimeHarnessDir(projectDir);
-  return discoverProjectHarnesses(projectDir)
-    .find((candidate) => candidate.harnessDir === harnessDir)?.distribution ?? null;
+  return (
+    discoverProjectHarnesses(projectDir).find(
+      (candidate) => candidate.harnessDir === harnessDir,
+    )?.distribution ?? null
+  );
 }
 
-function activateReserved(version: string, options: { failAfter?: number } = {}): void {
+function activateReserved(
+  version: string,
+  options: { failAfter?: number } = {},
+): void {
   if (!completeVersion(version)) {
     commandError(`retained version ${version} is incomplete`, EXIT.unavailable);
   }
@@ -924,8 +992,15 @@ function activateReserved(version: string, options: { failAfter?: number } = {})
       EXIT.integrity,
     );
   }
-  if (windows && existsSync(commandPath()) && readFileSync(commandPath(), "utf-8") !== shim) {
-    commandError("existing aidlc.cmd is not owned by this AI-DLC install", EXIT.integrity);
+  if (
+    windows &&
+    existsSync(commandPath()) &&
+    readFileSync(commandPath(), "utf-8") !== shim
+  ) {
+    commandError(
+      "existing aidlc.cmd is not owned by this AI-DLC install",
+      EXIT.integrity,
+    );
   }
   if (
     windows &&
@@ -934,12 +1009,20 @@ function activateReserved(version: string, options: { failAfter?: number } = {})
       readFileSync(windowsShimPath(), "utf-8"),
     )
   ) {
-    commandError("existing aidlc-shim.ps1 is not owned by this AI-DLC install", EXIT.integrity);
+    commandError(
+      "existing aidlc-shim.ps1 is not owned by this AI-DLC install",
+      EXIT.integrity,
+    );
   }
   const operations = [
     ...(previous && previous !== version
-      ? [writeOperation(relative(root, rollbackVersionPath()), `${previous}\n`,
-          transactionState(rollbackVersionPath()))]
+      ? [
+          writeOperation(
+            relative(root, rollbackVersionPath()),
+            `${previous}\n`,
+            transactionState(rollbackVersionPath()),
+          ),
+        ]
       : []),
     writeOperation(
       relative(root, activeVersionPath()),
@@ -955,28 +1038,32 @@ function activateReserved(version: string, options: { failAfter?: number } = {})
             0o700,
           ),
           ...(!existsSync(commandPath())
-            ? [writeOperation(
-                relative(root, commandPath()),
-                shim,
-                "absent",
-                0o700,
-              )]
+            ? [
+                writeOperation(
+                  relative(root, commandPath()),
+                  shim,
+                  "absent",
+                  0o700,
+                ),
+              ]
             : []),
         ]
-      : [writeOperation(
-          relative(root, commandPath()),
-          shim,
-          transactionState(commandPath()),
-          0o700,
-        )]),
+      : [
+          writeOperation(
+            relative(root, commandPath()),
+            shim,
+            transactionState(commandPath()),
+            0o700,
+          ),
+        ]),
     writeOperation(
       relative(root, activeExecutablePath()),
       `${target}${windows ? "\r\n" : "\n"}`,
       transactionState(activeExecutablePath()),
       0o600,
     ),
-    ...(Object.entries(COMPLETION_FILES) as Array<[Shell, string]>)
-      .map(([shell, file]) => {
+    ...(Object.entries(COMPLETION_FILES) as Array<[Shell, string]>).map(
+      ([shell, file]) => {
         const path = join(installRoot(), "completions", file);
         return writeOperation(
           relative(root, path),
@@ -984,52 +1071,64 @@ function activateReserved(version: string, options: { failAfter?: number } = {})
           transactionState(path),
           0o644,
         );
-      }),
+      },
+    ),
   ];
-  executePlan({
-    schemaVersion: 1,
-    root,
-    operations,
-  }, {
-    ...options,
-    validateLocked: () => {
-      const inspection = inspectInstalledVersion(version);
-      if (!inspection.complete) {
-        commandError(
-          `retained version ${version} became incomplete before activation: ${
-            inspection.reason ?? "integrity validation failed"
-          }`,
-          EXIT.integrity,
-        );
-      }
+  executePlan(
+    {
+      schemaVersion: 1,
+      root,
+      operations,
     },
-    validateCommitted: () => {
-      if (
-        readActiveExecutable() !== resolve(target) ||
-        (windows
-          ? !windowsLauncherOwnedByInstaller()
-          : !unixLauncherOwnedByInstaller())
-      ) {
-        throw new Error(`command pointer validation failed for ${version}`);
-      }
-      const probe = Bun.spawnSync([commandPath(), "version"], {
-        stdin: "ignore",
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const output = Buffer.from(probe.stdout ?? new Uint8Array()).toString("utf-8").trim();
-      if (probe.exitCode !== 0 || output !== `aidlc ${version} (runtime ${version})`) {
-        throw new Error(
-          `command pointer validation failed for ${version}: version probe returned ${
-            probe.exitCode ?? "no exit"
-          } ${JSON.stringify(output)}`,
-        );
-      }
+    {
+      ...options,
+      validateLocked: () => {
+        const inspection = inspectInstalledVersion(version);
+        if (!inspection.complete) {
+          commandError(
+            `retained version ${version} became incomplete before activation: ${
+              inspection.reason ?? "integrity validation failed"
+            }`,
+            EXIT.integrity,
+          );
+        }
+      },
+      validateCommitted: () => {
+        if (
+          readActiveExecutable() !== resolve(target) ||
+          (windows
+            ? !windowsLauncherOwnedByInstaller()
+            : !unixLauncherOwnedByInstaller())
+        ) {
+          throw new Error(`command pointer validation failed for ${version}`);
+        }
+        const probe = Bun.spawnSync([commandPath(), "version"], {
+          stdin: "ignore",
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        const output = Buffer.from(probe.stdout ?? new Uint8Array())
+          .toString("utf-8")
+          .trim();
+        if (
+          probe.exitCode !== 0 ||
+          output !== `aidlc ${version} (runtime ${version})`
+        ) {
+          throw new Error(
+            `command pointer validation failed for ${version}: version probe returned ${
+              probe.exitCode ?? "no exit"
+            } ${JSON.stringify(output)}`,
+          );
+        }
+      },
     },
-  });
+  );
 }
 
-export function activate(version: string, options: { failAfter?: number } = {}): void {
+export function activate(
+  version: string,
+  options: { failAfter?: number } = {},
+): void {
   const releaseReservation = reserveVersion(version);
   try {
     activateReserved(version, options);
@@ -1054,7 +1153,7 @@ const STABLE_ONLY_VALID_VERSION = [
   "  IFS=.",
   "  set -- $version_value",
   "  IFS=$old_ifs",
-  "  [ \"$#\" -eq 3 ] && valid_number \"$1\" && valid_number \"$2\" && valid_number \"$3\"",
+  '  [ "$#" -eq 3 ] && valid_number "$1" && valid_number "$2" && valid_number "$3"',
   "}",
 ];
 
@@ -1066,7 +1165,7 @@ const VALID_VERSION = [
   "valid_version() {",
   "  version_value=$1",
   "  preview_suffix=",
-  "  case \"$version_value\" in",
+  '  case "$version_value" in',
   `    *-${PREVIEW_CHANNEL}.*)`,
   `      preview_suffix=\${version_value#*-${PREVIEW_CHANNEL}.}`,
   `      version_value=\${version_value%%-${PREVIEW_CHANNEL}.*}`,
@@ -1077,9 +1176,9 @@ const VALID_VERSION = [
   "  IFS=.",
   "  set -- $version_value",
   "  IFS=$old_ifs",
-  "  [ \"$#\" -eq 3 ] && valid_number \"$1\" && valid_number \"$2\" && valid_number \"$3\" || return 1",
-  "  [ -n \"$preview_suffix\" ] || return 0",
-  "  case \"$preview_suffix\" in",
+  '  [ "$#" -eq 3 ] && valid_number "$1" && valid_number "$2" && valid_number "$3" || return 1',
+  '  [ -n "$preview_suffix" ] || return 0',
+  '  case "$preview_suffix" in',
   "    [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].*) ;;",
   "    *) return 1 ;;",
   "  esac",
@@ -1101,31 +1200,31 @@ function renderUnixShim(validVersion: readonly string[]): string {
     "  line=",
     "  extra=",
     "  {",
-    "    IFS= read -r line || [ -n \"$line\" ] || return 1",
+    '    IFS= read -r line || [ -n "$line" ] || return 1',
     "    if IFS= read -r extra; then return 1; fi",
-    "  } < \"$1\"",
-    "  [ -n \"$line\" ] || return 1",
+    '  } < "$1"',
+    '  [ -n "$line" ] || return 1',
     "  return 0",
     "}",
     "valid_number() {",
     "  case \"$1\" in ''|*[!0-9]*) return 1 ;; 0) return 0 ;; 0*) return 1 ;; *) return 0 ;; esac",
     "}",
     ...validVersion,
-    "if ! read_one_line \"$active_version_pointer\" || ! valid_version \"$line\"; then",
+    'if ! read_one_line "$active_version_pointer" || ! valid_version "$line"; then',
     "  printf 'aidlc: active version marker is missing or malformed\\n' >&2",
     "  printf 'Run: aidlc update --version <version> --from <release-directory>\\n' >&2",
     "  exit 4",
     "fi",
     "active_version=$line",
-    "if ! read_one_line \"$active_pointer\"; then",
+    'if ! read_one_line "$active_pointer"; then',
     "  printf 'aidlc: active command target is missing or malformed\\n' >&2",
     "  printf 'Run: aidlc update --version <version> --from <release-directory>\\n' >&2",
     "  exit 4",
     "fi",
     "target=$line",
     "expected=$versions_root/$active_version/aidlc",
-    "if [ \"$target\" != \"$expected\" ] || [ ! -f \"$target\" ] || [ ! -x \"$target\" ]; then exit 4; fi",
-    "exec \"$target\" \"$@\"",
+    'if [ "$target" != "$expected" ] || [ ! -f "$target" ] || [ ! -x "$target" ]; then exit 4; fi',
+    'exec "$target" "$@"',
     "",
   ].join("\n");
 }
@@ -1164,10 +1263,10 @@ function renderWindowsShimHelper(versionPattern: string): string {
     "try {",
     "  $versionRaw = [IO.File]::ReadAllText($versionPointer)",
     `  if ($versionRaw -notmatch '^${versionPattern}\\r?\\n?$') { exit 4 }`,
-    "  $activeVersion = $versionRaw.TrimEnd(\"`r\", \"`n\")",
+    '  $activeVersion = $versionRaw.TrimEnd("`r", "`n")',
     "  $raw = [IO.File]::ReadAllText($pointer)",
     "  if ($raw -notmatch '^[^\\r\\n]+\\r?\\n?$') { exit 4 }",
-    "  $executable = [IO.Path]::GetFullPath($raw.TrimEnd(\"`r\", \"`n\"))",
+    '  $executable = [IO.Path]::GetFullPath($raw.TrimEnd("`r", "`n"))',
     "  $expected = [IO.Path]::Combine($versions, $activeVersion, 'aidlc.exe')",
     "  if (-not $executable.Equals($expected, [StringComparison]::OrdinalIgnoreCase)) { exit 4 }",
     "  if (-not [IO.File]::Exists($executable)) { exit 4 }",
@@ -1200,7 +1299,7 @@ function previousWindowsShimHelpers(): string[] {
       "try {",
       "  $raw = [IO.File]::ReadAllText($pointer)",
       "  if ($raw -notmatch '^[^\\r\\n]+\\r?\\n?$') { exit 4 }",
-      "  $executable = [IO.Path]::GetFullPath($raw.TrimEnd(\"`r\", \"`n\"))",
+      '  $executable = [IO.Path]::GetFullPath($raw.TrimEnd("`r", "`n"))',
       "  $prefix = $versions.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar",
       "  if (-not $executable.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { exit 4 }",
       "  $relative = $executable.Substring($prefix.Length)",
@@ -1234,12 +1333,12 @@ async function installVersion(options: {
   const wantedVersion = options.version
     ? requestedVersion(options.version)
     : !options.from && options.channel === PREVIEW_CHANNEL
-    ? await resolvePreviewVersion({
-        baseUrl: options.baseUrl,
-        apiUrl: options.apiUrl,
-        caBundle: options.caBundle,
-      })
-    : undefined;
+      ? await resolvePreviewVersion({
+          baseUrl: options.baseUrl,
+          apiUrl: options.apiUrl,
+          caBundle: options.caBundle,
+        })
+      : undefined;
   const target = targetTriple();
   const release = await acquireRelease({
     version: wantedVersion,
@@ -1265,20 +1364,32 @@ async function installVersion(options: {
       candidate,
       process.platform === "win32" ? "aidlc.exe" : "aidlc",
     );
-    writeFileSync(candidateExecutable, readFileSync(binarySource), { mode: 0o755 });
+    writeFileSync(candidateExecutable, readFileSync(binarySource), {
+      mode: 0o755,
+    });
     if (process.platform !== "win32") chmodSync(candidateExecutable, 0o755);
     extractTarGz(join(release.directory, runtimeAsset), candidate, {
       reservedTopLevelNames: ["aidlc", "aidlc.exe"],
     });
-    const distributions = release.manifest.distributions.map((item) => item.name).sort();
+    const distributions = release.manifest.distributions
+      .map((item) => item.name)
+      .sort();
     for (const distribution of distributions) {
       const root = join(candidate, "runtime", distribution);
       const { stamp } = projectionFiles(root);
-      if (stamp.frameworkVersion !== version || stamp.distribution !== distribution) {
-        throw new Error(`${distribution} runtime stamp does not match release ${version}`);
+      if (
+        stamp.frameworkVersion !== version ||
+        stamp.distribution !== distribution
+      ) {
+        throw new Error(
+          `${distribution} runtime stamp does not match release ${version}`,
+        );
       }
     }
-    const baselinePath = join(candidate, basename(runtimeIntegrityPath(version)));
+    const baselinePath = join(
+      candidate,
+      basename(runtimeIntegrityPath(version)),
+    );
     writeFileSync(
       baselinePath,
       `${JSON.stringify(
@@ -1290,30 +1401,41 @@ async function installVersion(options: {
     );
     writeFileSync(
       join(candidate, "version.json"),
-      `${JSON.stringify({
-        ...release.manifest,
-        installedRuntime: {
-          schemaVersion: 1,
-          baseline: basename(baselinePath),
-          sha256: sha256File(baselinePath),
+      `${JSON.stringify(
+        {
+          ...release.manifest,
+          installedRuntime: {
+            schemaVersion: 1,
+            baseline: basename(baselinePath),
+            sha256: sha256File(baselinePath),
+          },
         },
-      }, null, 2)}\n`,
+        null,
+        2,
+      )}\n`,
     );
     if (!options.dryRun) {
       const destination = versionRoot(version);
       if (existsSync(destination)) {
         const priorManifestPath = join(destination, "version.json");
         if (!existsSync(priorManifestPath)) {
-          commandError(`existing ${version} install has no release manifest`, EXIT.integrity);
+          commandError(
+            `existing ${version} install has no release manifest`,
+            EXIT.integrity,
+          );
         }
-        const priorManifest = JSON.parse(readFileSync(priorManifestPath, "utf-8")) as {
+        const priorManifest = JSON.parse(
+          readFileSync(priorManifestPath, "utf-8"),
+        ) as {
           assets?: Array<{ name: string; sha256: string }>;
         };
         const expectedAssets = new Map(
           release.manifest.assets.map((asset) => [asset.name, asset.sha256]),
         );
         for (const assetName of required) {
-          const prior = priorManifest.assets?.find((asset) => asset.name === assetName);
+          const prior = priorManifest.assets?.find(
+            (asset) => asset.name === assetName,
+          );
           if (!prior || prior.sha256 !== expectedAssets.get(assetName)) {
             commandError(
               `existing ${version} install came from a different ${assetName}`,
@@ -1321,32 +1443,42 @@ async function installVersion(options: {
             );
           }
         }
-        if (digest(installedExecutablePath(version)) !== expectedAssets.get(binaryAsset(target))) {
+        if (
+          digest(installedExecutablePath(version)) !==
+          expectedAssets.get(binaryAsset(target))
+        ) {
           commandError(
             `existing ${version} binary does not match the verified release`,
             EXIT.integrity,
           );
         }
-        if (!treesMatch(join(destination, "runtime"), join(candidate, "runtime"))) {
+        if (
+          !treesMatch(join(destination, "runtime"), join(candidate, "runtime"))
+        ) {
           commandError(
             `existing ${version} runtime does not match the verified release`,
             EXIT.integrity,
           );
         }
         if (!completeVersion(version)) {
-          commandError(`existing ${version} install is incomplete`, EXIT.integrity);
+          commandError(
+            `existing ${version} install is incomplete`,
+            EXIT.integrity,
+          );
         }
       } else {
         executePlan({
           schemaVersion: 1,
           root: machineTransactionRoot(),
-          operations: [{
-            kind: "tree",
-            path: relative(machineTransactionRoot(), destination),
-            source: candidate,
-            sourceHash: transactionSourceHash(candidate),
-            expected: "absent",
-          }],
+          operations: [
+            {
+              kind: "tree",
+              path: relative(machineTransactionRoot(), destination),
+              source: candidate,
+              sourceHash: transactionSourceHash(candidate),
+              expected: "absent",
+            },
+          ],
         });
       }
       if (options.activate) activate(version);
@@ -1355,24 +1487,33 @@ async function installVersion(options: {
   } finally {
     releaseReservation?.();
     rmSync(temporary, { recursive: true, force: true });
-    if (release.cleanup) rmSync(release.cleanup, { recursive: true, force: true });
+    if (release.cleanup)
+      rmSync(release.cleanup, { recursive: true, force: true });
   }
 }
 
-async function versionsCommand(argv: string[]): Promise<ReturnType<typeof success>> {
+async function versionsCommand(
+  argv: string[],
+): Promise<ReturnType<typeof success>> {
   const verb = argv[1];
   if (verb === "list") {
     const { versions, pinWarnings } = retainedVersions();
     if (argv.includes("--completion-values")) {
       return success(
-        versions.filter((item) => item.complete).map((item) => item.version).join("\n"),
+        versions
+          .filter((item) => item.complete)
+          .map((item) => item.version)
+          .join("\n"),
       );
     }
     return success(
       (versions.length
-        ? versions.map((item) =>
-            `${item.version}${item.active ? " active" : ""}${item.rollback ? " rollback" : ""} [${item.distributions.join(",")}] pins=${item.pinPaths.length} stale-pins=${item.stalePinPaths.length}${item.complete ? "" : " incomplete"}`
-          ).join("\n")
+        ? versions
+            .map(
+              (item) =>
+                `${item.version}${item.active ? " active" : ""}${item.rollback ? " rollback" : ""} [${item.distributions.join(",")}] pins=${item.pinPaths.length} stale-pins=${item.stalePinPaths.length}${item.complete ? "" : " incomplete"}`,
+            )
+            .join("\n")
         : "no retained versions") +
         (pinWarnings.length > 0 ? `\nwarning: ${pinWarnings.join("; ")}` : ""),
       { versions, pinWarnings },
@@ -1386,7 +1527,8 @@ async function versionsCommand(argv: string[]): Promise<ReturnType<typeof succes
         EXIT.integrity,
       );
     }
-    const { removable, protectedVersions, protection } = partitionRetained(versions);
+    const { removable, protectedVersions, protection } =
+      partitionRetained(versions);
     if (removable.length === 0) {
       return success(
         protection
@@ -1407,40 +1549,52 @@ async function versionsCommand(argv: string[]): Promise<ReturnType<typeof succes
       );
     }
     const stillRemovable = new Set(
-      partitionRetained(refreshed.versions).removable.map((item) => item.version),
+      partitionRetained(refreshed.versions).removable.map(
+        (item) => item.version,
+      ),
     );
-    const newlyProtected = removable.filter((item) => !stillRemovable.has(item.version));
+    const newlyProtected = removable.filter(
+      (item) => !stillRemovable.has(item.version),
+    );
     if (newlyProtected.length > 0) {
       commandError(
-        `prune cancelled because version protection changed: ${
-          newlyProtected.map((item) => item.version).join(", ")
-        }`,
+        `prune cancelled because version protection changed: ${newlyProtected
+          .map((item) => item.version)
+          .join(", ")}`,
         EXIT.failure,
       );
     }
     const root = machineTransactionRoot();
-    executePlan({
-      schemaVersion: 1,
-      root,
-      operations: removable.map((item) => ({
-        kind: "remove" as const,
-        path: relative(root, versionRoot(item.version)),
-        expected: transactionState(versionRoot(item.version)) as string,
-      })),
-    }, {
-      validateLocked: () =>
-        assertVersionsRemainPrunable(removable.map((item) => item.version)),
-    });
+    executePlan(
+      {
+        schemaVersion: 1,
+        root,
+        operations: removable.map((item) => ({
+          kind: "remove" as const,
+          path: relative(root, versionRoot(item.version)),
+          expected: transactionState(versionRoot(item.version)) as string,
+        })),
+      },
+      {
+        validateLocked: () =>
+          assertVersionsRemainPrunable(removable.map((item) => item.version)),
+      },
+    );
     return success(
       `pruned ${removable.map((item) => item.version).join(", ")}${
         protection ? `; protected: ${protection}` : ""
       }`,
-      { removed: removable.map((item) => item.version), protected: protectedVersions },
+      {
+        removed: removable.map((item) => item.version),
+        protected: protectedVersions,
+      },
     );
   }
-  if (verb !== "install") return usage("usage: aidlc system versions <list|install|prune>");
+  if (verb !== "install")
+    return usage("usage: aidlc system versions <list|install|prune>");
   const version = argv[2];
-  if (!version || version.startsWith("--")) return usage("versions install requires a release version");
+  if (!version || version.startsWith("--"))
+    return usage("versions install requires a release version");
   if (argv.includes("--harness")) return usage("unknown argument: --harness");
   const result = await installVersion({
     version,
@@ -1468,18 +1622,21 @@ function pruneUnprotectedVersions(): string[] {
   const { removable } = partitionRetained(versions);
   if (removable.length === 0) return [];
   const root = machineTransactionRoot();
-  executePlan({
-    schemaVersion: 1,
-    root,
-    operations: removable.map((item) => ({
-      kind: "remove" as const,
-      path: relative(root, versionRoot(item.version)),
-      expected: transactionState(versionRoot(item.version)) as string,
-    })),
-  }, {
-    validateLocked: () =>
-      assertVersionsRemainPrunable(removable.map((item) => item.version)),
-  });
+  executePlan(
+    {
+      schemaVersion: 1,
+      root,
+      operations: removable.map((item) => ({
+        kind: "remove" as const,
+        path: relative(root, versionRoot(item.version)),
+        expected: transactionState(versionRoot(item.version)) as string,
+      })),
+    },
+    {
+      validateLocked: () =>
+        assertVersionsRemainPrunable(removable.map((item) => item.version)),
+    },
+  );
   return removable.map((item) => item.version);
 }
 
@@ -1508,7 +1665,10 @@ function uninstallCommand(argv: string[]): CommandResult {
     );
   }
   if (typeof process.getuid === "function" && process.getuid() === 0) {
-    return failure("refusing to uninstall a root-owned installation", EXIT.integrity);
+    return failure(
+      "refusing to uninstall a root-owned installation",
+      EXIT.integrity,
+    );
   }
   const purge = argv.includes("--purge");
   if (process.platform === "win32") {
@@ -1542,7 +1702,9 @@ function uninstallCommand(argv: string[]): CommandResult {
     );
   }
   const { versions } = retainedVersions();
-  const preserved = purge ? "nothing" : "global config, update cache, pins, and harness default";
+  const preserved = purge
+    ? "nothing"
+    : "global config, update cache, pins, and harness default";
   requireConfirmation(
     argv,
     `Uninstall AI-DLC (${versions.length} retained version(s))? Project trees will not be changed; preserving ${preserved}.`,
@@ -1589,7 +1751,12 @@ function uninstallCommand(argv: string[]): CommandResult {
   if (purge) removeEmptyInstallerDirectory(resolvedInstallRoot);
   return success(
     `uninstalled AI-DLC; ${purge ? "removed machine configuration and cache" : "preserved machine configuration and cache"}`,
-    { purge, preserved: purge ? [] : ["config", "update-cache", "pins", "default-harness"] },
+    {
+      purge,
+      preserved: purge
+        ? []
+        : ["config", "update-cache", "pins", "default-harness"],
+    },
   );
 }
 
@@ -1615,7 +1782,10 @@ function requestedChannel(argv: readonly string[]): ReleaseChannel {
   const explicit = valueAfter(argv, "--channel");
   if (explicit) {
     if (!isReleaseChannel(explicit)) {
-      commandError(`--channel must be ${RELEASE_CHANNELS.join(" or ")}`, EXIT.usage);
+      commandError(
+        `--channel must be ${RELEASE_CHANNELS.join(" or ")}`,
+        EXIT.usage,
+      );
     }
     return explicit;
   }
@@ -1656,7 +1826,9 @@ async function updateCommand(argv: string[]): Promise<CommandResult> {
     } catch (error) {
       commandError(
         error instanceof Error ? error.message : String(error),
-        error instanceof ReleaseUnavailableError ? EXIT.unavailable : EXIT.failure,
+        error instanceof ReleaseUnavailableError
+          ? EXIT.unavailable
+          : EXIT.failure,
       );
     }
     if (state.state === "behind") {
@@ -1667,12 +1839,13 @@ async function updateCommand(argv: string[]): Promise<CommandResult> {
       };
     }
     if (state.state === "invalid-config") {
-      return failure(state.message, EXIT.usage, "repair or remove the invalid machine config");
+      return failure(
+        state.message,
+        EXIT.usage,
+        "repair or remove the invalid machine config",
+      );
     }
-    if (
-      state.state === "unavailable" ||
-      state.state === "offline"
-    ) {
+    if (state.state === "unavailable" || state.state === "offline") {
       return failure(state.message, EXIT.unavailable);
     }
     if (state.state === "disabled") {
@@ -1695,9 +1868,10 @@ async function updateCommand(argv: string[]): Promise<CommandResult> {
   // Moving between channels is a switch, never a downgrade error: the newest
   // stable sorts below a preview built after it, and converging on it is the
   // documented way back.
-  const channelSwitch = current && versionChannel(current) !== versionChannel(result.version)
-    ? { from: versionChannel(current), to: versionChannel(result.version) }
-    : undefined;
+  const channelSwitch =
+    current && versionChannel(current) !== versionChannel(result.version)
+      ? { from: versionChannel(current), to: versionChannel(result.version) }
+      : undefined;
   const switched = channelSwitch
     ? ` (switched channel ${channelSwitch.from} -> ${channelSwitch.to})`
     : "";
@@ -1714,8 +1888,8 @@ async function updateCommand(argv: string[]): Promise<CommandResult> {
     dryRun
       ? `update plan: ${current ?? "none"} -> ${result.version} [${result.distributions.join(",")}]${switched}`
       : `updated ${current ?? "new install"} -> ${result.version}${switched}${
-        pruned.length > 0 ? `; pruned ${pruned.join(", ")}` : ""
-      }`,
+          pruned.length > 0 ? `; pruned ${pruned.join(", ")}` : ""
+        }`,
     {
       ...result,
       channel,
@@ -1757,16 +1931,24 @@ function rollbackCommand(argv: string[]): ReturnType<typeof success> {
     const eligible = versions.filter((item) => item.complete && !item.active);
     return success(
       (eligible.length
-        ? eligible.map((item) => `${item.version} [${item.distributions.join(",")}]`).join("\n")
+        ? eligible
+            .map((item) => `${item.version} [${item.distributions.join(",")}]`)
+            .join("\n")
         : "no rollback target") +
         (pinWarnings.length > 0 ? `\nwarning: ${pinWarnings.join("; ")}` : ""),
       { versions: eligible, pinWarnings },
     );
   }
-  const target = valueAfter(argv, "--version") ||
-    (existsSync(rollbackVersionPath()) ? readFileSync(rollbackVersionPath(), "utf-8").trim() : "");
+  const target =
+    valueAfter(argv, "--version") ||
+    (existsSync(rollbackVersionPath())
+      ? readFileSync(rollbackVersionPath(), "utf-8").trim()
+      : "");
   if (!target) {
-    commandError("no prior version is recorded; run aidlc use <version>", EXIT.failure);
+    commandError(
+      "no prior version is recorded; run aidlc use <version>",
+      EXIT.failure,
+    );
   }
   if (valueAfter(argv, "--version")) {
     requestedVersion(target);
@@ -1782,7 +1964,9 @@ function rollbackCommand(argv: string[]): ReturnType<typeof success> {
   }
   const active = activeVersion();
   const missing = active
-    ? installedDistributions(active).filter((item) => !installedDistributions(target).includes(item))
+    ? installedDistributions(active).filter(
+        (item) => !installedDistributions(target).includes(item),
+      )
     : [];
   if (missing.length > 0 && !argv.includes("--allow-harness-loss")) {
     throw new Error(`rollback target lacks harnesses: ${missing.join(", ")}`);
@@ -1791,12 +1975,16 @@ function rollbackCommand(argv: string[]): ReturnType<typeof success> {
   return success(`rolled back to ${target}`, { version: target });
 }
 
-export async function configureProjectPin(argv: string[]): Promise<CommandResult> {
+export async function configureProjectPin(
+  argv: string[],
+): Promise<CommandResult> {
   try {
     const hasPin = argv.includes("--pin");
     const hasUnpin = argv.includes("--unpin");
     if (hasPin === hasUnpin) {
-      return usage("usage: aidlc config --pin <version> | aidlc config --unpin");
+      return usage(
+        "usage: aidlc config --pin <version> | aidlc config --unpin",
+      );
     }
     if (argv.includes("--harness")) return usage("unknown argument: --harness");
     const projectDir = projectDirFrom(argv);
@@ -1804,20 +1992,21 @@ export async function configureProjectPin(argv: string[]): Promise<CommandResult
     const dryRun = argv.includes("--dry-run");
     if (hasUnpin) {
       if (dryRun) {
-        return success(
-          "Project pin removal plan; no files were changed.",
-          {
-            projectDir: responseProjectDir,
-            version: activeVersion(),
-            pinned: false,
-            dryRun: true,
-          },
-        );
+        return success("Project pin removal plan; no files were changed.", {
+          projectDir: responseProjectDir,
+          version: activeVersion(),
+          pinned: false,
+          dryRun: true,
+        });
       }
       commitProjectPin(projectDir, null);
       return success(
         "Removed this project's AI-DLC version pin; it now follows the active machine version.",
-        { projectDir: responseProjectDir, version: activeVersion(), pinned: false },
+        {
+          projectDir: responseProjectDir,
+          version: activeVersion(),
+          pinned: false,
+        },
       );
     }
     const requested = valueAfter(argv, "--pin");
@@ -1826,8 +2015,13 @@ export async function configureProjectPin(argv: string[]): Promise<CommandResult
     const releaseReservation = dryRun ? null : reserveVersion(version);
     try {
       if (existsSync(versionRoot(version)) && !completeVersion(version)) {
-        const reason = inspectInstalledVersion(version).reason ?? "integrity validation failed";
-        commandError(`retained version ${version} is incomplete: ${reason}`, EXIT.integrity);
+        const reason =
+          inspectInstalledVersion(version).reason ??
+          "integrity validation failed";
+        commandError(
+          `retained version ${version} is incomplete: ${reason}`,
+          EXIT.integrity,
+        );
       }
       let distributions = completeVersion(version)
         ? installedDistributions(version)
@@ -1846,12 +2040,20 @@ export async function configureProjectPin(argv: string[]): Promise<CommandResult
       }
       const distribution = projectDistribution(projectDir);
       if (distribution && !distributions.includes(distribution)) {
-        commandError(`${version} does not contain this project's ${distribution} runtime`, EXIT.usage);
+        commandError(
+          `${version} does not contain this project's ${distribution} runtime`,
+          EXIT.usage,
+        );
       }
       if (dryRun) {
         return success(
           `Project pin plan for aidlc ${version}; no files were changed.`,
-          { projectDir: responseProjectDir, version, pinned: true, dryRun: true },
+          {
+            projectDir: responseProjectDir,
+            version,
+            pinned: true,
+            dryRun: true,
+          },
         );
       }
       commitProjectPin(projectDir, version);
@@ -1878,9 +2080,12 @@ async function useCommand(argv: string[]): Promise<CommandResult> {
     );
   }
   const value = argv[1];
-  if (!value || value.startsWith("--")) return usage("usage: aidlc use <version>");
+  if (!value || value.startsWith("--"))
+    return usage("usage: aidlc use <version>");
   if (argv.includes("--pin")) {
-    return usage("use --pin is not supported; run aidlc config --pin <version>");
+    return usage(
+      "use --pin is not supported; run aidlc config --pin <version>",
+    );
   }
   if (value === "current") {
     return usage("use current is not supported; run aidlc config --unpin");
@@ -1888,8 +2093,12 @@ async function useCommand(argv: string[]): Promise<CommandResult> {
   if (argv.includes("--harness")) return usage("unknown argument: --harness");
   const version = requestedVersion(value);
   if (existsSync(versionRoot(version)) && !completeVersion(version)) {
-    const reason = inspectInstalledVersion(version).reason ?? "integrity validation failed";
-    commandError(`retained version ${version} is incomplete: ${reason}`, EXIT.integrity);
+    const reason =
+      inspectInstalledVersion(version).reason ?? "integrity validation failed";
+    commandError(
+      `retained version ${version} is incomplete: ${reason}`,
+      EXIT.integrity,
+    );
   }
   if (!completeVersion(version)) {
     await installVersion({
@@ -1918,7 +2127,10 @@ function installProfileCommand(argv: string[]): CommandResult {
   const bin = resolve(binValue);
   const home = resolve(process.env.HOME || "");
   if (!process.env.HOME) {
-    return failure("profile path must be inside the target user's home directory", EXIT.integrity);
+    return failure(
+      "profile path must be inside the target user's home directory",
+      EXIT.integrity,
+    );
   }
   let profileRelative: string;
   try {
@@ -1937,7 +2149,10 @@ function installProfileCommand(argv: string[]): CommandResult {
     profileRelative.startsWith(`..${sep}`) ||
     isAbsolute(profileRelative)
   ) {
-    return failure("profile path must be inside the target user's home directory", EXIT.integrity);
+    return failure(
+      "profile path must be inside the target user's home directory",
+      EXIT.integrity,
+    );
   }
   let profileMode = 0o600;
   let profileExists = false;
@@ -1971,10 +2186,16 @@ function installProfileCommand(argv: string[]): CommandResult {
     beginLines.length !== endLines.length ||
     (beginLines.length === 1 && beginLines[0] >= endLines[0])
   ) {
-    return failure("profile AI-DLC PATH markers are missing, duplicated, or malformed", EXIT.integrity);
+    return failure(
+      "profile AI-DLC PATH markers are missing, duplicated, or malformed",
+      EXIT.integrity,
+    );
   }
-  const escapedBin = bin.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")
-    .replaceAll("$", "\\$").replaceAll("`", "\\`");
+  const escapedBin = bin
+    .replaceAll("\\", "\\\\")
+    .replaceAll('"', '\\"')
+    .replaceAll("$", "\\$")
+    .replaceAll("`", "\\`");
   const block = `${begin}\nexport PATH="${escapedBin}:$PATH"\n${end}`;
   let next: string;
   if (beginLines.length === 1) {
@@ -1982,20 +2203,26 @@ function installProfileCommand(argv: string[]): CommandResult {
     const finish = current.indexOf(end, start + begin.length) + end.length;
     next = `${current.slice(0, start)}${block}${current.slice(finish)}`;
   } else {
-    const prefix = current.length === 0 || current.endsWith("\n") ? current : `${current}\n`;
+    const prefix =
+      current.length === 0 || current.endsWith("\n") ? current : `${current}\n`;
     next = `${prefix}${prefix.length > 0 ? "\n" : ""}${block}\n`;
   }
   executePlan({
     schemaVersion: 1,
     root: dirname(profile),
-    operations: [writeOperation(
-      basename(profile),
-      next,
-      transactionState(profile),
-      profileMode,
-    )],
+    operations: [
+      writeOperation(
+        basename(profile),
+        next,
+        transactionState(profile),
+        profileMode,
+      ),
+    ],
   });
-  return success(`updated ${profile} with an owned AI-DLC PATH block`, { profile, bin });
+  return success(`updated ${profile} with an owned AI-DLC PATH block`, {
+    profile,
+    bin,
+  });
 }
 
 function humanLifecycleNarration(
@@ -2006,37 +2233,43 @@ function humanLifecycleNarration(
 ): string | null {
   if (!result.ok) return null;
   if (command === "update" && !argv.includes("--check")) {
-    const data = result.data as {
-      version?: string;
-      channel?: ReleaseChannel;
-      channelSwitch?: { from: ReleaseChannel; to: ReleaseChannel };
-      pruned?: string[];
-      pruneWarning?: string;
-    } | undefined;
+    const data = result.data as
+      | {
+          version?: string;
+          channel?: ReleaseChannel;
+          channelSwitch?: { from: ReleaseChannel; to: ReleaseChannel };
+          pruned?: string[];
+          pruneWarning?: string;
+        }
+      | undefined;
     const target = data?.version;
     if (!target) return null;
-    const channelWord = data?.channel && data.channel !== "stable" ? `${data.channel} ` : "";
+    const channelWord =
+      data?.channel && data.channel !== "stable" ? `${data.channel} ` : "";
     const pruned = data?.pruned ?? [];
-    const pruneLine = pruned.length > 0
-      ? `\nPruned unprotected releases: ${pruned.join(", ")}.`
-      : data?.pruneWarning
-      ? `\nWarning: update succeeded, but old-release cleanup was skipped: ${data.pruneWarning}`
-      : "";
+    const pruneLine =
+      pruned.length > 0
+        ? `\nPruned unprotected releases: ${pruned.join(", ")}.`
+        : data?.pruneWarning
+          ? `\nWarning: update succeeded, but old-release cleanup was skipped: ${data.pruneWarning}`
+          : "";
     const switchLine = data?.channelSwitch
       ? `Switched release channel from ${data.channelSwitch.from} to ${data.channelSwitch.to}.`
       : null;
     if (argv.includes("--dry-run")) {
       return before === target
         ? successText(
-          `You're on the latest version of aidlc (${target}); nothing to update.`,
-          process.stdout,
-        )
+            `You're on the latest version of aidlc (${target}); nothing to update.`,
+            process.stdout,
+          )
         : warnVerdict(
-          `Would update aidlc from ${before ?? "not installed"} to ${target}${
-            switchLine ? ` (switching to the ${data?.channelSwitch?.to} channel)` : ""
-          }.`,
-          process.stdout,
-        );
+            `Would update aidlc from ${before ?? "not installed"} to ${target}${
+              switchLine
+                ? ` (switching to the ${data?.channelSwitch?.to} channel)`
+                : ""
+            }.`,
+            process.stdout,
+          );
     }
     if (before === target) {
       return `${successText(
@@ -2051,7 +2284,9 @@ function humanLifecycleNarration(
         before ? `${before} retained` : "no prior version retained"
       })`,
       ...(switchLine ? [switchLine] : []),
-      ...(pruned.length > 0 ? [`Pruned unprotected releases: ${pruned.join(", ")}.`] : []),
+      ...(pruned.length > 0
+        ? [`Pruned unprotected releases: ${pruned.join(", ")}.`]
+        : []),
       ...(data?.pruneWarning
         ? [`Warning: old-release cleanup was skipped: ${data.pruneWarning}`]
         : []),
@@ -2064,7 +2299,8 @@ function humanLifecycleNarration(
     ].join("\n");
   }
   if (command === "use") {
-    const target = (result.data as { version?: string } | undefined)?.version ?? argv[1];
+    const target =
+      (result.data as { version?: string } | undefined)?.version ?? argv[1];
     if (!target) return null;
     return successText(
       before === target
@@ -2076,10 +2312,12 @@ function humanLifecycleNarration(
     );
   }
   if (command === "uninstall") {
-    const data = result.data as {
-      purge?: boolean;
-      deferred?: boolean;
-    } | undefined;
+    const data = result.data as
+      | {
+          purge?: boolean;
+          deferred?: boolean;
+        }
+      | undefined;
     if (data?.deferred) return null;
     return successText(
       data?.purge
@@ -2102,34 +2340,40 @@ export async function main(input: string[]): Promise<void> {
   try {
     const command = argv[0];
     const before = activeVersion();
-    const result = command === "versions"
-      ? await versionsCommand(argv)
-      : command === "update"
-      ? await updateCommand(argv)
-      : command === "rollback"
-      ? rollbackCommand(argv)
-      : command === "use"
-      ? await useCommand(argv)
-      : command === "uninstall"
-      ? uninstallCommand(argv)
-      : command === "install-profile"
-      ? installProfileCommand(argv)
-      : command === "install-apply"
-      ? success(
-          `installed ${(await installVersion({
-            version: valueAfter(argv, "--version"),
-            from: valueAfter(argv, "--from"),
-            offline: true,
-            activate: true,
-            dryRun: false,
-            baseUrl: valueAfter(argv, "--release-base-url"),
-            caBundle: valueAfter(argv, "--ca-bundle"),
-          })).version}`,
-        )
-      : usage("unknown lifecycle command");
-    const narration = options.mode === "human"
-      ? humanLifecycleNarration(command, argv, before, result)
-      : null;
+    const result =
+      command === "versions"
+        ? await versionsCommand(argv)
+        : command === "update"
+          ? await updateCommand(argv)
+          : command === "rollback"
+            ? rollbackCommand(argv)
+            : command === "use"
+              ? await useCommand(argv)
+              : command === "uninstall"
+                ? uninstallCommand(argv)
+                : command === "install-profile"
+                  ? installProfileCommand(argv)
+                  : command === "install-apply"
+                    ? success(
+                        `installed ${
+                          (
+                            await installVersion({
+                              version: valueAfter(argv, "--version"),
+                              from: valueAfter(argv, "--from"),
+                              offline: true,
+                              activate: true,
+                              dryRun: false,
+                              baseUrl: valueAfter(argv, "--release-base-url"),
+                              caBundle: valueAfter(argv, "--ca-bundle"),
+                            })
+                          ).version
+                        }`,
+                      )
+                    : usage("unknown lifecycle command");
+    const narration =
+      options.mode === "human"
+        ? humanLifecycleNarration(command, argv, before, result)
+        : null;
     if (narration !== null) {
       process.stdout.write(`${narration}\n`);
       process.exitCode = result.code;
@@ -2143,7 +2387,9 @@ export async function main(input: string[]): Promise<void> {
 
 if (import.meta.main) {
   main(process.argv.slice(2)).catch((error) => {
-    process.stderr.write(`aidlc lifecycle: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(
+      `aidlc lifecycle: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
     process.exitCode = EXIT.failure;
   });
 }

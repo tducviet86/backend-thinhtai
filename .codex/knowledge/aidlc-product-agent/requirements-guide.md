@@ -3,14 +3,18 @@
 ## Requirement Types
 
 ### Functional Requirements (FR)
+
 Define what the system must do. Format: "The system shall [verb] [object] [condition]."
+
 - User-facing behavior (inputs, outputs, interactions)
 - Business rules and logic (calculations, validations, state transitions)
 - Data requirements (entities, relationships, lifecycle)
 - Integration requirements (external systems, APIs, data feeds)
 
 ### Non-Functional Requirements (NFR)
+
 Define how the system must perform. Must be quantifiable.
+
 - **Performance**: Response time < Xms for Y% of requests under Z concurrent users
 - **Availability**: X% uptime measured over a rolling 30-day window
 - **Scalability**: Support X to Y concurrent users with linear resource scaling
@@ -19,14 +23,18 @@ Define how the system must perform. Must be quantifiable.
 - **Maintainability**: Code coverage target, deployment frequency target
 
 ### Constraints
+
 Non-negotiable boundaries imposed externally:
+
 - Technology mandates (must use AWS, must use React, must support IE11)
 - Regulatory compliance (GDPR, HIPAA, SOC2, PCI-DSS)
 - Budget and timeline limitations
 - Integration compatibility with existing systems
 
 ### Assumptions
+
 Believed-true conditions that have not been validated:
+
 - Always document assumptions explicitly
 - Assign an owner responsible for validating each assumption
 - Track assumption status (unvalidated, confirmed, invalidated)
@@ -34,6 +42,7 @@ Believed-true conditions that have not been validated:
 ## Elicitation Techniques
 
 Use these in order of preference for AI-DLC:
+
 1. **Document analysis** -- Read existing docs, READMEs, wikis, API specs, database schemas
 2. **Structured questioning** -- Ask targeted questions using the completeness checklist below
 3. **Scenario walkthrough** -- Walk through key user journeys step by step
@@ -43,6 +52,7 @@ Use these in order of preference for AI-DLC:
 ## Acceptance Criteria Pattern
 
 Use Given/When/Then (Gherkin) format:
+
 ```
 Given [precondition or initial state]
 When [action or trigger]
@@ -51,6 +61,7 @@ And [additional outcomes if needed]
 ```
 
 Each requirement should have:
+
 - At least 1 happy-path scenario
 - At least 1 error/edge-case scenario
 - Boundary values for any numeric constraints
@@ -58,6 +69,7 @@ Each requirement should have:
 ## Completeness Analysis Checklist
 
 For every system, verify coverage of:
+
 - [ ] User authentication and authorization
 - [ ] Data input validation and sanitization
 - [ ] Error handling and user-facing error messages
@@ -83,6 +95,7 @@ For every system, verify coverage of:
 ```
 
 Every cell should be filled. Empty cells indicate gaps:
+
 - Empty Design Ref: requirement not yet designed
 - Empty Unit Ref: requirement not yet assigned for implementation
 - Empty Test Ref: requirement not yet covered by test plan

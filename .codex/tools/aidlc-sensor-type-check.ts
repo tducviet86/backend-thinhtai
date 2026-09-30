@@ -77,59 +77,59 @@ import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { resolveProjectDir, sensorsDir } from "./aidlc-lib.ts";
 
 interface ParsedError {
-	file: string;
-	line: number;
-	column: number;
-	message: string;
+  file: string;
+  line: number;
+  column: number;
+  message: string;
 }
 
 interface SensorOutput {
-	pass: boolean;
-	errors: ParsedError[];
-	findings_count: number;
+  pass: boolean;
+  errors: ParsedError[];
+  findings_count: number;
 }
 
 // --- argv parsing -----------------------------------------------------------
 
 interface Args {
-	stage: string;
-	filePath: string;
+  stage: string;
+  filePath: string;
 }
 
 function parseArgs(argv: string[]): Args {
-	let stage = "";
-	let filePath = "";
-	for (let i = 0; i < argv.length; i++) {
-		const a = argv[i];
-		if (a === "--stage") {
-			stage = argv[++i] ?? "";
-		} else if (a === "--file-path") {
-			filePath = argv[++i] ?? "";
-		} else if (a === "--help" || a === "-h") {
-			printHelp();
-			process.exit(0);
-		} else {
-			process.stderr.write(`unknown flag: ${a}\n`);
-			process.exit(1);
-		}
-	}
-	if (!stage) {
-		process.stderr.write("missing required flag: --stage\n");
-		process.exit(1);
-	}
-	if (!filePath) {
-		process.stderr.write("missing required flag: --file-path\n");
-		process.exit(1);
-	}
-	return { stage, filePath };
+  let stage = "";
+  let filePath = "";
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--stage") {
+      stage = argv[++i] ?? "";
+    } else if (a === "--file-path") {
+      filePath = argv[++i] ?? "";
+    } else if (a === "--help" || a === "-h") {
+      printHelp();
+      process.exit(0);
+    } else {
+      process.stderr.write(`unknown flag: ${a}\n`);
+      process.exit(1);
+    }
+  }
+  if (!stage) {
+    process.stderr.write("missing required flag: --stage\n");
+    process.exit(1);
+  }
+  if (!filePath) {
+    process.stderr.write("missing required flag: --file-path\n");
+    process.exit(1);
+  }
+  return { stage, filePath };
 }
 
 function printHelp(): void {
-	process.stdout.write(
-		`Usage: aidlc-sensor-type-check --stage <slug> --file-path <path>\n\n` +
-			`Wraps \`bunx --package typescript@6 tsc --project <tsconfig> --noEmit --pretty false\` and\n` +
-			`prints {pass, errors[]} JSON to stdout (filtered to --file-path).\n`,
-	);
+  process.stdout.write(
+    `Usage: aidlc-sensor-type-check --stage <slug> --file-path <path>\n\n` +
+      `Wraps \`bunx --package typescript@6 tsc --project <tsconfig> --noEmit --pretty false\` and\n` +
+      `prints {pass, errors[]} JSON to stdout (filtered to --file-path).\n`,
+  );
 }
 
 // --- tsconfig resolution ----------------------------------------------------
@@ -137,15 +137,15 @@ function printHelp(): void {
 // Walk up from --file-path to the nearest tsconfig.json. Returns the
 // absolute path to that tsconfig. Returns null if absent.
 function findTsconfig(filePath: string): string | null {
-	const abs = resolve(filePath);
-	let dir = dirname(abs);
-	while (true) {
-		const candidate = join(dir, "tsconfig.json");
-		if (existsSync(candidate)) return candidate;
-		const parent = dirname(dir);
-		if (parent === dir) return null;
-		dir = parent;
-	}
+  const abs = resolve(filePath);
+  let dir = dirname(abs);
+  while (true) {
+    const candidate = join(dir, "tsconfig.json");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
 }
 
 // --- tsc subprocess wrappers ------------------------------------------------
@@ -161,38 +161,41 @@ const TSC_ARGS = ["--package", "typescript@6", "tsc"] as const;
 // resolution, registry timeout). The dispatcher's branch b (status === 127)
 // won't catch those — propagate by exiting 127 ourselves on any non-zero.
 function probeTscAvailable(cwd: string): void {
-	const result = spawnSync("bunx", [...TSC_ARGS, "--version"], {
-		encoding: "utf-8",
-		timeout: 30_000,
-		cwd,
-	});
-	if (result.status !== 0) {
-		process.stderr.write("tsc-unavailable\n");
-		process.exit(127);
-	}
+  const result = spawnSync("bunx", [...TSC_ARGS, "--version"], {
+    encoding: "utf-8",
+    timeout: 30_000,
+    cwd,
+  });
+  if (result.status !== 0) {
+    process.stderr.write("tsc-unavailable\n");
+    process.exit(127);
+  }
 }
 
 function runTsc(opts: {
-	tsconfigPath: string;
-	tsBuildInfoFile: string;
-	cwd: string;
+  tsconfigPath: string;
+  tsBuildInfoFile: string;
+  cwd: string;
 }): { output: string; status: number | null } {
-	const result = spawnSync(
-		"bunx",
-		[
-			...TSC_ARGS,
-			"--project",
-			opts.tsconfigPath,
-			"--noEmit",
-			"--pretty",
-			"false",
-			"--incremental",
-			"--tsBuildInfoFile",
-			opts.tsBuildInfoFile,
-		],
-		{ encoding: "utf-8", timeout: 60_000, cwd: opts.cwd },
-	);
-	return { output: `${result.stdout ?? ""}${result.stderr ?? ""}`, status: result.status };
+  const result = spawnSync(
+    "bunx",
+    [
+      ...TSC_ARGS,
+      "--project",
+      opts.tsconfigPath,
+      "--noEmit",
+      "--pretty",
+      "false",
+      "--incremental",
+      "--tsBuildInfoFile",
+      opts.tsBuildInfoFile,
+    ],
+    { encoding: "utf-8", timeout: 60_000, cwd: opts.cwd },
+  );
+  return {
+    output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+    status: result.status,
+  };
 }
 
 // --- diagnostic parsing -----------------------------------------------------
@@ -205,127 +208,127 @@ function runTsc(opts: {
 const PRIMARY_RE = /^(.+?)\((\d+),(\d+)\):\s+error\s+TS\d+:\s+(.+)$/;
 
 function parseTscOutput(stdout: string): ParsedError[] {
-	const errs: ParsedError[] = [];
-	for (const rawLine of stdout.split(/\r?\n/)) {
-		if (rawLine === "") continue;
-		const m = rawLine.match(PRIMARY_RE);
-		if (m) {
-			errs.push({
-				file: m[1],
-				line: Number(m[2]),
-				column: Number(m[3]),
-				message: m[4],
-			});
-			continue;
-		}
-		// Continuation: indented (whitespace prefix). Append to previous
-		// primary if any. We don't drop unmatched lines that aren't
-		// indented either — but those shouldn't appear with --pretty false.
-		if (errs.length > 0 && /^\s/.test(rawLine)) {
-			const last = errs[errs.length - 1];
-			last.message = `${last.message}\n  ${rawLine.trim()}`;
-		}
-		// Otherwise (empty-after-trim, banner, summary line like "Found N
-		// errors") — drop silently. tsc's summary lines aren't errors.
-	}
-	return errs;
+  const errs: ParsedError[] = [];
+  for (const rawLine of stdout.split(/\r?\n/)) {
+    if (rawLine === "") continue;
+    const m = rawLine.match(PRIMARY_RE);
+    if (m) {
+      errs.push({
+        file: m[1],
+        line: Number(m[2]),
+        column: Number(m[3]),
+        message: m[4],
+      });
+      continue;
+    }
+    // Continuation: indented (whitespace prefix). Append to previous
+    // primary if any. We don't drop unmatched lines that aren't
+    // indented either — but those shouldn't appear with --pretty false.
+    if (errs.length > 0 && /^\s/.test(rawLine)) {
+      const last = errs[errs.length - 1];
+      last.message = `${last.message}\n  ${rawLine.trim()}`;
+    }
+    // Otherwise (empty-after-trim, banner, summary line like "Found N
+    // errors") — drop silently. tsc's summary lines aren't errors.
+  }
+  return errs;
 }
 
 // Filter parsed errors to those whose file equals or contains
 // --file-path. tsc's path emission varies with cwd: paths may be
 // relative to the tsconfig dir OR absolute. We match either form.
 function filterToFilePath(
-	errs: ParsedError[],
-	filePath: string,
-	tsconfigDir: string,
+  errs: ParsedError[],
+  filePath: string,
+  tsconfigDir: string,
 ): ParsedError[] {
-	const absTarget = resolve(filePath);
-	const relTargetFromTsconfig = relative(tsconfigDir, absTarget);
-	return errs.filter((e) => {
-		// tsc may emit absolute or relative; resolve against tsconfigDir if
-		// relative, then compare. Also keep the substring fallback so
-		// platform path-separator drift doesn't drop matches.
-		const emitted = isAbsolute(e.file) ? e.file : resolve(tsconfigDir, e.file);
-		if (emitted === absTarget) return true;
-		if (e.file === absTarget) return true;
-		if (e.file === relTargetFromTsconfig) return true;
-		if (e.file.endsWith(relTargetFromTsconfig)) return true;
-		return false;
-	});
+  const absTarget = resolve(filePath);
+  const relTargetFromTsconfig = relative(tsconfigDir, absTarget);
+  return errs.filter((e) => {
+    // tsc may emit absolute or relative; resolve against tsconfigDir if
+    // relative, then compare. Also keep the substring fallback so
+    // platform path-separator drift doesn't drop matches.
+    const emitted = isAbsolute(e.file) ? e.file : resolve(tsconfigDir, e.file);
+    if (emitted === absTarget) return true;
+    if (e.file === absTarget) return true;
+    if (e.file === relTargetFromTsconfig) return true;
+    if (e.file.endsWith(relTargetFromTsconfig)) return true;
+    return false;
+  });
 }
 
 // --- main -------------------------------------------------------------------
 
 export function main(argv: string[]): void {
-	const args = parseArgs(argv);
+  const args = parseArgs(argv);
 
-	if (!existsSync(args.filePath)) {
-		process.stderr.write(`file-path not found: ${args.filePath}\n`);
-		process.exit(1);
-	}
+  if (!existsSync(args.filePath)) {
+    process.stderr.write(`file-path not found: ${args.filePath}\n`);
+    process.exit(1);
+  }
 
-	const tsconfigPath = findTsconfig(args.filePath);
-	if (!tsconfigPath) {
-		process.stderr.write("no-tsconfig-found\n");
-		process.exit(1);
-	}
-	const tsconfigDir = dirname(tsconfigPath);
+  const tsconfigPath = findTsconfig(args.filePath);
+  if (!tsconfigPath) {
+    process.stderr.write("no-tsconfig-found\n");
+    process.exit(1);
+  }
+  const tsconfigDir = dirname(tsconfigPath);
 
-	// Keep every package's incremental state in the project record tree. Hashing
-	// the portable project-relative tsconfig path isolates monorepo caches while
-	// preserving the tsconfig directory as tsc's cwd below.
-	const projectDir = resolveProjectDir();
-	const relativeTsconfigPath = posix.normalize(
-		relative(projectDir, tsconfigPath).replaceAll("\\", "/"),
-	);
-	const tsconfigHash = createHash("sha256")
-		.update(relativeTsconfigPath, "utf-8")
-		.digest("hex");
-	const sensorsBaseDir = sensorsDir(projectDir);
-	try {
-		mkdirSync(sensorsBaseDir, { recursive: true });
-	} catch {
-		// Leave the requested cache path in place. tsc will report an unwritable
-		// path through the ordinary script-error status gate.
-	}
-	const tsBuildInfoFile = join(sensorsBaseDir, `.tsbuildinfo-${tsconfigHash}`);
+  // Keep every package's incremental state in the project record tree. Hashing
+  // the portable project-relative tsconfig path isolates monorepo caches while
+  // preserving the tsconfig directory as tsc's cwd below.
+  const projectDir = resolveProjectDir();
+  const relativeTsconfigPath = posix.normalize(
+    relative(projectDir, tsconfigPath).replaceAll("\\", "/"),
+  );
+  const tsconfigHash = createHash("sha256")
+    .update(relativeTsconfigPath, "utf-8")
+    .digest("hex");
+  const sensorsBaseDir = sensorsDir(projectDir);
+  try {
+    mkdirSync(sensorsBaseDir, { recursive: true });
+  } catch {
+    // Leave the requested cache path in place. tsc will report an unwritable
+    // path through the ordinary script-error status gate.
+  }
+  const tsBuildInfoFile = join(sensorsBaseDir, `.tsbuildinfo-${tsconfigHash}`);
 
-	// Probe tsc availability first. cwd doesn't matter for --version.
-	probeTscAvailable(tsconfigDir);
+  // Probe tsc availability first. cwd doesn't matter for --version.
+  probeTscAvailable(tsconfigDir);
 
-	const { output, status } = runTsc({
-		tsconfigPath,
-		tsBuildInfoFile,
-		cwd: tsconfigDir,
-	});
-	const allErrors = parseTscOutput(output);
-	const errors = filterToFilePath(allErrors, args.filePath, tsconfigDir);
+  const { output, status } = runTsc({
+    tsconfigPath,
+    tsBuildInfoFile,
+    cwd: tsconfigDir,
+  });
+  const allErrors = parseTscOutput(output);
+  const errors = filterToFilePath(allErrors, args.filePath, tsconfigDir);
 
-	// Status gate: tsc exited non-zero but parseTscOutput found ZERO diagnostics
-	// ANYWHERE in the project (a config-load failure — e.g. TS18003 "No inputs
-	// were found", which carries no (line,col) so PRIMARY_RE matches nothing).
-	// Emitting pass:true here would be a FALSE clean PASS: a broken tsconfig would
-	// silently report green. Instead we propagate tsc's exit code so the dispatcher's
-	// branch e reclassifies it as PASSED Note=script-error: exit-<n> (advisory, not
-	// a real type pass). We gate on allErrors (the WHOLE-project parse), NOT the
-	// post-filtered `errors`: a non-zero exit with diagnostics elsewhere in the
-	// project but none for --file-path is a genuine type-error run whose errors fall
-	// outside the target — that must stay a per-file clean PASS (the documented
-	// cross-file known limitation above), not a script-error. A non-zero exit WITH
-	// parsed diagnostics FOR the target flows through as pass:false below (exit 0,
-	// the JSON verdict carries it).
-	if (status !== null && status !== 0 && allErrors.length === 0) {
-		process.exit(status);
-	}
+  // Status gate: tsc exited non-zero but parseTscOutput found ZERO diagnostics
+  // ANYWHERE in the project (a config-load failure — e.g. TS18003 "No inputs
+  // were found", which carries no (line,col) so PRIMARY_RE matches nothing).
+  // Emitting pass:true here would be a FALSE clean PASS: a broken tsconfig would
+  // silently report green. Instead we propagate tsc's exit code so the dispatcher's
+  // branch e reclassifies it as PASSED Note=script-error: exit-<n> (advisory, not
+  // a real type pass). We gate on allErrors (the WHOLE-project parse), NOT the
+  // post-filtered `errors`: a non-zero exit with diagnostics elsewhere in the
+  // project but none for --file-path is a genuine type-error run whose errors fall
+  // outside the target — that must stay a per-file clean PASS (the documented
+  // cross-file known limitation above), not a script-error. A non-zero exit WITH
+  // parsed diagnostics FOR the target flows through as pass:false below (exit 0,
+  // the JSON verdict carries it).
+  if (status !== null && status !== 0 && allErrors.length === 0) {
+    process.exit(status);
+  }
 
-	const out: SensorOutput = {
-		pass: errors.length === 0,
-		errors,
-		// findings_count emitted by the script (sensor-id-agnostic dispatcher).
-		findings_count: errors.length,
-	};
-	process.stdout.write(`${JSON.stringify(out)}\n`);
-	process.exit(0);
+  const out: SensorOutput = {
+    pass: errors.length === 0,
+    errors,
+    // findings_count emitted by the script (sensor-id-agnostic dispatcher).
+    findings_count: errors.length,
+  };
+  process.stdout.write(`${JSON.stringify(out)}\n`);
+  process.exit(0);
 }
 
 if (import.meta.main) main(process.argv.slice(2));

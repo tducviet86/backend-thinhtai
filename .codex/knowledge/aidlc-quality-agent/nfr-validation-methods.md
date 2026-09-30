@@ -5,12 +5,14 @@ Practical approaches to validating performance, scalability, and reliability req
 ## Load Testing Tools and Methodology
 
 **Tools**:
+
 - **k6** (Grafana): Script-based, developer-friendly, runs locally or in cloud. Preferred for API load testing.
 - **Locust** (Python): Distributed, programmable load generation. Good for complex user behaviour simulation.
 - **Artillery**: YAML-driven, supports HTTP/WebSocket/Socket.io. Quick to set up.
 - **AWS Distributed Load Testing**: CloudFormation-based, uses Fargate to generate load from within AWS.
 
 **Methodology**:
+
 1. Identify critical user journeys and their expected traffic volumes.
 2. Create realistic test scripts with think times, parameterized data, and varied payloads.
 3. Establish a performance baseline on current production or staging.
@@ -20,15 +22,19 @@ Practical approaches to validating performance, scalability, and reliability req
 ## Performance Test Design Patterns
 
 ### Ramp-Up Test
+
 Gradually increase virtual users from 0 to target over 5-15 minutes. Validates system behaviour under increasing load and identifies the breaking point.
 
 ### Steady-State Test
+
 Hold constant load at expected peak for 30-60 minutes. Validates sustained performance, memory leaks, connection pool exhaustion, and resource saturation.
 
 ### Spike Test
+
 Suddenly inject 3-5x normal load for a short burst (2-5 minutes). Validates auto-scaling triggers, queue depth handling, circuit breaker behaviour, and graceful degradation.
 
 ### Soak Test
+
 Run at moderate load (60-80% of peak) for 4-24 hours. Detects slow memory leaks, file handle exhaustion, log rotation issues, and gradual performance degradation.
 
 ## Latency Percentiles
@@ -67,12 +73,12 @@ Always measure percentiles, not averages. An average of 50ms can hide a p99 of 5
 
 Track every NFR with a structured comparison:
 
-| NFR | Target | Actual | Status | Test Date | Notes |
-|-----|--------|--------|--------|-----------|-------|
-| API latency p95 | < 200ms | 145ms | PASS | 2024-01-15 | Under 500 RPS |
-| API latency p99 | < 500ms | 620ms | FAIL | 2024-01-15 | DB connection pool saturation |
-| Throughput | > 1000 RPS | 1250 RPS | PASS | 2024-01-15 | |
-| Availability | 99.95% | — | PENDING | — | Requires 30-day measurement |
+| NFR             | Target     | Actual   | Status  | Test Date  | Notes                         |
+| --------------- | ---------- | -------- | ------- | ---------- | ----------------------------- |
+| API latency p95 | < 200ms    | 145ms    | PASS    | 2024-01-15 | Under 500 RPS                 |
+| API latency p99 | < 500ms    | 620ms    | FAIL    | 2024-01-15 | DB connection pool saturation |
+| Throughput      | > 1000 RPS | 1250 RPS | PASS    | 2024-01-15 |                               |
+| Availability    | 99.95%     | —        | PENDING | —          | Requires 30-day measurement   |
 
 Review the matrix at each milestone. Failing NFRs are risks that must be addressed before release.
 

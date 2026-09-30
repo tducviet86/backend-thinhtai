@@ -13,13 +13,13 @@ Practical principles for designing consistent, predictable, and evolvable HTTP A
 
 ## HTTP Method Semantics
 
-| Method | Purpose | Idempotent | Safe |
-|--------|---------|------------|------|
-| GET | Retrieve resource(s) | Yes | Yes |
-| POST | Create a resource or trigger a process | No | No |
-| PUT | Full replace of a resource | Yes | No |
-| PATCH | Partial update of a resource | No* | No |
-| DELETE | Remove a resource | Yes | No |
+| Method | Purpose                                | Idempotent | Safe |
+| ------ | -------------------------------------- | ---------- | ---- |
+| GET    | Retrieve resource(s)                   | Yes        | Yes  |
+| POST   | Create a resource or trigger a process | No         | No   |
+| PUT    | Full replace of a resource             | Yes        | No   |
+| PATCH  | Partial update of a resource           | No*        | No   |
+| DELETE | Remove a resource                      | Yes        | No   |
 
 Use POST for actions that do not map to CRUD: `POST /orders/{id}/cancel`.
 

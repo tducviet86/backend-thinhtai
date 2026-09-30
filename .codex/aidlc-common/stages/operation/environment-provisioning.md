@@ -45,6 +45,7 @@ outputs: environment-inventory.md, validation-report.md, environment-provisionin
 ### Step 2: Generate Clarifying Questions
 
 Create questions file covering:
+
 - Are all environments provisioned per Infra Design?
 - Are VPCs, subnets, security groups, NACLs correct?
 - Are secrets in Secrets Manager / Parameter Store correctly injected?

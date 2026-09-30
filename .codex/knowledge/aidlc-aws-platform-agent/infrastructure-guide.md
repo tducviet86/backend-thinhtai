@@ -2,17 +2,18 @@
 
 ## IaC Tool Selection
 
-| Tool | Best For | Considerations |
-|------|----------|---------------|
-| AWS CDK | AWS-native, TypeScript/Python teams, complex constructs | Vendor lock-in, steep learning curve |
-| Terraform | Multi-cloud, team standardization, mature ecosystem | HCL syntax, state management complexity |
-| CloudFormation | AWS-only, simple stacks, when CDK is overkill | Verbose YAML/JSON, slow drift detection |
-| Pulumi | Polyglot teams wanting general-purpose languages | Smaller community, state backend choice |
-| Docker Compose | Local development, simple multi-container apps | Not for production orchestration |
+| Tool           | Best For                                                | Considerations                          |
+| -------------- | ------------------------------------------------------- | --------------------------------------- |
+| AWS CDK        | AWS-native, TypeScript/Python teams, complex constructs | Vendor lock-in, steep learning curve    |
+| Terraform      | Multi-cloud, team standardization, mature ecosystem     | HCL syntax, state management complexity |
+| CloudFormation | AWS-only, simple stacks, when CDK is overkill           | Verbose YAML/JSON, slow drift detection |
+| Pulumi         | Polyglot teams wanting general-purpose languages        | Smaller community, state backend choice |
+| Docker Compose | Local development, simple multi-container apps          | Not for production orchestration        |
 
 ## CI/CD Pipeline Design
 
 ### Standard Pipeline Stages
+
 ```
 [Source] -> [Lint] -> [Build] -> [Unit Test] -> [SAST] -> [Package] ->
 [Integration Test] -> [Deploy Staging] -> [E2E Test] -> [Security Scan] ->
@@ -20,6 +21,7 @@
 ```
 
 ### Stage Requirements
+
 - **Lint**: Fail fast on formatting and static analysis violations. Under 30 seconds.
 - **Build**: Compile/transpile, resolve dependencies. Cache aggressively. Under 2 minutes.
 - **Unit Test**: Full suite. Fail the pipeline on any failure. Under 3 minutes.
@@ -36,24 +38,28 @@
 ## Deployment Strategies
 
 ### Blue-Green
+
 - Two identical environments; traffic switches atomically
 - **Pro**: Instant rollback, zero downtime
 - **Con**: Double infrastructure cost, database schema sync complexity
 - **Use when**: Zero-downtime required, database changes are backward-compatible
 
 ### Canary
+
 - Route small percentage of traffic (1-5%) to new version, gradually increase
 - **Pro**: Limited blast radius, real-user validation
 - **Con**: Requires traffic splitting, metric comparison automation
 - **Use when**: High-traffic systems, need to validate under real load
 
 ### Rolling
+
 - Replace instances incrementally (1 at a time or N at a time)
 - **Pro**: No extra infrastructure, gradual rollout
 - **Con**: Mixed versions running simultaneously, slower rollback
 - **Use when**: Stateless services, backward-compatible changes
 
 ### Recreate
+
 - Stop all old instances, start all new instances
 - **Pro**: Simple, no version mixing
 - **Con**: Downtime during transition
@@ -62,6 +68,7 @@
 ## Monitoring & Observability Stack
 
 ### The Four Pillars
+
 1. **Metrics**: Numeric measurements over time (CPU, latency, error count)
    - Tool examples: CloudWatch, Prometheus + Grafana, Datadog
    - Key metrics: RED (Rate, Errors, Duration) for services; USE (Utilization, Saturation, Errors) for resources
@@ -83,6 +90,7 @@
 ## Container Orchestration Checklist
 
 For containerized deployments, define:
+
 - [ ] Base image selection (minimal, security-patched, pinned version)
 - [ ] Multi-stage build for smaller production images
 - [ ] Health check endpoint (`/health` or `/readyz`)
@@ -103,6 +111,7 @@ Production   -> Full scale, multi-AZ, monitoring and alerting active
 ```
 
 Parity rules:
+
 - Staging MUST use the same IaC templates as production (parameterized for scale)
 - Staging MUST use the same database engine and version as production
 - Staging SHOULD have representative (anonymized) data volume

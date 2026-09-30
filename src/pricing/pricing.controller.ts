@@ -1,2 +1,11 @@
-import { Body, Controller, Post, Version } from '@nestjs/common'; import { Public } from '../common/decorators/permissions.decorator'; import { QuoteDto } from './dto/quote.dto'; import { PricingService } from './pricing.service';
-@Controller('pricing') export class PricingController {constructor(private readonly service:PricingService){} @Public() @Post('quote') @Version('1') quote(@Body() dto:QuoteDto){return this.service.quote(dto);} }
+import { Body, Controller, Post, Version } from "@nestjs/common";
+import { Public } from "../common/decorators/permissions.decorator";
+import { QuoteDto } from "./dto/quote.dto";
+import { PricingService } from "./pricing.service";
+@Controller("pricing")
+export class PricingController {
+  constructor(private readonly service: PricingService) {}
+  @Public() @Post("quote") @Version("1") quote(@Body() dto: QuoteDto) {
+    return this.service.quote(dto);
+  }
+}

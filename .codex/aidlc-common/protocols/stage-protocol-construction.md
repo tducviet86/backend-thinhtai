@@ -15,7 +15,7 @@ module applies only when `directive.reviewer` is present.
 > **Status — two layers.** Follow the shipped layer; do not run the planned
 > Bolt-major layer as conductor procedure.
 >
-> **Shipped:** walking-skeleton *stance* classification (`gate: "unresolved"`
+> **Shipped:** walking-skeleton _stance_ classification (`gate: "unresolved"`
 > in the harness bindings; resolution order `org.md` → `team.md` →
 > `project.md`), the first Construction EXECUTE-stage gate
 > (`isSkeletonGateStage`), the ladder prompt after that gate, halt-and-ask on
@@ -90,7 +90,7 @@ options:
     description: Stop for your approval after each Bolt (or each parallel batch).
 ```
 
-The shipped option labels still say "remaining Bolts" / "Gate every Bolt"; they govern remaining Construction *stage* gates, not Bolt-level gates.
+The shipped option labels still say "remaining Bolts" / "Gate every Bolt"; they govern remaining Construction _stage_ gates, not Bolt-level gates.
 
 - Record the answer in `aidlc-state.md` as `Construction Autonomy Mode: autonomous` or `Construction Autonomy Mode: gated` via `aidlc-bolt.ts set-autonomy --mode <choice>` (which emits `AUTONOMY_MODE_SET` itself).
 - The ladder choice is set-autonomy-owned, like an approval choice is report-owned: do NOT call `aidlc-log.ts decision` or `aidlc-log.ts answer` for it. Switching to `autonomous` requires the human's fresh turn (the ladder answer) — logging the choice as an interview answer first would consume that turn and the mode switch would refuse.
@@ -105,7 +105,7 @@ The shipped option labels still say "remaining Bolts" / "Gate every Bolt"; they 
 
 > **Planned (non-executable).** Under a later Bolt-major walk, Bolts after the
 > walking skeleton would present a Bolt-level gate only if `Construction
-> Autonomy Mode: gated`. In `autonomous` mode that gate would be skipped. For
+Autonomy Mode: gated`. In `autonomous` mode that gate would be skipped. For
 > parallel Bolt batches the gate would cover every Bolt in the batch. The
 > shipped walk does not present subsequent Bolt-level gates.
 
@@ -169,6 +169,7 @@ reviewed under the new attempt.
 
 **Autonomous loop-back procedure** (mode `autonomous`, bound not exhausted,
 impact-estimated fix identified):
+
 1. Append the `### Loop-back N — <ISO timestamp>` entry (Diagnosis /
    Root-cause stage / Planned fix / Estimated impact) to test-results.md and a matching
    Deviations entry to this stage's memory.md.
@@ -176,7 +177,7 @@ impact-estimated fix identified):
    `aidlc engine orchestrate next --stage code-generation`.
    The engine validates the target and answers with a `print` directive naming
    the exact `aidlc-jump.ts execute --target code-generation --direction
-   backward --scope <scope>` command; run that printed command verbatim (it
+backward --scope <scope>` command; run that printed command verbatim (it
    resets the target + downstream stages, emits the canonical `STAGE_JUMPED`,
    and pivots Current Stage), then re-run `next` and continue the forwarding
    loop. Never compose the `execute` call by hand — the engine's print is the
@@ -298,7 +299,6 @@ gate is presented. A human-approved retry does count an entry in the Loop-Back
 Log, and the human may override the bound explicitly. Every option's
 description must carry its estimated impact where one is known — presenting an
 impact-unestimated give-up option is a protocol violation.
-
 
 ---
 
