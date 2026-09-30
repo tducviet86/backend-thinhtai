@@ -5,6 +5,25 @@ additive Phase 2 proposal. Phase 1 was approved by the user and its files are
 preserved. No saved AI-DLC intent or state record exists in this checkout.
 This document records the continuation without inventing earlier decisions.
 
+## Completion status
+
+**Phase 2: COMPLETE — 2026-09-30.** Completion recorded at the user's explicit
+request, based on the following user-reported validation results:
+
+- `npm run typecheck`: PASS.
+- `npm test`: PASS — 8/8 test suites and 71/71 tests passed.
+- `npm run build`: PASS.
+- Local database: `tt_rental` at `localhost:5432`.
+- Both Phase 2 migrations are applied:
+  `202609290001_rental_lifecycle_foundation` and
+  `202609300001_refresh_rotation_foundation`.
+- `prisma migrate status`: No pending migrations.
+
+This completion update records the supplied results; validation was not rerun.
+Work stops at Phase 2. Phase 3 is not started or authorized. No source code is
+changed by this update, and no hold services, booking expiry, VNPay changes,
+refund workers or controllers are implemented as part of it.
+
 ## Repository findings
 
 On resumption, the working tree already contained the expanded Prisma schema,
